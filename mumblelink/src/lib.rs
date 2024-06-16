@@ -98,16 +98,6 @@ pub struct PositionDef {
     pub top: Vector3D,
 }
 
-impl Into<Position> for PositionDef {
-    fn into(self) -> Position {
-        Position {
-            position: [self.position[0], self.position[1], self.position[2]],
-            front: [self.front[0], self.front[1], self.front[2]],
-            top: [self.top[0], self.top[1], self.top[2]],
-        }
-    }
-}
-
 impl From<Position> for PositionDef {
     fn from(value: Position) -> Self {
         Self {
@@ -129,22 +119,6 @@ pub struct MumbleLinkDataDef {
     pub context_len: i64,
     pub context: GW2Context,
     pub description: String,
-}
-
-impl Into<MumbleLinkData> for MumbleLinkDataDef {
-    fn into(self) -> MumbleLinkData {
-        MumbleLinkData {
-            ui_version: self.ui_version,
-            ui_tick: self.ui_tick,
-            avatar: self.avatar.into(),
-            name: self.name,
-            camera: self.camera.into(),
-            identity: self.identity,
-            context_len: self.context_len,
-            context: self.context.into_bytes().unwrap(),
-            description: self.description,
-        }
-    }
 }
 
 impl From<MumbleLinkData> for MumbleLinkDataDef {
