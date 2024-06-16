@@ -1,13 +1,11 @@
-use std::cell::Cell;
+use std::net::UdpSocket;
 use std::thread::sleep;
 use std::time::Duration;
-use std::{net::UdpSocket, rc::Rc};
 
-use mumblelink::{MumbleLinkDataDef, MumbleLinkMessage};
+use mumblelink::MumbleLinkMessage;
 use mumblelink_reader::mumble_link::MumbleLinkReader;
 use mumblelink_reader::mumble_link_handler::MumbleLinkHandler;
 use rdev::{listen, Event, EventType::*, Key};
-use serde::{Deserialize, Serialize};
 
 fn main() {
     let (tx, rx) = crossbeam_channel::unbounded::<MumbleLinkMessage>();

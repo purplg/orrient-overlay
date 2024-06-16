@@ -1,7 +1,5 @@
-use std::f32::consts::PI;
 use std::net::UdpSocket;
 
-use bevy::app::AppExit;
 use bevy::color::palettes::basic::{BLUE, RED};
 use bevy::input::keyboard::KeyboardInput;
 use bevy::window::{CompositeAlphaMode, PrimaryWindow, WindowResolution};
@@ -168,10 +166,7 @@ fn gizmo(
     }
 }
 
-fn input(
-    input: Res<ButtonInput<KeyCode>>,
-    mut mumble_link_event: EventWriter<MumbleLinkEvent>,
-) {
+fn input(input: Res<ButtonInput<KeyCode>>, mut mumble_link_event: EventWriter<MumbleLinkEvent>) {
     if input.just_pressed(KeyCode::Escape) {
         mumble_link_event.send(MumbleLinkEvent::Toggle);
     }
