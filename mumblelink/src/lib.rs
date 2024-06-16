@@ -1,4 +1,7 @@
-use std::{io::{Read, Seek}, net::Ipv4Addr};
+use std::{
+    io::{Read, Seek},
+    net::Ipv4Addr,
+};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use mumblelink_reader::mumble_link::{MumbleLinkData, Position, Vector3D};
@@ -33,13 +36,14 @@ impl GW2Context {
             unknown: cursor.read_u32::<LittleEndian>()?,
             server_address: {
                 let addr = Ipv4Addr::new(
-                cursor.read_u8()?,
-                cursor.read_u8()?,
-                cursor.read_u8()?,
-                cursor.read_u8()?,
+                    cursor.read_u8()?,
+                    cursor.read_u8()?,
+                    cursor.read_u8()?,
+                    cursor.read_u8()?,
                 );
                 cursor.seek_relative(24)?;
-            addr},
+                addr
+            },
             map_id: cursor.read_u32::<LittleEndian>()?,
             map_type: cursor.read_u32::<LittleEndian>()?,
             shard_id: cursor.read_u32::<LittleEndian>()?,
