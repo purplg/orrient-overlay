@@ -1,7 +1,4 @@
-use std::{
-    io::{Read, Seek},
-    net::Ipv4Addr,
-};
+use std::{io::Seek, net::Ipv4Addr};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use mumblelink_reader::mumble_link::{MumbleLinkData, Position, Vector3D};
@@ -11,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub enum MumbleLinkMessage {
     MumbleLinkData(MumbleLinkDataDef),
     Toggle,
+    Save,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

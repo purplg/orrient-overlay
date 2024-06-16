@@ -2,7 +2,7 @@ use std::net::UdpSocket;
 use std::thread::sleep;
 use std::time::Duration;
 
-use mumblelink::MumbleLinkMessage;
+use mumblelink::{MumbleLinkDataDef, MumbleLinkMessage};
 use mumblelink_reader::mumble_link::MumbleLinkReader;
 use mumblelink_reader::mumble_link_handler::MumbleLinkHandler;
 use rdev::{listen, Event, EventType::*, Key};
@@ -30,7 +30,12 @@ fn input(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
                 KeyPress(key) => match key {
                     Key::Comma => {
                         if let Err(e) = tx.send(MumbleLinkMessage::Toggle) {
-                            println!("Error sending toggle message: {:?}", e);
+                            println!("Error sending Toggle message: {:?}", e);
+                        }
+                    }
+                    Key::Dot => {
+                        if let Err(e) = tx.send(MumbleLinkMessage::Save) {
+                            println!("Error sending Save message: {:?}", e);
                         }
                     }
                     _ => {}
@@ -58,9 +63,10 @@ fn input(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
 fn link(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
     let handler = MumbleLinkHandler::new().unwrap();
     loop {
-        if let Err(e) = tx.send(MumbleLinkMessage::MumbleLinkData(
-            handler.read().unwrap().into(),
-        )) {
+        if let Err(e) = tx.send(MumbleLinkMessage::MumbleLinkData({
+            let data: MumbleLinkDataDef = handler.read().unwrap().into();
+            data
+        })) {
             println!("error: {:?}", e);
         };
         sleep(Duration::from_millis(32));
