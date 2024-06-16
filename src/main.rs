@@ -121,7 +121,7 @@ fn camera_system(
             pos.translation = position;
 
             pos.look_to(
-                Dir3::new_unchecked(Vec3::new(
+                -Dir3::new_unchecked(Vec3::new(
                     mumbledata.camera.front[0],
                     mumbledata.camera.front[1],
                     mumbledata.camera.front[2],
@@ -169,16 +169,10 @@ fn gizmo(
 }
 
 fn input(
-    mut events: EventReader<KeyboardInput>,
-    mut app_exit_events: ResMut<Events<AppExit>>,
-    mut window: Query<&mut Window, With<PrimaryWindow>>,
+    input: Res<ButtonInput<KeyCode>>,
+    mut mumble_link_event: EventWriter<MumbleLinkEvent>,
 ) {
-    for event in events.read() {
-        match event.key_code {
-            KeyCode::Escape => {
-                app_exit_events.send(AppExit::Success);
-            }
-            _ => {}
-        }
+    if input.just_pressed(KeyCode::Escape) {
+        mumble_link_event.send(MumbleLinkEvent::Toggle);
     }
 }
