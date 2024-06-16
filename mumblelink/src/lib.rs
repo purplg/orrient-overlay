@@ -7,7 +7,13 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use mumblelink_reader::mumble_link::{MumbleLinkData, Position, Vector3D};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
+pub enum MumbleLinkMessage {
+    MumbleLinkData(MumbleLinkDataDef),
+    Toggle,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GW2Context {
     pub unknown: u32,
     pub server_address: Ipv4Addr,
@@ -87,7 +93,7 @@ impl GW2Context {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PositionDef {
     pub position: Vector3D,
     pub front: Vector3D,
@@ -97,9 +103,9 @@ pub struct PositionDef {
 impl Into<Position> for PositionDef {
     fn into(self) -> Position {
         Position {
-            position: self.position,
-            front: self.front,
-            top: self.top,
+            position: [self.position[0], self.position[1], self.position[2]],
+            front: [self.front[0], self.front[1], self.front[2]],
+            top: [self.top[0], self.top[1], self.top[2]],
         }
     }
 }
@@ -107,14 +113,14 @@ impl Into<Position> for PositionDef {
 impl From<Position> for PositionDef {
     fn from(value: Position) -> Self {
         Self {
-            position: value.position,
-            front: value.front,
-            top: value.top,
+            position: [value.position[0], value.position[1], value.position[2]],
+            front: [value.front[0], value.front[1], value.front[2]],
+            top: [value.top[0], value.top[1], value.top[2]],
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MumbleLinkDataDef {
     pub ui_version: i64,
     pub ui_tick: i64,
