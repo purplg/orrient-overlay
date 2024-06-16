@@ -6,7 +6,11 @@ edition = "2021"
 [dependencies]
 # bevy = { version = "0.13.2", features = ["wayland"] }
 bevy = { git = "https://github.com/bevyengine/bevy.git", tag = "v0.14.0-rc.2", features = ["wayland"] }
+bincode = "1.3.3"
+crossbeam-channel = "0.5.13"
 env_logger = "0.11.3"
+mumblelink = { path = "mumblelink" }
+mumblelink_reader = "0.3.5"
 
 [workspace]
 members = [
