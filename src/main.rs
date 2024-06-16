@@ -136,8 +136,9 @@ fn toggle_hittest_system(
 ) {
     for event in events.read() {
         if let MumbleLinkEvent::Toggle = event {
-            window.single_mut().cursor.hit_test = !window.single_mut().cursor.hit_test;
-            println!("hittest: {:?}", window.single_mut().cursor.hit_test);
+            let mut window = window.single_mut();
+            window.cursor.hit_test = !window.cursor.hit_test;
+            window.decorations = window.cursor.hit_test;
         }
     }
 }
