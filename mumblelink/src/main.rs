@@ -58,9 +58,11 @@ fn input(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
 fn link(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
     let handler = MumbleLinkHandler::new().unwrap();
     loop {
-        tx.send(MumbleLinkMessage::MumbleLinkData(
+        if let Err(e) = tx.send(MumbleLinkMessage::MumbleLinkData(
             handler.read().unwrap().into(),
-        ));
+        )) {
+            println!("error: {:?}", e);
+        };
         sleep(Duration::from_millis(32));
     }
 }
