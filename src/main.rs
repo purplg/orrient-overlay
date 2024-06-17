@@ -120,11 +120,11 @@ fn setup(mut commands: Commands) {
 
 fn camera_system(
     mut events: EventReader<MumbleLinkEvent>,
-    mut camera: Query<&mut Transform, With<Camera3d>>,
+    mut camera: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
 ) {
     for event in events.read() {
         if let MumbleLinkEvent::MumbleLinkData(mumbledata) = event {
-            let mut transform = camera.single_mut();
+            let (mut transform, projection) = camera.single_mut();
             transform.translation = Vec3::new(
                 mumbledata.camera.position[0],
                 mumbledata.camera.position[1],
@@ -142,6 +142,10 @@ fn camera_system(
             transform.rotation = Quat::IDENTITY;
             transform.rotate_x(forward.y.asin());
             transform.rotate_y(-forward.x.atan2(forward.z));
+
+            if let Projection::Perspective(perspective) = projection.into_inner() {
+                perspective.fov = mumbledata.identity.fov
+            }
         }
     }
 }
