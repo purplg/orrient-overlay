@@ -1,7 +1,6 @@
 use std::net::UdpSocket;
 
 use bevy::color::palettes::basic;
-use bevy::input::keyboard::KeyboardInput;
 use bevy::window::{CompositeAlphaMode, PrimaryWindow, WindowResolution};
 use bevy::{
     prelude::*,
@@ -48,7 +47,7 @@ fn main() {
         Update,
         toggle_hittest_system.run_if(on_event::<MumbleLinkEvent>()),
     );
-    app.add_systems(Update, input.run_if(on_event::<KeyboardInput>()));
+    app.add_systems(Update, input);
 
     app.run();
 }
