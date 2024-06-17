@@ -1,8 +1,9 @@
 mod camera;
 mod link;
 mod player;
+mod ui;
 
-use bevy::window::{CompositeAlphaMode, PrimaryWindow, WindowResolution};
+use bevy::window::{CompositeAlphaMode, WindowResolution};
 use bevy::{
     prelude::*,
     window::{Cursor, WindowLevel},
@@ -34,28 +35,11 @@ fn main() {
     app.add_plugins(camera::Plugin);
     app.add_plugins(link::Plugin);
     app.add_plugins(player::Plugin);
+    app.add_plugins(ui::Plugin);
 
-    app.add_systems(
-        Update,
-        toggle_hittest_system.run_if(on_event::<MumbleLinkEvent>()),
-    );
     app.add_systems(Update, input);
 
     app.run();
-}
-
-fn toggle_hittest_system(
-    mut events: EventReader<MumbleLinkEvent>,
-    mut window: Query<&mut Window, With<PrimaryWindow>>,
-) {
-    for event in events.read() {
-        if let MumbleLinkEvent::Toggle = event {
-            let mut window = window.single_mut();
-            window.cursor.hit_test = !window.cursor.hit_test;
-            window.decorations = window.cursor.hit_test;
-            println!("hittest: {:?}", window.cursor.hit_test);
-        }
-    }
 }
 
 fn input(input: Res<ButtonInput<KeyCode>>, mut mumble_link_event: EventWriter<MumbleLinkEvent>) {
