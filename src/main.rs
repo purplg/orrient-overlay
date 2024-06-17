@@ -13,9 +13,44 @@ use mumblelink::{MumbleLinkDataDef, MumbleLinkMessage};
 fn main() {
     let (tx, rx) = crossbeam_channel::unbounded::<MumbleLinkMessage>();
 
-    // launch_gw();
     std::thread::spawn(|| link(tx));
-    launch_bevy(rx);
+
+    let mut app = App::new();
+
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            title: "GW2Orrient".to_string(),
+            resolution: WindowResolution::new(2560., 1440.),
+            transparent: true,
+            // decorations: false,
+            window_level: WindowLevel::AlwaysOnTop,
+            composite_alpha_mode: CompositeAlphaMode::PreMultiplied,
+            cursor: Cursor {
+                hit_test: false,
+                ..default()
+            },
+            ..default()
+        }),
+        ..default()
+    }));
+
+    app.insert_resource(ClearColor(Color::NONE));
+    app.insert_resource(MumbleLinkMessageReceiver(rx));
+    app.init_resource::<MumbleData>();
+    app.add_event::<MumbleLinkEvent>();
+
+    app.add_systems(Startup, setup);
+    app.add_systems(Update, gizmo);
+    app.add_systems(Update, socket_system);
+    app.add_systems(Update, save_pos_system);
+    app.add_systems(Update, camera_system);
+    app.add_systems(
+        Update,
+        toggle_hittest_system.run_if(on_event::<MumbleLinkEvent>()),
+    );
+    app.add_systems(Update, input.run_if(on_event::<KeyboardInput>()));
+
+    app.run();
 }
 
 fn link(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
@@ -67,45 +102,6 @@ enum MumbleLinkEvent {
     MumbleLinkData(MumbleLinkDataDef),
     Toggle,
     Save,
-}
-
-fn launch_bevy(rx: crossbeam_channel::Receiver<MumbleLinkMessage>) {
-    let mut app = App::new();
-
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-            title: "GW2Orrient".to_string(),
-            resolution: WindowResolution::new(2560., 1440.),
-            transparent: true,
-            // decorations: false,
-            window_level: WindowLevel::AlwaysOnTop,
-            composite_alpha_mode: CompositeAlphaMode::PreMultiplied,
-            cursor: Cursor {
-                hit_test: false,
-                ..default()
-            },
-            ..default()
-        }),
-        ..default()
-    }));
-
-    app.insert_resource(ClearColor(Color::NONE));
-    app.insert_resource(MumbleLinkMessageReceiver(rx));
-    app.init_resource::<MumbleData>();
-    app.add_event::<MumbleLinkEvent>();
-
-    app.add_systems(Startup, setup);
-    app.add_systems(Update, gizmo);
-    app.add_systems(Update, socket_system);
-    app.add_systems(Update, save_pos_system);
-    app.add_systems(Update, camera_system);
-    app.add_systems(
-        Update,
-        toggle_hittest_system.run_if(on_event::<MumbleLinkEvent>()),
-    );
-    app.add_systems(Update, input.run_if(on_event::<KeyboardInput>()));
-
-    app.run();
 }
 
 fn setup(mut commands: Commands) {
