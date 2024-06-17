@@ -109,7 +109,13 @@ fn launch_bevy(rx: crossbeam_channel::Receiver<MumbleLinkMessage>) {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera3dBundle::default());
+    commands.spawn(Camera3dBundle {
+        projection: Projection::Perspective(PerspectiveProjection {
+            fov: 70.32_f32.to_radians(),
+            ..default()
+        }),
+        ..default()
+    });
 }
 
 fn camera_system(
@@ -118,11 +124,11 @@ fn camera_system(
 ) {
     for event in events.read() {
         if let MumbleLinkEvent::MumbleLinkData(mumbledata) = event {
-            let mut pos = camera.single_mut();
-            pos.translation = Vec3::new(
+            let mut transform = camera.single_mut();
+            transform.translation = Vec3::new(
                 mumbledata.camera.position[0],
                 mumbledata.camera.position[1],
-                mumbledata.camera.position[2],
+                -mumbledata.camera.position[2],
             );
 
             let Ok(forward) = Dir3::new(Vec3::new(
@@ -133,13 +139,9 @@ fn camera_system(
                 continue;
             };
 
-            let up = Dir3::new(Vec3::new(
-                mumbledata.camera.top[0],
-                mumbledata.camera.top[1],
-                mumbledata.camera.top[2],
-            ))
-            .unwrap_or(Dir3::Y);
-            pos.look_to(forward, up);
+            transform.rotation = Quat::IDENTITY;
+            transform.rotate_x(forward.y.asin());
+            transform.rotate_y(-forward.x.atan2(forward.z));
         }
     }
 }
@@ -171,7 +173,7 @@ fn save_pos_system(
                     pos.translation = Vec3::new(
                         data.avatar.position[0],
                         data.avatar.position[1],
-                        data.avatar.position[2],
+                        -data.avatar.position[2],
                     );
                     println!("position updated");
                 } else {
@@ -180,7 +182,7 @@ fn save_pos_system(
                         Transform::from_xyz(
                             data.avatar.position[0],
                             data.avatar.position[1],
-                            data.avatar.position[2],
+                            -data.avatar.position[2],
                         ),
                     ));
                     println!("new position saved");
@@ -196,7 +198,7 @@ fn gizmo(
     mut mumbledata: ResMut<MumbleData>,
     query: Query<&Transform, With<SavedPosition>>,
 ) {
-    let position = Vec3::new(0.0, 100., 0.0);
+    let position = Vec3::new(0., 120., 0.);
     gizmos.sphere(position, Quat::default(), 1.0, basic::RED);
 
     for event in events.read() {
@@ -214,7 +216,7 @@ fn gizmo(
         let player = Vec3::new(
             data.avatar.position[0],
             data.avatar.position[1],
-            data.avatar.position[2],
+            -data.avatar.position[2],
         );
         gizmos.arrow(player, player + Vec3::X, basic::RED);
         gizmos.arrow(player, player + Vec3::Y, basic::GREEN);
