@@ -101,9 +101,9 @@ pub struct PositionDef {
 impl From<Position> for PositionDef {
     fn from(value: Position) -> Self {
         Self {
-            position: [value.position[0], value.position[1], value.position[2]],
-            front: [value.front[0], value.front[1], value.front[2]],
-            top: [value.top[0], value.top[1], value.top[2]],
+            position: [value.position[0], value.position[1], -value.position[2]],
+            front: [value.front[0], value.front[1], -value.front[2]],
+            top: [value.top[0], value.top[1], -value.top[2]],
         }
     }
 }

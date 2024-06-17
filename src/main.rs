@@ -125,19 +125,18 @@ fn camera_system(
                 mumbledata.camera.position[2],
             );
 
-            pos.look_to(
-                Dir3::new(Vec3::new(
-                    mumbledata.camera.front[0],
-                    mumbledata.camera.front[1],
-                    mumbledata.camera.front[2],
-                ))
-                .unwrap(),
-                Vec3::new(
-                    mumbledata.camera.top[0],
-                    mumbledata.camera.top[1],
-                    mumbledata.camera.top[2],
-                ),
-            );
+            let forward = Dir3::new_unchecked(Vec3::new(
+                mumbledata.camera.front[0],
+                mumbledata.camera.front[1],
+                mumbledata.camera.front[2],
+            ));
+            let up = Dir3::new(Vec3::new(
+                mumbledata.camera.top[0],
+                mumbledata.camera.top[1],
+                mumbledata.camera.top[2],
+            ))
+            .unwrap_or(Dir3::Y);
+            pos.look_to(forward, up);
         }
     }
 }
