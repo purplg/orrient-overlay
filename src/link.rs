@@ -28,6 +28,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.init_resource::<MumbleData>();
         app.add_event::<MumbleLinkEvent>();
         app.add_systems(Update, socket_system);
+        app.add_systems(Update, update_system);
     }
 }
 
@@ -63,6 +64,14 @@ fn socket_system(rx: Res<MumbleLinkMessageReceiver>, mut events: EventWriter<Mum
             MumbleLinkMessage::Save => {
                 events.send(MumbleLinkEvent::Save);
             }
+        }
+    }
+}
+
+fn update_system(mut events: EventReader<MumbleLinkEvent>, mut data: ResMut<MumbleData>) {
+    for event in events.read() {
+        if let MumbleLinkEvent::Data(content) = event {
+            data.0 = Some(content.clone());
         }
     }
 }

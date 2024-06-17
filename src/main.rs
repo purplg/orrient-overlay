@@ -138,18 +138,11 @@ fn save_pos_system(
 
 fn gizmo(
     mut gizmos: Gizmos,
-    mut events: EventReader<MumbleLinkEvent>,
-    mut mumbledata: ResMut<MumbleData>,
+    mumbledata: Res<MumbleData>,
     query: Query<&Transform, With<SavedPosition>>,
 ) {
     let position = Vec3::new(0., 120., 0.);
     gizmos.sphere(position, Quat::default(), 1.0, basic::RED);
-
-    for event in events.read() {
-        if let MumbleLinkEvent::Data(data) = event {
-            mumbledata.0 = Some(data.clone());
-        }
-    }
 
     if let Ok(saved_pos) = query.get_single() {
         let pos = saved_pos.translation;
