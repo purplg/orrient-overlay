@@ -1,4 +1,4 @@
-use std::net::UdpSocket;
+mod link;
 
 use bevy::color::palettes::basic;
 use bevy::window::{CompositeAlphaMode, PrimaryWindow, WindowResolution};
@@ -6,14 +6,9 @@ use bevy::{
     prelude::*,
     window::{Cursor, WindowLevel},
 };
-use crossbeam_channel::Receiver;
-use mumblelink::{MumbleLinkDataDef, MumbleLinkMessage};
+use link::{MumbleData, MumbleLinkEvent};
 
 fn main() {
-    let (tx, rx) = crossbeam_channel::unbounded::<MumbleLinkMessage>();
-
-    std::thread::spawn(|| link(tx));
-
     let mut app = App::new();
 
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -34,13 +29,11 @@ fn main() {
     }));
 
     app.insert_resource(ClearColor(Color::NONE));
-    app.insert_resource(MumbleLinkMessageReceiver(rx));
-    app.init_resource::<MumbleData>();
-    app.add_event::<MumbleLinkEvent>();
+
+    app.add_plugins(link::Plugin);
 
     app.add_systems(Startup, setup);
     app.add_systems(Update, gizmo);
-    app.add_systems(Update, socket_system);
     app.add_systems(Update, save_pos_system);
     app.add_systems(Update, camera_system);
     app.add_systems(
@@ -52,56 +45,8 @@ fn main() {
     app.run();
 }
 
-fn link(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
-    let socket = UdpSocket::bind("127.0.0.1:5001").unwrap();
-    loop {
-        let mut buf = [0; 240];
-        let _size = socket.recv(&mut buf);
-        let message: MumbleLinkMessage = bincode::deserialize(&buf).unwrap();
-        if let Err(e) = tx.send(message) {
-            println!("e: {:?}", e);
-        }
-    }
-}
-
-fn socket_system(rx: Res<MumbleLinkMessageReceiver>, mut events: EventWriter<MumbleLinkEvent>) {
-    let mut message: Option<MumbleLinkMessage> = None;
-
-    // Only care about latest
-    while let Ok(inner) = rx.try_recv() {
-        message = Some(inner);
-    }
-
-    if let Some(message) = message {
-        match message {
-            MumbleLinkMessage::MumbleLinkData(data) => {
-                events.send(MumbleLinkEvent::MumbleLinkData(data));
-            }
-            MumbleLinkMessage::Toggle => {
-                events.send(MumbleLinkEvent::Toggle);
-            }
-            MumbleLinkMessage::Save => {
-                events.send(MumbleLinkEvent::Save);
-            }
-        }
-    }
-}
-
-#[derive(Resource, Deref)]
-struct MumbleLinkMessageReceiver(Receiver<MumbleLinkMessage>);
-
-#[derive(Resource, Default)]
-struct MumbleData(Option<MumbleLinkDataDef>);
-
 #[derive(Component)]
 struct SavedPosition;
-
-#[derive(Event)]
-enum MumbleLinkEvent {
-    MumbleLinkData(MumbleLinkDataDef),
-    Toggle,
-    Save,
-}
 
 fn setup(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
