@@ -86,31 +86,108 @@ impl From<Position> for PositionDef {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+struct Identity {
+    pub name: String,
+    pub profession: u8,
+    pub spec: u8,
+    pub race: u8,
+    pub map_id: usize,
+    // obsolete
+    #[serde(skip)]
+    pub _world_id: usize,
+    pub team_color_id: usize,
+    pub commander: bool,
+    pub fov: f32,
+    pub uisz: u8,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum Profession {
+    Unknown = 0,
+    Guardian = 1,
+    Warrior = 2,
+    Engineer = 3,
+    Ranger = 4,
+    Thief = 5,
+    Elementalist = 6,
+    Mesmer = 7,
+    Necromancer = 8,
+    Revenant = 9,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct IdentityDef {
+    pub name: String,
+    pub profession: Profession,
+    pub spec: u8,
+    pub race: u8,
+    pub map_id: usize,
+    pub team_color_id: usize,
+    pub commander: bool,
+    pub fov: f32,
+    pub uisz: u8,
+}
+
+impl Profession {
+    fn from_u8(value: u8) -> Self {
+        match value {
+            1 => Profession::Guardian,
+            2 => Profession::Warrior,
+            3 => Profession::Engineer,
+            4 => Profession::Ranger,
+            5 => Profession::Thief,
+            6 => Profession::Elementalist,
+            7 => Profession::Mesmer,
+            8 => Profession::Necromancer,
+            9 => Profession::Revenant,
+            _ => Profession::Unknown,
+        }
+    }
+}
+
+impl IdentityDef {
+    fn from_string(value: String) -> Result<Self, serde_json::Error> {
+        let identity: Identity = serde_json::from_str(value.as_str())?;
+        Ok(Self {
+            name: identity.name,
+            profession: Profession::from_u8(identity.profession),
+            spec: identity.spec,
+            race: identity.race,
+            map_id: identity.map_id,
+            team_color_id: identity.team_color_id,
+            commander: identity.commander,
+            fov: identity.fov,
+            uisz: identity.uisz,
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MumbleLinkDataDef {
     pub ui_version: i64,
     pub ui_tick: i64,
     pub avatar: PositionDef,
     pub name: String,
     pub camera: PositionDef,
-    pub identity: String,
+    pub identity: IdentityDef,
     pub context_len: i64,
     pub context: GW2Context,
     pub description: String,
 }
 
-impl From<MumbleLinkData> for MumbleLinkDataDef {
-    fn from(value: MumbleLinkData) -> Self {
+impl MumbleLinkDataDef {
+    pub fn from_data(value: MumbleLinkData) -> Result<MumbleLinkDataDef, serde_json::Error> {
         let context = GW2Context::from_bytes(value.context).unwrap();
-        Self {
+        Ok(Self {
             ui_version: value.ui_version,
             ui_tick: value.ui_tick,
             avatar: value.avatar.into(),
             name: value.name,
             camera: value.camera.into(),
-            identity: value.identity,
+            identity: IdentityDef::from_string(value.identity)?,
             context_len: value.context_len,
             context,
             description: value.description,
-        }
+        })
     }
 }

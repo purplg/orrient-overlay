@@ -2510,6 +2510,7 @@ dependencies = [
  "mumblelink_reader",
  "rdev",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

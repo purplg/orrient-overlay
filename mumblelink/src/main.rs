@@ -63,10 +63,23 @@ fn input(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
 fn link(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
     let handler = MumbleLinkHandler::new().unwrap();
     loop {
-        if let Err(e) = tx.send(MumbleLinkMessage::MumbleLinkData({
-            let data: MumbleLinkDataDef = handler.read().unwrap().into();
-            data
-        })) {
+        let data = match handler.read() {
+            Ok(data) => data,
+            Err(error) => {
+                println!("Could not read data... weird: {:?}", error);
+                continue;
+            }
+        };
+
+        let def = match MumbleLinkDataDef::from_data(data.clone()) {
+            Ok(def) => def,
+            Err(error) => {
+                println!("Error deserializing data: {:?}\n{:?}", error, data);
+                continue;
+            }
+        };
+
+        if let Err(e) = tx.send(MumbleLinkMessage::MumbleLinkData(def)) {
             println!("error: {:?}", e);
         };
         sleep(Duration::from_millis(32));
