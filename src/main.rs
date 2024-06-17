@@ -125,11 +125,14 @@ fn camera_system(
                 mumbledata.camera.position[2],
             );
 
-            let forward = Dir3::new_unchecked(Vec3::new(
+            let Ok(forward) = Dir3::new(Vec3::new(
                 mumbledata.camera.front[0],
                 mumbledata.camera.front[1],
                 mumbledata.camera.front[2],
-            ));
+            )) else {
+                continue;
+            };
+
             let up = Dir3::new(Vec3::new(
                 mumbledata.camera.top[0],
                 mumbledata.camera.top[1],
