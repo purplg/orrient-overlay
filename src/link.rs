@@ -36,7 +36,7 @@ struct MumbleLinkMessageReceiver(pub Receiver<MumbleLinkMessage>);
 
 #[derive(Event)]
 pub enum MumbleLinkEvent {
-    MumbleLinkData(MumbleLinkDataDef),
+    Data(MumbleLinkDataDef),
     Toggle,
     Save,
 }
@@ -55,7 +55,7 @@ fn socket_system(rx: Res<MumbleLinkMessageReceiver>, mut events: EventWriter<Mum
     if let Some(message) = message {
         match message {
             MumbleLinkMessage::MumbleLinkData(data) => {
-                events.send(MumbleLinkEvent::MumbleLinkData(data));
+                events.send(MumbleLinkEvent::Data(data));
             }
             MumbleLinkMessage::Toggle => {
                 events.send(MumbleLinkEvent::Toggle);

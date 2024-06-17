@@ -63,7 +63,7 @@ fn camera_system(
     mut camera: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
 ) {
     for event in events.read() {
-        if let MumbleLinkEvent::MumbleLinkData(mumbledata) = event {
+        if let MumbleLinkEvent::Data(mumbledata) = event {
             let (mut transform, projection) = camera.single_mut();
             transform.translation = Vec3::new(
                 mumbledata.camera.position[0],
@@ -146,7 +146,7 @@ fn gizmo(
     gizmos.sphere(position, Quat::default(), 1.0, basic::RED);
 
     for event in events.read() {
-        if let MumbleLinkEvent::MumbleLinkData(data) = event {
+        if let MumbleLinkEvent::Data(data) = event {
             mumbledata.0 = Some(data.clone());
         }
     }
