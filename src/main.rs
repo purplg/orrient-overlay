@@ -1,3 +1,4 @@
+mod camera;
 mod link;
 mod player;
 
@@ -30,11 +31,10 @@ fn main() {
 
     app.insert_resource(ClearColor(Color::NONE));
 
+    app.add_plugins(camera::Plugin);
     app.add_plugins(link::Plugin);
     app.add_plugins(player::Plugin);
 
-    app.add_systems(Startup, setup);
-    app.add_systems(Update, camera_system);
     app.add_systems(
         Update,
         toggle_hittest_system.run_if(on_event::<MumbleLinkEvent>()),
@@ -42,48 +42,6 @@ fn main() {
     app.add_systems(Update, input);
 
     app.run();
-}
-
-fn setup(mut commands: Commands) {
-    commands.spawn(Camera3dBundle {
-        projection: Projection::Perspective(PerspectiveProjection {
-            fov: 70.32_f32.to_radians(),
-            ..default()
-        }),
-        ..default()
-    });
-}
-
-fn camera_system(
-    mut events: EventReader<MumbleLinkEvent>,
-    mut camera: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
-) {
-    for event in events.read() {
-        if let MumbleLinkEvent::Data(mumbledata) = event {
-            let (mut transform, projection) = camera.single_mut();
-            transform.translation = Vec3::new(
-                mumbledata.camera.position[0],
-                mumbledata.camera.position[1],
-                -mumbledata.camera.position[2],
-            );
-
-            let Ok(forward) = Dir3::new(Vec3::new(
-                mumbledata.camera.front[0],
-                mumbledata.camera.front[1],
-                mumbledata.camera.front[2],
-            )) else {
-                continue;
-            };
-
-            transform.rotation = Quat::IDENTITY;
-            transform.rotate_x(forward.y.asin());
-            transform.rotate_y(-forward.x.atan2(forward.z));
-
-            if let Projection::Perspective(perspective) = projection.into_inner() {
-                perspective.fov = mumbledata.identity.fov
-            }
-        }
-    }
 }
 
 fn toggle_hittest_system(
