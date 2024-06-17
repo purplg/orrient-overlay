@@ -1,6 +1,6 @@
 use std::{io::Seek, net::Ipv4Addr};
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt};
 use mumblelink_reader::mumble_link::{MumbleLinkData, Position, Vector3D};
 use serde::{Deserialize, Serialize};
 
@@ -65,29 +65,6 @@ impl GW2Context {
             process_id: cursor.read_u32::<LittleEndian>()?,
             mount_index: cursor.read_u8()?,
         })
-    }
-
-    fn into_bytes(self) -> Result<[u8; 256], std::io::Error> {
-        let mut cursor = std::io::Cursor::new([0u8; 256]);
-        cursor.write_u32::<LittleEndian>(self.unknown)?;
-        cursor.write_u32::<LittleEndian>(self.server_address.to_bits())?;
-        cursor.write_u32::<LittleEndian>(self.map_id)?;
-        cursor.write_u32::<LittleEndian>(self.map_type)?;
-        cursor.write_u32::<LittleEndian>(self.shard_id)?;
-        cursor.write_u32::<LittleEndian>(self.instance)?;
-        cursor.write_u32::<LittleEndian>(self.build_id)?;
-        cursor.write_u32::<LittleEndian>(self.ui_state)?;
-        cursor.write_u16::<LittleEndian>(self.compass_width)?;
-        cursor.write_u16::<LittleEndian>(self.compass_height)?;
-        cursor.write_f32::<LittleEndian>(self.compress_rotation)?;
-        cursor.write_f32::<LittleEndian>(self.player_x)?;
-        cursor.write_f32::<LittleEndian>(self.player_y)?;
-        cursor.write_f32::<LittleEndian>(self.map_center_x)?;
-        cursor.write_f32::<LittleEndian>(self.map_center_y)?;
-        cursor.write_f32::<LittleEndian>(self.map_scale)?;
-        cursor.write_u32::<LittleEndian>(self.process_id)?;
-        cursor.write_u8(self.mount_index)?;
-        Ok(cursor.into_inner())
     }
 }
 
