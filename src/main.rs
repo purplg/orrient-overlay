@@ -55,8 +55,8 @@ fn main() {
 fn link(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
     let socket = UdpSocket::bind("127.0.0.1:5001").unwrap();
     loop {
-        let mut buf = [0; 4096];
-        let _ = socket.recv(&mut buf);
+        let mut buf = [0; 240];
+        let _size = socket.recv(&mut buf);
         let message: MumbleLinkMessage = bincode::deserialize(&buf).unwrap();
         if let Err(e) = tx.send(message) {
             println!("e: {:?}", e);
