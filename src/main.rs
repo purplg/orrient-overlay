@@ -1,6 +1,7 @@
 mod camera;
 mod input;
 mod link;
+mod marker;
 mod player;
 mod ui;
 
@@ -37,6 +38,7 @@ fn main() {
     app.add_plugins(link::Plugin);
     app.add_plugins(player::Plugin);
     app.add_plugins(ui::Plugin);
+    app.add_plugins(marker::Plugin);
 
     app.run();
 }
