@@ -62,6 +62,31 @@ fn input(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
 
 fn link(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
     let handler = MumbleLinkHandler::new().unwrap();
+
+    println!("Waiting for MumbleLink...");
+
+    loop {
+        match handler.read() {
+            Ok(data) => {
+                if data.ui_tick > 0 {
+                    // If we have any ui_tick's, then GW2 should be
+                    // running and we can continue to the next loop to
+                    // actually parse and send the data.
+                    break;
+                } else {
+                    // Otherwise, we wait a second to try again.
+                    sleep(Duration::from_secs(1));
+                }
+            }
+            Err(error) => {
+                println!("Could not read data... weird: {:?}", error);
+                sleep(Duration::from_secs(1));
+            }
+        }
+    }
+
+    println!("Connected!");
+
     loop {
         let data = match handler.read() {
             Ok(data) => data,
