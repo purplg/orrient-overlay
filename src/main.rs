@@ -11,6 +11,18 @@ use bevy::{
     window::{Cursor, WindowLevel},
 };
 
+#[derive(Event)]
+pub enum OrrientEvent {
+    CameraUpdate {
+        position: Vec3,
+        facing: Dir3,
+        fov: f32,
+    },
+    PlayerPositon(Vec3),
+    ToggleUI,
+    SavePosition,
+}
+
 fn main() {
     let mut app = App::new();
 
@@ -31,6 +43,7 @@ fn main() {
         ..default()
     }));
 
+    app.add_event::<OrrientEvent>();
     app.insert_resource(ClearColor(Color::NONE));
 
     app.add_plugins(camera::Plugin);

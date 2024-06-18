@@ -2,7 +2,9 @@ use bevy::prelude::*;
 use crossbeam_channel::Receiver;
 use std::net::UdpSocket;
 
-use mumblelink::{MumbleLinkDataDef, MumbleLinkMessage};
+use mumblelink::MumbleLinkMessage;
+
+use crate::OrrientEvent;
 
 fn run(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
     let socket = UdpSocket::bind("127.0.0.1:5001").unwrap();
@@ -25,27 +27,14 @@ impl bevy::prelude::Plugin for Plugin {
         std::thread::spawn(|| run(tx));
 
         app.insert_resource(MumbleLinkMessageReceiver(rx));
-        app.init_resource::<MumbleData>();
-        app.add_event::<MumbleLinkEvent>();
         app.add_systems(Update, socket_system);
-        app.add_systems(Update, update_system);
     }
 }
 
 #[derive(Resource, Deref)]
 struct MumbleLinkMessageReceiver(pub Receiver<MumbleLinkMessage>);
 
-#[derive(Event)]
-pub enum MumbleLinkEvent {
-    Data(MumbleLinkDataDef),
-    Toggle,
-    Save,
-}
-
-#[derive(Resource, Default, Deref, DerefMut)]
-pub struct MumbleData(pub Option<MumbleLinkDataDef>);
-
-fn socket_system(rx: Res<MumbleLinkMessageReceiver>, mut events: EventWriter<MumbleLinkEvent>) {
+fn socket_system(rx: Res<MumbleLinkMessageReceiver>, mut events: EventWriter<OrrientEvent>) {
     let mut message: Option<MumbleLinkMessage> = None;
 
     // Only care about latest
@@ -53,25 +42,40 @@ fn socket_system(rx: Res<MumbleLinkMessageReceiver>, mut events: EventWriter<Mum
         message = Some(inner);
     }
 
-    if let Some(message) = message {
-        match message {
-            MumbleLinkMessage::MumbleLinkData(data) => {
-                events.send(MumbleLinkEvent::Data(data));
-            }
-            MumbleLinkMessage::Toggle => {
-                events.send(MumbleLinkEvent::Toggle);
-            }
-            MumbleLinkMessage::Save => {
-                events.send(MumbleLinkEvent::Save);
-            }
-        }
-    }
-}
+    let Some(message) = message else {
+        return;
+    };
 
-fn update_system(mut events: EventReader<MumbleLinkEvent>, mut data: ResMut<MumbleData>) {
-    for event in events.read() {
-        if let MumbleLinkEvent::Data(content) = event {
-            data.0 = Some(content.clone());
+    match message {
+        MumbleLinkMessage::MumbleLinkData(data) => {
+            // events.send(MumbleLinkEvent::Data(data));
+            if let Ok(facing) = Dir3::new(Vec3::new(
+                data.camera.front[0],
+                data.camera.front[1],
+                data.camera.front[2],
+            )) {
+                events.send(OrrientEvent::CameraUpdate {
+                    position: Vec3::new(
+                        data.camera.position[0],
+                        data.camera.position[1],
+                        -data.camera.position[2],
+                    ),
+                    facing,
+                    fov: data.identity.fov,
+                });
+            }
+
+            events.send(OrrientEvent::PlayerPositon(Vec3 {
+                x: data.avatar.position[0],
+                y: data.avatar.position[1],
+                z: -data.avatar.position[2],
+            }));
+        }
+        MumbleLinkMessage::Toggle => {
+            events.send(OrrientEvent::ToggleUI);
+        }
+        MumbleLinkMessage::Save => {
+            events.send(OrrientEvent::SavePosition);
         }
     }
 }

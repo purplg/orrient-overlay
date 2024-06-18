@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::link::MumbleLinkEvent;
+use crate::OrrientEvent;
 
 pub(crate) struct Plugin;
 
@@ -22,33 +22,28 @@ fn setup(mut commands: Commands) {
 }
 
 fn camera_system(
-    mut events: EventReader<MumbleLinkEvent>,
+    mut events: EventReader<OrrientEvent>,
     mut camera: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
 ) {
     for event in events.read() {
-        if let MumbleLinkEvent::Data(mumbledata) = event {
-            let (mut transform, projection) = camera.single_mut();
-            transform.translation = Vec3::new(
-                mumbledata.camera.position[0],
-                mumbledata.camera.position[1],
-                -mumbledata.camera.position[2],
-            );
+        match event {
+            OrrientEvent::CameraUpdate {
+                position,
+                facing,
+                fov,
+            } => {
+                let (mut transform, projection) = camera.single_mut();
+                transform.translation = *position;
 
-            let Ok(forward) = Dir3::new(Vec3::new(
-                mumbledata.camera.front[0],
-                mumbledata.camera.front[1],
-                mumbledata.camera.front[2],
-            )) else {
-                continue;
-            };
+                transform.rotation = Quat::IDENTITY;
+                transform.rotate_x(facing.y.asin());
+                transform.rotate_y(-facing.x.atan2(facing.z));
 
-            transform.rotation = Quat::IDENTITY;
-            transform.rotate_x(forward.y.asin());
-            transform.rotate_y(-forward.x.atan2(forward.z));
-
-            if let Projection::Perspective(perspective) = projection.into_inner() {
-                perspective.fov = mumbledata.identity.fov
+                if let Projection::Perspective(perspective) = projection.into_inner() {
+                    perspective.fov = *fov;
+                }
             }
+            _ => (),
         }
     }
 }

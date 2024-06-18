@@ -1,6 +1,6 @@
 use bevy::{ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
 
-use crate::link::MumbleLinkEvent;
+use crate::OrrientEvent;
 
 pub(crate) struct Plugin;
 
@@ -10,7 +10,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Update, icon_button_system);
         app.add_systems(
             Update,
-            toggle_hittest_system.run_if(on_event::<MumbleLinkEvent>()),
+            toggle_hittest_system.run_if(on_event::<OrrientEvent>()),
         );
     }
 }
@@ -111,12 +111,12 @@ fn icon_button_system(button: Query<&Interaction, (Changed<Interaction>, With<Ma
 }
 
 fn toggle_hittest_system(
-    mut events: EventReader<MumbleLinkEvent>,
+    mut events: EventReader<OrrientEvent>,
     mut window: Query<&mut Window, With<PrimaryWindow>>,
     mut ui: Query<&mut Visibility, With<MainCanvas>>,
 ) {
     for event in events.read() {
-        if let MumbleLinkEvent::Toggle = event {
+        if let OrrientEvent::ToggleUI = event {
             let mut window = window.single_mut();
             window.cursor.hit_test = !window.cursor.hit_test;
 
