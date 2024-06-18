@@ -2123,6 +2123,7 @@ dependencies = [
  "bincode",
  "crossbeam-channel",
  "env_logger",
+ "marker",
  "mumblelink",
  "mumblelink_reader",
  "quick-xml 0.32.0",

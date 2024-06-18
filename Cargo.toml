@@ -10,12 +10,13 @@ bincode = "1.3.3"
 crossbeam-channel = "0.5.13"
 env_logger = "0.11.3"
 mumblelink = { path = "mumblelink" }
+marker = { path = "marker" }
 mumblelink_reader = "0.3.5"
 serde = { version = "1.0.203", features = ["derive"] }
 quick-xml = { version = "0.32.0", features = ["serialize"] }
 
 [workspace]
 members = [ "marker",
-    "mumblelink",
-    "marker",
+  "mumblelink",
+  "marker",
 ]
