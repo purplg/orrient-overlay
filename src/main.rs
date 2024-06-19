@@ -10,12 +10,13 @@ use bevy::{
     prelude::*,
     window::{Cursor, WindowLevel},
 };
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 #[derive(Event)]
 pub enum OrrientEvent {
     CameraUpdate {
         position: Vec3,
-        facing: Dir3,
+        facing: Vec3,
         fov: f32,
     },
     PlayerPositon(Vec3),
@@ -31,17 +32,19 @@ fn main() {
             title: "GW2Orrient".to_string(),
             resolution: WindowResolution::new(2560., 1440.),
             transparent: true,
-            // decorations: false,
+            decorations: true,
             window_level: WindowLevel::AlwaysOnTop,
             composite_alpha_mode: CompositeAlphaMode::PreMultiplied,
             cursor: Cursor {
-                hit_test: false,
+                hit_test: true,
                 ..default()
             },
             ..default()
         }),
         ..default()
     }));
+
+    app.add_plugins(WorldInspectorPlugin::new());
 
     app.add_event::<OrrientEvent>();
     app.insert_resource(ClearColor(Color::NONE));

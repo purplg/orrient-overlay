@@ -1,4 +1,3 @@
-use bevy::color::palettes::basic;
 use bevy::prelude::*;
 
 use crate::OrrientEvent;
@@ -44,17 +43,17 @@ fn position(
     saved: Query<&Transform, With<SavedPosition>>,
 ) {
     let position = Vec3::new(0., 120., 0.);
-    gizmos.sphere(position, Quat::default(), 1.0, basic::RED);
+    gizmos.sphere(position, Quat::default(), 1.0, Color::RED);
 
     if let Ok(saved_pos) = saved.get_single() {
         let pos = saved_pos.translation;
-        gizmos.sphere(pos, Quat::default(), 1.0, basic::FUCHSIA);
+        gizmos.sphere(pos, Quat::default(), 1.0, Color::FUCHSIA);
     }
 
     let player = player.single().translation;
-    gizmos.arrow(player, player + Vec3::X, basic::RED);
-    gizmos.arrow(player, player + Vec3::Y, basic::GREEN);
-    gizmos.arrow(player, player + Vec3::Z, basic::BLUE);
+    gizmos.arrow(player, player + Vec3::X, Color::RED);
+    gizmos.arrow(player, player + Vec3::Y, Color::GREEN);
+    gizmos.arrow(player, player + Vec3::Z, Color::BLUE);
 }
 
 #[derive(Component)]

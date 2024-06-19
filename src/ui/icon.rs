@@ -24,18 +24,23 @@ const ICON_POSITION: Vec2 = Vec2 {
 pub(super) struct MainIcon;
 
 impl UIElement for MainIcon {
-    fn build(&self, entity: &mut EntityCommands) {
-        entity.insert(ButtonBundle {
-            button: Button,
-            style: Style {
-                left: Val::Px(ICON_POSITION.x),
-                top: Val::Px(ICON_POSITION.y),
-                width: Val::Px(ICON_WIDTH),
-                height: Val::Px(ICON_HEIGHT),
-                ..default()
-            },
-            ..default()
-        });
+    fn build(&self, world: &mut World) -> Entity {
+        world
+            .spawn((
+                Name::new("MainIcon"),
+                ButtonBundle {
+                    button: Button,
+                    style: Style {
+                        left: Val::Px(ICON_POSITION.x),
+                        top: Val::Px(ICON_POSITION.y),
+                        width: Val::Px(ICON_WIDTH),
+                        height: Val::Px(ICON_HEIGHT),
+                        ..default()
+                    },
+                    ..default()
+                },
+            ))
+            .id()
     }
 }
 

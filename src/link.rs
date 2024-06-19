@@ -49,21 +49,21 @@ fn socket_system(rx: Res<MumbleLinkMessageReceiver>, mut events: EventWriter<Orr
     match message {
         MumbleLinkMessage::MumbleLinkData(data) => {
             // events.send(MumbleLinkEvent::Data(data));
-            if let Ok(facing) = Dir3::new(Vec3::new(
+            let facing = Vec3::new(
                 data.camera.front[0],
                 data.camera.front[1],
                 data.camera.front[2],
-            )) {
-                events.send(OrrientEvent::CameraUpdate {
-                    position: Vec3::new(
-                        data.camera.position[0],
-                        data.camera.position[1],
-                        -data.camera.position[2],
-                    ),
-                    facing,
-                    fov: data.identity.fov,
-                });
-            }
+            );
+
+            events.send(OrrientEvent::CameraUpdate {
+                position: Vec3::new(
+                    data.camera.position[0],
+                    data.camera.position[1],
+                    -data.camera.position[2],
+                ),
+                facing,
+                fov: data.identity.fov,
+            });
 
             events.send(OrrientEvent::PlayerPositon(Vec3 {
                 x: data.avatar.position[0],

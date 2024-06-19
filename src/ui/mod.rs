@@ -1,7 +1,8 @@
 mod icon;
 mod marker_list;
 
-use bevy::{ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
+use bevy::{prelude::*, window::PrimaryWindow};
+use icon::MainIcon;
 
 use crate::{marker::Markers, OrrientEvent};
 
@@ -19,23 +20,17 @@ impl bevy::prelude::Plugin for Plugin {
     }
 }
 
-fn setup(mut commands: Commands, markers: Res<Markers>) {
-    MainCanvas.insert(&mut commands.spawn_empty());
-    marker_list::MarkerList(markers.clone()).insert(&mut commands.spawn_empty());
+fn setup(world: &mut World) {
+    let parent = world.spawn(NodeBundle::default()).id();
+    UIElement::spawn(MainCanvas, world, parent);
 }
 
 trait UIElement: Component + Sized {
-    fn insert(self, entity: &mut EntityCommands) {
-        self.build(entity);
-        entity.insert(self);
-    }
+    fn build(&self, world: &mut World) -> Entity;
 
-    fn build(&self, entity: &mut EntityCommands);
-
-    fn as_child(self, entity: &mut ChildBuilder) {
-        let mut entity = entity.spawn_empty();
-        self.build(&mut entity);
-        entity.insert(self);
+    fn spawn(self, world: &mut World, parent: Entity) {
+        let child = self.build(world);
+        world.entity_mut(child).set_parent(parent).insert(self);
     }
 }
 
@@ -43,18 +38,27 @@ trait UIElement: Component + Sized {
 struct MainCanvas;
 
 impl UIElement for MainCanvas {
-    fn build(&self, entity: &mut EntityCommands) {
-        entity
-            .insert(NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.),
-                    height: Val::Percent(100.),
+    fn build(&self, world: &mut World) -> Entity {
+        let entity = world
+            .spawn((
+                Name::new("MainCanvas"),
+                NodeBundle {
+                    style: Style {
+                        width: Val::Percent(100.),
+                        height: Val::Percent(100.),
+                        ..default()
+                    },
+                    visibility: Visibility::Visible,
                     ..default()
                 },
-                visibility: Visibility::Visible,
-                ..default()
-            })
-            .with_children(|parent| icon::MainIcon.as_child(parent));
+            ))
+            .id();
+
+        UIElement::spawn(icon::MainIcon, world, entity);
+        let markers = world.resource::<Markers>();
+        UIElement::spawn(marker_list::MarkerList(markers.clone()), world, entity);
+
+        entity
     }
 }
 

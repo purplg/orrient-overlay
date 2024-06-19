@@ -10,9 +10,9 @@ pub struct OverlayData {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MarkerCategory {
-    #[serde(rename = "@name", alias = "@bh-name", default)]
+    #[serde(rename = "@name")]
     pub name: String,
-    #[serde(rename = "@DisplayName", alias = "@bh-DisplayName")]
+    #[serde(rename = "@DisplayName")]
     pub display_name: String,
     #[serde(rename = "@IsSeparator")]
     pub is_separator: Option<bool>,
