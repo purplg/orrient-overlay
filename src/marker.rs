@@ -21,7 +21,7 @@ impl bevy::prelude::Plugin for Plugin {
             }
         };
 
-        let mut markers = Markers::default();
+        let mut markers = MarkerSet::default();
 
         for data in iter
             // List directory contents
@@ -41,6 +41,7 @@ impl bevy::prelude::Plugin for Plugin {
                 markers.insert(category);
             }
         }
+        println!("markers loaded");
         app.insert_resource(markers);
     }
 }
@@ -53,7 +54,8 @@ impl From<MarkerCategory> for Category {
             subcategories: {
                 let mut categories = HashMap::<String, Category>::default();
                 for category in category.categories {
-                    categories.insert(category.name.clone(), category.into());
+                    let id = category.name.clone();
+                    categories.insert(id, category.into());
                 }
                 categories
             },
@@ -62,12 +64,16 @@ impl From<MarkerCategory> for Category {
 }
 
 #[derive(Resource, Clone, Deref, Debug, Default)]
-pub struct Markers(HashMap<String, Category>);
+pub struct MarkerSet(HashMap<String, Category>);
 
-impl Markers {
+impl MarkerSet {
     fn insert(&mut self, marker: MarkerCategory) {
         let category: Category = marker.into();
-        self.0.insert(category.id.clone(), category);
+        if let Some(existing) = self.0.get_mut(&category.id) {
+            existing.merge(category.subcategories);
+        } else {
+            self.0.insert(category.id.clone(), category);
+        }
     }
 }
 
@@ -76,4 +82,20 @@ pub struct Category {
     pub id: String,
     pub name: String,
     pub subcategories: HashMap<String, Category>,
+}
+
+impl Category {
+    fn insert(&mut self, category: Category) {
+        if let Some(subcat) = self.subcategories.get_mut(&category.id) {
+            subcat.merge(category.subcategories)
+        } else {
+            self.subcategories.insert(category.id.clone(), category);
+        }
+    }
+
+    fn merge(&mut self, mut subcategories: HashMap<String, Category>) {
+        for (_, category) in subcategories.drain() {
+            self.insert(category)
+        }
+    }
 }

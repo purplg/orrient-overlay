@@ -4,7 +4,7 @@ mod marker_list;
 use bevy::{prelude::*, window::PrimaryWindow};
 use icon::MainIcon;
 
-use crate::{marker::Markers, OrrientEvent};
+use crate::{marker::MarkerSet, OrrientEvent};
 
 pub(crate) struct Plugin;
 
@@ -55,7 +55,7 @@ impl UIElement for MainCanvas {
             .id();
 
         UIElement::spawn(icon::MainIcon, world, entity);
-        let markers = world.resource::<Markers>();
+        let markers = world.resource::<MarkerSet>();
         UIElement::spawn(marker_list::MarkerList(markers.clone()), world, entity);
 
         entity

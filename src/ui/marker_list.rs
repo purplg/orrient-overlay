@@ -3,7 +3,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::marker::{Category, Markers};
+use crate::marker::{Category, MarkerSet};
 
 use super::UIElement;
 
@@ -24,7 +24,7 @@ struct ScrollBox {
 }
 
 #[derive(Component, Default)]
-pub struct MarkerList(pub Markers);
+pub struct MarkerList(pub MarkerSet);
 
 impl UIElement for MarkerList {
     fn build(&self, world: &mut World) -> Entity {
@@ -112,9 +112,6 @@ impl UIElement for MarkerListItem {
 
 #[derive(Component)]
 struct SubCategories(String);
-
-#[derive(Component)]
-struct Collapsed;
 
 #[derive(Component)]
 struct MarkerText(String);
