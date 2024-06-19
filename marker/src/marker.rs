@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn test_markers() {
-        let iter = std::fs::read_dir("../markers").unwrap();
+        let iter = std::fs::read_dir("~/.config/orrient/markers").unwrap();
         for path in iter
             .filter_map(|file| file.ok().map(|file| file.path()))
             .filter(|file| file.is_file())
