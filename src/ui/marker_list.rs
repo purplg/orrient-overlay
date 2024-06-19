@@ -50,7 +50,7 @@ impl UIElement for MarkerList {
             ))
             .id();
 
-        for category in self.0.values() {
+        for category in self.0.categories.values() {
             UIElement::spawn(MarkerListItem(category.clone()), world, parent);
         }
 

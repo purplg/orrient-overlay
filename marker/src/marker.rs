@@ -21,7 +21,7 @@ pub struct MarkerCategory {
     pub categories: Vec<MarkerCategory>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct POIs {
     #[serde(rename = "POI", default)]
     pub poi: Vec<POI>,
@@ -29,7 +29,7 @@ pub struct POIs {
     pub trail: Vec<Trail>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct POI {
     #[serde(rename = "@MapId", skip_serializing_if = "Option::is_none", default)]
     pub map_id: Option<usize>,
@@ -45,7 +45,7 @@ pub struct POI {
     pub guid: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Trail {
     #[serde(rename = "@type")]
     pub kind: String,

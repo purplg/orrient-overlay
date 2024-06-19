@@ -1,5 +1,5 @@
 use bevy::{prelude::*, utils::HashMap};
-use marker::MarkerCategory;
+use marker::{MarkerCategory, POIs};
 
 use crate::OrrientEvent;
 
@@ -14,7 +14,9 @@ impl bevy::prelude::Plugin for Plugin {
 }
 
 fn setup(mut events: EventWriter<OrrientEvent>) {
-    events.send(OrrientEvent::LoadMarkers("tw_lws03e05_draconismons.xml".into()));
+    events.send(OrrientEvent::LoadMarkers(
+        "tw_lws03e05_draconismons.xml".into(),
+    ));
 }
 
 fn load_marker(mut markerset: ResMut<MarkerSet>, mut events: EventReader<OrrientEvent>) {
@@ -27,10 +29,12 @@ fn load_marker(mut markerset: ResMut<MarkerSet>, mut events: EventReader<Orrient
                 .join(filename);
 
             if let Ok(data) = marker::read(&marker_path) {
-                markerset.0.clear();
+                markerset.categories.clear();
+                markerset.pois.clear();
                 for category in data.categories {
                     markerset.insert(category);
                 }
+                markerset.pois = data.pois;
             }
         }
     }
@@ -53,16 +57,19 @@ impl From<MarkerCategory> for Category {
     }
 }
 
-#[derive(Resource, Clone, Deref, Debug, Default)]
-pub struct MarkerSet(HashMap<String, Category>);
+#[derive(Resource, Clone, Debug, Default)]
+pub struct MarkerSet {
+    pub categories: HashMap<String, Category>,
+    pub pois: Vec<POIs>,
+}
 
 impl MarkerSet {
     fn insert(&mut self, marker: MarkerCategory) {
         let category: Category = marker.into();
-        if let Some(existing) = self.0.get_mut(&category.id) {
+        if let Some(existing) = self.categories.get_mut(&category.id) {
             existing.merge(category.subcategories);
         } else {
-            self.0.insert(category.id.clone(), category);
+            self.categories.insert(category.id.clone(), category);
         }
     }
 }
