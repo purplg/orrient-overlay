@@ -2,7 +2,6 @@ mod icon;
 mod marker_list;
 
 use bevy::{prelude::*, window::PrimaryWindow};
-use icon::MainIcon;
 
 use crate::{marker::MarkerSet, OrrientEvent};
 
@@ -10,7 +9,9 @@ pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup);
+        app.add_event::<ReloadUI>();
+        app.add_systems(Startup, load_ui);
+        app.add_systems(Update, load_ui.run_if(on_event::<ReloadUI>()));
         app.add_systems(
             Update,
             toggle_hittest_system.run_if(on_event::<OrrientEvent>()),
@@ -20,7 +21,16 @@ impl bevy::prelude::Plugin for Plugin {
     }
 }
 
-fn setup(world: &mut World) {
+#[derive(Event)]
+struct ReloadUI;
+
+fn load_ui(world: &mut World) {
+    if let Ok(maincanvas) = world
+        .query_filtered::<Entity, With<MainCanvas>>()
+        .get_single(world)
+    {
+        despawn_with_children_recursive(world, maincanvas);
+    }
     let parent = world.spawn(NodeBundle::default()).id();
     UIElement::spawn(MainCanvas, world, parent);
 }

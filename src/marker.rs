@@ -1,48 +1,38 @@
 use bevy::{prelude::*, utils::HashMap};
 use marker::MarkerCategory;
 
+use crate::OrrientEvent;
+
 pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        let marker_path = xdg::BaseDirectories::with_prefix("orrient")
-            .unwrap()
-            .get_config_home()
-            .join("markers");
+        app.init_resource::<MarkerSet>();
+        app.add_systems(Startup, setup);
+        app.add_systems(PreUpdate, load_marker.run_if(on_event::<OrrientEvent>()));
+    }
+}
 
-        let iter = match std::fs::read_dir(&marker_path) {
-            Ok(iter) => iter,
-            Err(err) => {
-                println!(
-                    "Error when opening marker directory: '{:?}' {:?}",
-                    marker_path, err
-                );
-                return;
-            }
-        };
+fn setup(mut events: EventWriter<OrrientEvent>) {
+    events.send(OrrientEvent::LoadMarkers("tw_lws03e05_draconismons.xml".into()));
+}
 
-        let mut markers = MarkerSet::default();
+fn load_marker(mut markerset: ResMut<MarkerSet>, mut events: EventReader<OrrientEvent>) {
+    for event in events.read() {
+        if let OrrientEvent::LoadMarkers(filename) = event {
+            let marker_path = xdg::BaseDirectories::with_prefix("orrient")
+                .unwrap()
+                .get_config_home()
+                .join("markers")
+                .join(filename);
 
-        for data in iter
-            // List directory contents
-            .filter_map(|direntry| direntry.ok().map(|file| file.path()))
-            // Only show files
-            .filter(|path| path.is_file())
-            // Only XML files
-            .filter(|file_path| {
-                file_path
-                    .extension()
-                    .map(|ext| ext == "xml")
-                    .unwrap_or_default()
-            })
-            .filter_map(|path| marker::read(&path).ok())
-        {
-            for category in data.categories {
-                markers.insert(category);
+            if let Ok(data) = marker::read(&marker_path) {
+                markerset.0.clear();
+                for category in data.categories {
+                    markerset.insert(category);
+                }
             }
         }
-        println!("markers loaded");
-        app.insert_resource(markers);
     }
 }
 

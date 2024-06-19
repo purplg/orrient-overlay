@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 
-use bevy::ecs::system::EntityCommands;
-
 use super::UIElement;
 
 pub(super) struct Plugin;

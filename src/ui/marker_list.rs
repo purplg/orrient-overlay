@@ -3,9 +3,12 @@ use bevy::{
     prelude::*,
 };
 
-use crate::marker::{Category, MarkerSet};
+use crate::{
+    marker::{Category, MarkerSet},
+    OrrientEvent,
+};
 
-use super::UIElement;
+use super::{ReloadUI, UIElement};
 
 pub(crate) struct Plugin;
 
@@ -15,6 +18,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Update, collapse_button_system);
         app.add_systems(Update, toggle_expand_system);
         app.add_systems(Update, scroll);
+        app.add_systems(Update, load_markers);
     }
 }
 
@@ -171,6 +175,14 @@ impl UIElement for MarkerCollapseButton {
 
 #[derive(Event)]
 struct ButtonEvent(String);
+
+fn load_markers(mut events: EventReader<OrrientEvent>, mut events_reloadui: EventWriter<ReloadUI>) {
+    for event in events.read() {
+        if let OrrientEvent::LoadMarkers(_) = event {
+            events_reloadui.send(ReloadUI);
+        }
+    }
+}
 
 fn collapse_button_system(
     input: Res<ButtonInput<MouseButton>>,
