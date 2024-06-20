@@ -10,8 +10,10 @@ pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<ReloadUI>();
+
         app.add_systems(Startup, load_ui);
         app.add_systems(Update, load_ui.run_if(on_event::<ReloadUI>()));
+
         app.add_systems(
             Update,
             toggle_hittest_system.run_if(on_event::<OrrientEvent>()),
@@ -55,7 +57,7 @@ impl UIElement for MainCanvas {
                 NodeBundle {
                     style: Style {
                         width: Val::Percent(100.),
-                        height: Val::Percent(100.),
+                        height: Val::Px(400.),
                         ..default()
                     },
                     visibility: Visibility::Visible,

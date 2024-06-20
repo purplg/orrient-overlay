@@ -17,41 +17,54 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_event::<ButtonEvent>();
         app.add_systems(Update, collapse_button_system);
         app.add_systems(Update, toggle_expand_system);
-        app.add_systems(Update, scroll);
         app.add_systems(Update, load_markers);
+        app.add_systems(Update, scroll);
     }
 }
 
 #[derive(Component, Default)]
-struct ScrollBox {
+pub struct ScrollBox {
     position: f32,
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Clone, Default)]
 pub struct MarkerList(pub MarkerSet);
 
 impl UIElement for MarkerList {
     fn build(&self, world: &mut World) -> Entity {
         let parent = world
+            .spawn(NodeBundle {
+                style: Style {
+                    flex_direction: FlexDirection::Column,
+                    width: Val::Px(1000.),
+                    height: Val::Px(600.),
+                    align_self: AlignSelf::Stretch,
+                    overflow: Overflow::clip_y(),
+                    ..default()
+                },
+                background_color: Color::RED.into(),
+                ..default()
+            })
+            .id();
+
+        let scrollbox = world
             .spawn((
                 ScrollBox::default(),
                 Name::new("MarkerList"),
                 NodeBundle {
                     style: Style {
-                        width: Val::Px(800.),
-                        height: Val::Px(600.),
-                        justify_content: JustifyContent::Start,
+                        // justify_content: JustifyContent::Start,
                         flex_direction: FlexDirection::Column,
                         ..default()
                     },
-                    background_color: Color::RED.into(),
                     ..default()
                 },
             ))
+            .set_parent(parent)
             .id();
 
         for category in self.0.categories.values() {
-            UIElement::spawn(MarkerListItem(category.clone()), world, parent);
+            UIElement::spawn(MarkerListItem(category.clone()), world, scrollbox);
         }
 
         parent
@@ -132,6 +145,7 @@ impl UIElement for MarkerText {
                             top: Val::Px(16.),
                             ..default()
                         },
+                        height: Val::Px(16.),
                         left: Val::Px(8.),
                         justify_content: JustifyContent::Start,
                         flex_direction: FlexDirection::Column,
