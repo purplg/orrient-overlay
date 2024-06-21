@@ -37,7 +37,7 @@ impl UIElement for MarkerList {
                     width: Val::Px(1000.),
                     height: Val::Px(600.),
                     align_self: AlignSelf::Stretch,
-                    overflow: Overflow::clip_y(),
+                    overflow: Overflow::clip(),
                     border: UiRect::all(Val::Px(1.0)),
                     ..default()
                 },
