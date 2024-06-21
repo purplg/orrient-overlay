@@ -67,8 +67,13 @@ impl UIElement for MainCanvas {
             .id();
 
         UIElement::spawn(icon::MainIcon, world, entity);
-        let markers = world.resource::<MarkerSet>();
-        UIElement::spawn(marker_list::MarkerList(markers.clone()), world, entity);
+        if let Some(markers) = world.get_resource::<MarkerSet>() {
+            UIElement::spawn(
+                marker_list::MarkerList(markers.markers.clone()),
+                world,
+                entity,
+            );
+        }
 
         entity
     }

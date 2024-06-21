@@ -2,11 +2,9 @@ use bevy::{
     input::mouse::{self, MouseWheel},
     prelude::*,
 };
+use marker::{MarkerCategory, OverlayData};
 
-use crate::{
-    marker::{Category, MarkerSet},
-    OrrientEvent,
-};
+use crate::OrrientEvent;
 
 use super::{ReloadUI, UIElement};
 
@@ -27,8 +25,8 @@ pub struct ScrollBox {
     position: f32,
 }
 
-#[derive(Component, Clone, Default)]
-pub struct MarkerList(pub MarkerSet);
+#[derive(Component, Clone)]
+pub struct MarkerList(pub OverlayData);
 
 impl UIElement for MarkerList {
     fn build(&self, world: &mut World) -> Entity {
@@ -40,9 +38,11 @@ impl UIElement for MarkerList {
                     height: Val::Px(600.),
                     align_self: AlignSelf::Stretch,
                     overflow: Overflow::clip_y(),
+                    border: UiRect::all(Val::Px(1.0)),
                     ..default()
                 },
-                background_color: Color::RED.into(),
+                background_color: Color::rgb(0.1, 0.1, 0.1).into(),
+                border_color: Color::GRAY.into(),
                 ..default()
             })
             .id();
@@ -63,7 +63,7 @@ impl UIElement for MarkerList {
             .set_parent(parent)
             .id();
 
-        for category in self.0.categories.values() {
+        for category in &self.0.categories {
             UIElement::spawn(MarkerListItem(category.clone()), world, scrollbox);
         }
 
@@ -72,11 +72,11 @@ impl UIElement for MarkerList {
 }
 
 #[derive(Component)]
-struct MarkerListItem(Category);
+struct MarkerListItem(MarkerCategory);
 
 impl UIElement for MarkerListItem {
     fn build(&self, world: &mut World) -> Entity {
-        let has_children = self.0.subcategories.len() > 0;
+        let has_children = self.0.categories.len() > 0;
         let parent = world
             .spawn(NodeBundle {
                 style: Style {
@@ -100,14 +100,14 @@ impl UIElement for MarkerListItem {
             .id();
 
         if has_children {
-            UIElement::spawn(MarkerCollapseButton(self.0.id.clone()), world, content);
+            UIElement::spawn(MarkerCollapseButton(self.0.name()), world, content);
         }
 
-        UIElement::spawn(MarkerText(self.0.name.clone()), world, content);
+        UIElement::spawn(MarkerText(self.0.display_name()), world, content);
 
         let subitems = world
             .spawn((
-                SubCategories(self.0.id.clone()),
+                SubCategories(self.0.name()),
                 NodeBundle {
                     style: Style {
                         flex_direction: FlexDirection::Column,
@@ -119,7 +119,7 @@ impl UIElement for MarkerListItem {
             .set_parent(parent)
             .id();
 
-        for category in self.0.subcategories.values() {
+        for category in &self.0.categories {
             UIElement::spawn(MarkerListItem(category.clone()), world, subitems);
         }
 

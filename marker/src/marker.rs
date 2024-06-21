@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer};
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct OverlayData {
     #[serde(rename = "MarkerCategory", default)]
     pub categories: Vec<MarkerCategory>,
@@ -8,7 +8,7 @@ pub struct OverlayData {
     pub pois: Vec<POIs>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct MarkerCategory {
     #[serde(rename = "@name", alias = "@Name")]
@@ -126,7 +126,7 @@ pub struct POIs {
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct POI {
-    #[serde(rename = "@MapId", skip_serializing_if = "Option::is_none", default)]
+    #[serde(rename = "@MapId", default)]
     pub map_id: Option<usize>,
     #[serde(rename = "@xpos")]
     pub x: f32,
@@ -166,7 +166,7 @@ mod tests {
         {
             println!("Testing: {:?}", path);
             let data = std::fs::read_to_string(path).unwrap();
-            let _de: OverlayData = quick_xml::de::from_str(&data).unwrap();
+            let overlay: OverlayData = quick_xml::de::from_str(&data).unwrap();
         }
     }
 }
