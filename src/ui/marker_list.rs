@@ -64,7 +64,14 @@ impl UIElement for MarkerList {
             .id();
 
         for category in &self.0.categories {
-            UIElement::spawn(MarkerListItem(category.clone()), world, scrollbox);
+            UIElement::spawn(
+                MarkerListItem {
+                    id: String::default(),
+                    category: category.clone(),
+                },
+                world,
+                scrollbox,
+            );
         }
 
         parent
@@ -72,11 +79,15 @@ impl UIElement for MarkerList {
 }
 
 #[derive(Component)]
-struct MarkerListItem(MarkerCategory);
+struct MarkerListItem {
+    id: String,
+    category: MarkerCategory,
+}
 
 impl UIElement for MarkerListItem {
     fn build(&self, world: &mut World) -> Entity {
-        let has_children = self.0.categories.len() > 0;
+        println!("self.id: {:?}", self.id);
+        let has_children = self.category.categories.len() > 0;
         let parent = world
             .spawn(NodeBundle {
                 style: Style {
@@ -84,7 +95,7 @@ impl UIElement for MarkerListItem {
                     flex_direction: FlexDirection::Column,
                     ..default()
                 },
-                background_color: if self.0.is_separator {
+                background_color: if self.category.is_separator {
                     Color::BLACK
                 } else {
                     Color::NONE
@@ -106,14 +117,14 @@ impl UIElement for MarkerListItem {
             .id();
 
         if has_children {
-            UIElement::spawn(MarkerCollapseButton(self.0.name()), world, content);
+            UIElement::spawn(MarkerCollapseButton(self.category.id()), world, content);
         }
 
-        UIElement::spawn(MarkerText(self.0.display_name()), world, content);
+        UIElement::spawn(MarkerText(self.category.display_name()), world, content);
 
         let subitems = world
             .spawn((
-                SubCategories(self.0.name()),
+                SubCategories(self.category.id()),
                 NodeBundle {
                     style: Style {
                         flex_direction: FlexDirection::Column,
@@ -125,8 +136,15 @@ impl UIElement for MarkerListItem {
             .set_parent(parent)
             .id();
 
-        for category in &self.0.categories {
-            UIElement::spawn(MarkerListItem(category.clone()), world, subitems);
+        for category in &self.category.categories {
+            UIElement::spawn(
+                MarkerListItem {
+                    id: format!("{}.{}", self.id, self.category.id()),
+                    category: category.clone(),
+                },
+                world,
+                subitems,
+            );
         }
 
         parent

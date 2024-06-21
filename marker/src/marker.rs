@@ -99,7 +99,7 @@ where
 }
 
 impl MarkerCategory {
-    pub fn name(&self) -> String {
+    pub fn id(&self) -> String {
         self._name
             .clone()
             .or_else(|| self.bh_name.clone())
