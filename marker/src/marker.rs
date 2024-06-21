@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct OverlayData {
     #[serde(rename = "MarkerCategory", default)]
     pub categories: Vec<MarkerCategory>,
@@ -8,20 +8,115 @@ pub struct OverlayData {
     pub pois: Vec<POIs>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct MarkerCategory {
-    #[serde(rename = "@name")]
-    pub name: String,
+    #[serde(rename = "@name", alias = "@Name")]
+    _name: Option<String>,
     #[serde(rename = "@DisplayName")]
-    pub display_name: String,
-    #[serde(rename = "@IsSeparator")]
-    pub is_separator: Option<bool>,
-    #[serde(rename = "MarkerCategory")]
-    #[serde(default)]
+    _display_name: Option<String>,
+    #[serde(rename = "@IsSeparator", default)]
+    pub is_separator: bool,
+    #[serde(rename = "MarkerCategory", default)]
     pub categories: Vec<MarkerCategory>,
+    #[serde(rename = "@fadeNear", default)]
+    pub fade_near: Option<f32>,
+    #[serde(rename = "@fadeFar", default)]
+    pub fade_far: Option<f32>,
+    #[serde(rename = "@iconFile", default)]
+    pub icon_path: Option<String>,
+    #[serde(rename = "@iconSize", default)]
+    pub icon_size: Option<f32>,
+    #[serde(rename = "@mapDisplaySize", default)]
+    pub map_display_size: Option<f32>,
+    #[serde(rename = "@inGameVisibility", default)]
+    pub show_on_ingame: bool,
+    #[serde(rename = "@mapVisibility", default)]
+    pub show_on_map: bool,
+    #[serde(rename = "@miniMapVisibility", default)]
+    pub show_on_minimap: bool,
+    #[serde(rename = "@heightOffset", default)]
+    pub height_offset: Option<f32>,
+    #[serde(rename = "@minSize", default)]
+    pub min_size: Option<f32>,
+    #[serde(
+        rename = "@achievementId",
+        deserialize_with = "achievement_deser",
+        default
+    )]
+    pub achievement_id: Option<u32>,
+    #[serde(rename = "@achievementBit", default)]
+    pub achievement_bit: Option<u8>,
+    #[serde(rename = "@bounce", default)]
+    pub bounce: Option<String>,
+    #[serde(rename = "@bounce-height", default)]
+    pub bounce_height: Option<f32>,
+    #[serde(rename = "@autotrigger", default)]
+    pub autotrigger: bool,
+    #[serde(rename = "@triggerrange", default)]
+    pub triggerrange: Option<f32>,
+    #[serde(rename = "@tip-name", default)]
+    pub tip_name: Option<String>,
+    #[serde(rename = "@tip-description", default)]
+    pub tip_description: Option<String>,
+    #[serde(rename = "@behavior", default)]
+    pub behavior: Option<u8>,
+    #[serde(rename = "@copy", default)]
+    pub copy: Option<String>,
+    #[serde(rename = "@copy-message", default)]
+    pub copy_message: Option<String>,
+    #[serde(rename = "@resetLength", default)]
+    pub reset_length: Option<f32>,
+    #[serde(rename = "@toggleCategory", default)]
+    pub toggle_category: Option<String>,
+    #[serde(rename = "@profession", default)]
+    pub profession: Option<String>,
+
+    #[serde(rename = "@bh-name")]
+    bh_name: Option<String>,
+    #[serde(rename = "@bh-DisplayName")]
+    bh_display_name: Option<String>,
+    #[serde(rename = "@bh-heightOffset", default)]
+    pub bh_height_offset: Option<f32>,
+    #[serde(rename = "@bh-iconSize", default)]
+    pub bh_icon_size: Option<f32>,
+    #[serde(rename = "@bh-inGameVisibility", default)]
+    pub bh_show_on_ingame: bool,
+    #[serde(rename = "@bh-mapVisibility", default)]
+    pub bh_show_on_map: bool,
+    #[serde(rename = "@bh-miniMapVisibility", default)]
+    pub bh_show_on_minimap: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+/// There is a single instance where an achievementId is "XXX" so I
+/// just set to a default value if it fails.
+/// Located in the `tw_mc_masterypoints.xml` markers.
+fn achievement_deser<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(u32::deserialize(deserializer).ok())
+}
+
+impl MarkerCategory {
+    pub fn name(&self) -> String {
+        self._name
+            .clone()
+            .or_else(|| self.bh_name.clone())
+            .expect("No category name")
+            .clone()
+    }
+
+    pub fn display_name(&self) -> String {
+        self._display_name
+            .clone()
+            .or_else(|| self.bh_display_name.clone())
+            .expect("No category name")
+            .clone()
+    }
+}
+
+#[derive(Deserialize, Clone, Debug)]
 pub struct POIs {
     #[serde(rename = "POI", default)]
     pub poi: Vec<POI>,
@@ -29,7 +124,7 @@ pub struct POIs {
     pub trail: Vec<Trail>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct POI {
     #[serde(rename = "@MapId", skip_serializing_if = "Option::is_none", default)]
     pub map_id: Option<usize>,
@@ -45,7 +140,7 @@ pub struct POI {
     pub guid: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct Trail {
     #[serde(rename = "@type")]
     pub kind: String,
@@ -63,15 +158,15 @@ mod tests {
 
     #[test]
     fn test_markers() {
-        let iter = std::fs::read_dir("~/.config/orrient/markers").unwrap();
+        let iter = std::fs::read_dir("/home/purplg/.config/orrient/markers").unwrap();
         for path in iter
             .filter_map(|file| file.ok().map(|file| file.path()))
             .filter(|file| file.is_file())
             .filter(|file| file.extension().map(|ext| ext == "xml").unwrap_or_default())
         {
             println!("Testing: {:?}", path);
-            let a = std::fs::read_to_string(path).unwrap();
-            let _de: OverlayData = quick_xml::de::from_str(&a).unwrap();
+            let data = std::fs::read_to_string(path).unwrap();
+            let _de: OverlayData = quick_xml::de::from_str(&data).unwrap();
         }
     }
 }

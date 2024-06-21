@@ -43,12 +43,12 @@ fn load_marker(mut markerset: ResMut<MarkerSet>, mut events: EventReader<Orrient
 impl From<MarkerCategory> for Category {
     fn from(category: MarkerCategory) -> Self {
         Category {
-            id: category.name,
-            name: category.display_name,
+            id: category.name(),
+            name: category.display_name(),
             subcategories: {
                 let mut categories = HashMap::<String, Category>::default();
                 for category in category.categories {
-                    let id = category.name.clone();
+                    let id = category.name();
                     categories.insert(id, category.into());
                 }
                 categories
