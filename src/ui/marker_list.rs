@@ -84,6 +84,12 @@ impl UIElement for MarkerListItem {
                     flex_direction: FlexDirection::Column,
                     ..default()
                 },
+                background_color: if self.0.is_separator {
+                    Color::BLACK
+                } else {
+                    Color::NONE
+                }
+                .into(),
                 ..default()
             })
             .id();
