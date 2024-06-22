@@ -34,7 +34,7 @@ fn load_marker(mut commands: Commands, mut events: EventReader<OrrientEvent>) {
     }
 }
 
-#[derive(Resource, Clone, Debug)]
+#[derive(Resource, Clone, Deref, Debug)]
 pub struct MarkerSet {
     pub markers: OverlayData,
 }

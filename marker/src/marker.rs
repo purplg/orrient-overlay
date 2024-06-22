@@ -166,7 +166,7 @@ mod tests {
         {
             println!("Testing: {:?}", path);
             let data = std::fs::read_to_string(path).unwrap();
-            let overlay: OverlayData = quick_xml::de::from_str(&data).unwrap();
+            let _overlay: OverlayData = quick_xml::de::from_str(&data).unwrap();
         }
     }
 }

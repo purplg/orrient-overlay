@@ -11,7 +11,7 @@ impl bevy::prelude::Plugin for Plugin {
             Update,
             update_position_system.run_if(on_event::<OrrientEvent>()),
         );
-        app.add_systems(Update, position);
+        // app.add_systems(Update, position);
         app.add_systems(Update, save_pos_system);
     }
 }

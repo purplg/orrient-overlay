@@ -3,9 +3,11 @@ mod input;
 mod link;
 mod marker;
 mod player;
+#[path = "lunex/mod.rs"]
 mod ui;
+// mod ui;
 
-use bevy::window::{CompositeAlphaMode, WindowResolution};
+use bevy::window::{CompositeAlphaMode, PrimaryWindow, WindowResolution};
 use bevy::{
     prelude::*,
     window::{Cursor, WindowLevel},
@@ -45,7 +47,7 @@ fn main() {
         ..default()
     }));
 
-    app.add_plugins(WorldInspectorPlugin::new());
+    // app.add_plugins(WorldInspectorPlugin::new());
 
     app.add_event::<OrrientEvent>();
     app.insert_resource(ClearColor(Color::NONE));
@@ -56,6 +58,31 @@ fn main() {
     app.add_plugins(player::Plugin);
     app.add_plugins(ui::Plugin);
     app.add_plugins(marker::Plugin);
+    app.add_systems(Update, toggle_hittest_system);
+
+    app.world.send_event(OrrientEvent::ToggleUI);
 
     app.run();
+}
+
+fn toggle_hittest_system(
+    mut events: EventReader<OrrientEvent>,
+    mut window: Query<&mut Window, With<PrimaryWindow>>,
+) {
+    for event in events.read() {
+        if let OrrientEvent::ToggleUI = event {
+            let mut window = window.single_mut();
+            window.cursor.hit_test = !window.cursor.hit_test;
+
+            window.decorations = window.cursor.hit_test;
+            println!(
+                "UI {}",
+                if window.cursor.hit_test {
+                    "enabled"
+                } else {
+                    "disabled"
+                }
+            );
+        }
+    }
 }

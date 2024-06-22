@@ -6,19 +6,8 @@ pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup);
         app.add_systems(Update, camera_system);
     }
-}
-
-fn setup(mut commands: Commands) {
-    commands.spawn(Camera3dBundle {
-        projection: Projection::Perspective(PerspectiveProjection {
-            fov: 70.32_f32.to_radians(),
-            ..default()
-        }),
-        ..default()
-    });
 }
 
 fn camera_system(

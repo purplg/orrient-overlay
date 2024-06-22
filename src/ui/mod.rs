@@ -78,32 +78,3 @@ impl UIElement for MainCanvas {
         entity
     }
 }
-
-fn toggle_hittest_system(
-    mut events: EventReader<OrrientEvent>,
-    mut window: Query<&mut Window, With<PrimaryWindow>>,
-    mut ui: Query<&mut Visibility, With<MainCanvas>>,
-) {
-    for event in events.read() {
-        if let OrrientEvent::ToggleUI = event {
-            let mut window = window.single_mut();
-            window.cursor.hit_test = !window.cursor.hit_test;
-
-            window.decorations = window.cursor.hit_test;
-            *ui.single_mut() = if window.cursor.hit_test {
-                Visibility::Visible
-            } else {
-                Visibility::Hidden
-            };
-
-            println!(
-                "UI {}",
-                if window.cursor.hit_test {
-                    "enabled"
-                } else {
-                    "disabled"
-                }
-            );
-        }
-    }
-}
