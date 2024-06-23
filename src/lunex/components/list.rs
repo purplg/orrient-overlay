@@ -1,4 +1,4 @@
-use bevy::{input::mouse::MouseWheel, prelude::*};
+use bevy::prelude::*;
 use bevy_lunex::prelude::*;
 
 pub(crate) struct Plugin;
@@ -7,8 +7,9 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(UiGenericPlugin::<List>::new());
         app.add_plugins(UiDebugPlugin::<List>::new());
-        app.add_systems(Update, build_component.before(UiSystems::Compute));
+        app.add_systems(Update, build_list.before(UiSystems::Compute));
         app.add_systems(Update, scroll);
+        app.add_systems(Update, select);
     }
 }
 
@@ -25,7 +26,7 @@ impl List {
     }
 }
 
-fn build_component(mut commands: Commands, query: Query<(Entity, &List), Added<List>>) {
+fn build_list(mut commands: Commands, query: Query<(Entity, &List), Added<List>>) {
     for (entity, list) in &query {
         commands
             .entity(entity)
@@ -35,48 +36,59 @@ fn build_component(mut commands: Commands, query: Query<(Entity, &List), Added<L
             .with_children(|ui| {
                 let root = UiLink::<List>::path("Root");
 
+                let base = ui
+                    .spawn((
+                        root.clone(),
+                        UiLayout::window_full().pack::<Base>(),
+                        // Some interactivity stuff so we can capture
+                        // scroll events to scroll the list of entries
+                        UiZoneBundle::default(),
+                        UiScrollEmitter::SELF,
+                    ))
+                    .id();
+
                 let gap = 0.0;
-                let size = 16.0;
-                let mut offset = 0.0;
-                let mut count = 0;
-                for item in &list.items {
-                    let link = root.add(format!("Item: {}", count));
+                let size = 32.0;
+                for (idx, item) in list.items.iter().enumerate() {
+                    let root = root.add(idx.to_string());
+                    // The text within the list entry.
+                    let entity = ui
+                        .spawn((
+                            root.add("Text"),
+                            UiLayout::window() //
+                                .pack::<Base>(),
+                            item.clone(),
+                            UiText2dBundle {
+                                text: Text::from_section(
+                                    item.text.clone(),
+                                    TextStyle {
+                                        font_size: 100.,
+                                        ..default()
+                                    },
+                                ),
+                                ..default()
+                            },
+                            UiClickEmitter::SELF,
+                            UiScrollEmitter::new(base),
+                        ))
+                        .id();
+
+                    // The base layout for a single list entry.
                     ui.spawn((
-                        link,
+                        root,
                         UiLayout::window() //
-                            .width(100.)
+                            .width(Rl(100.))
                             .height(size)
-                            .y(Ab(offset))
                             .x(item.indent_level as f32 * 8.)
+                            .y(Ab(idx as f32 * (gap + size)))
                             .pack::<Base>(),
-                        item.clone(),
-                        UiText2dBundle {
-                            text: Text::from_section(
-                                item.text.clone(),
-                                TextStyle {
-                                    font_size: 100.,
-                                    ..default()
-                                },
-                            ),
-                            ..default()
-                        },
                         // Some interactivity stuff so we can capture
                         // click events to select entries
-                        // UiClickEmitter::SELF,
-                        // Pickable::default(),
+                        UiZoneBundle::default(),
+                        UiClickEmitter::new(entity),
+                        UiScrollEmitter::new(base),
                     ));
-                    offset += gap + size * 2.;
-                    count += 1;
                 }
-
-                ui.spawn((
-                    root,
-                    UiLayout::window_full() //
-                        .pack::<Base>(),
-                    // Some interactivity stuff so we can capture scroll events
-                    UiClickEmitter::SELF,
-                    UiZoneBundle::default(),
-                ));
             });
     }
 }
@@ -117,8 +129,8 @@ impl ListItem {
 
     pub fn separator(id: String, text: String, indent_level: u8) -> Self {
         Self {
-            id,
-            text,
+            id: id.into(),
+            text: text.into(),
             kind: ListKind::Separator,
             indent_level,
         }
@@ -126,17 +138,21 @@ impl ListItem {
 }
 
 fn scroll(
-    mut events: EventReader<MouseWheel>, //
-    mut query_list: Query<&mut UiLayout, With<List>>,
+    mut events: EventReader<UiScrollEvent>, //
+    mut query_list: Query<&mut UiLayout>,
 ) {
     for event in events.read() {
-        let amount = match event.unit {
-            bevy::input::mouse::MouseScrollUnit::Pixel => Ab(event.y),
-            bevy::input::mouse::MouseScrollUnit::Line => Ab(event.y * 20.),
-        };
-        for mut list in &mut query_list {
-            let new_y = list.layout.expect_window().pos.get_y() + amount;
+        if let Ok(mut list) = query_list.get_mut(event.target) {
+            let new_y = list.layout.expect_window().pos.get_y() + Rl(event.delta.y);
             list.layout.expect_window_mut().set_y(new_y);
+        }
+    }
+}
+
+fn select(mut events: EventReader<UiClickEvent>, query_items: Query<&ListItem>) {
+    for event in events.read() {
+        if let Ok(item) = query_items.get(event.target) {
+            println!("Load markers: {:?}", item.id);
         }
     }
 }

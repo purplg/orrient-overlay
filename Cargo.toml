@@ -16,10 +16,13 @@ serde = { version = "1.0.203", features = ["derive"] }
 quick-xml = { version = "0.32.0", features = ["serialize"] }
 xdg = "2.5.2"
 bevy-inspector-egui = "0.24.0"
-bevy_lunex = "0.1.0"
+# bevy_lunex = "0.1.0"
+bevy_lunex = { path = "../bevy_lunex/crates/bevy_lunex/" }
+# bevy_lunex = { git = "https://github.com/purplg/bevy_lunex.git", branch = "feat/scroll-support" }
 
 [workspace]
-members = [ "marker",
+resolver = "2"
+members = [
   "mumblelink",
   "marker",
 ]

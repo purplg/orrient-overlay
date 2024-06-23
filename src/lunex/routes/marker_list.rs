@@ -46,7 +46,8 @@ fn build_route(
                             Name::new(root.path.clone()),
                             root,
                             UiLayout::window() //
-                                .height(Ab(32.))
+                                .width(Ab(800.))
+                                .height(Rl(100.))
                                 .pack::<Base>(),
                             List::new(flatten_categories(&markers)),
                         ));
