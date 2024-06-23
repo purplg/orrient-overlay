@@ -57,24 +57,20 @@ fn build_route(
 }
 
 fn flatten_categories(overlay: &OverlayData) -> Vec<ListItem> {
-    fn merge(items: &mut Vec<ListItem>, category: &MarkerCategory, indent: u8) {
-        items.push(ListItem::category(
-            category.id(),
-            category.display_name(),
-            indent,
-        ));
-        category
-            .categories
-            .iter()
-            .for_each(|category| merge(items, category, indent + 1));
+    fn merge(items: &mut Vec<ListItem>, prefix: &str, category: &MarkerCategory, indent: u8) {
+        let id = format!("{}.{}", prefix, category.id());
+        let item = ListItem::category(id.clone(), category.display_name(), indent);
+        items.push(item);
+        for category in &category.categories {
+            merge(items, &id, category, indent + 1);
+        }
     }
 
     let mut items: Vec<ListItem> = vec![];
-
     overlay
         .categories
         .iter()
-        .for_each(|category| merge(&mut items, category, 0));
+        .for_each(|category| merge(&mut items, "", category, 0));
 
     items
 }

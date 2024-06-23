@@ -102,9 +102,9 @@ enum ListKind {
 
 #[derive(Component, Clone)]
 pub struct ListItem {
-    id: String,
-    text: String,
-    kind: ListKind,
+    pub id: String,
+    pub text: String,
+    pub kind: ListKind,
     indent_level: u8,
 }
 
