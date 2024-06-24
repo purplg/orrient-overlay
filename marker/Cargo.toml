@@ -6,4 +6,3 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0.203", features = ["derive"] }
 quick-xml = { version = "0.32.0", features = ["serialize"] }
-nom = "7.1.3"

@@ -3,6 +3,7 @@ mod input;
 mod link;
 mod marker;
 mod player;
+mod trail;
 #[path = "lunex/mod.rs"]
 mod ui;
 // mod ui;
@@ -25,6 +26,7 @@ pub enum OrrientEvent {
     ToggleUI,
     SavePosition,
     LoadMarkers(String),
+    LoadTrail(String),
 }
 
 fn main() {
@@ -58,9 +60,10 @@ fn main() {
     app.add_plugins(player::Plugin);
     app.add_plugins(ui::Plugin);
     app.add_plugins(marker::Plugin);
+    app.add_plugins(trail::Plugin);
     app.add_systems(Update, toggle_hittest_system);
 
-    app.world.send_event(OrrientEvent::ToggleUI);
+    // app.world.send_event(OrrientEvent::ToggleUI);
 
     app.run();
 }

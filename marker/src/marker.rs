@@ -1,7 +1,7 @@
 use serde::{Deserialize, Deserializer};
 
 #[derive(Clone, Deserialize, Debug)]
-pub struct OverlayData {
+pub(super) struct OverlayData {
     #[serde(rename = "MarkerCategory", default)]
     pub categories: Vec<MarkerCategory>,
     #[serde(rename = "POIs", default)]
@@ -10,7 +10,7 @@ pub struct OverlayData {
 
 #[derive(Clone, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-pub struct MarkerCategory {
+pub(super) struct MarkerCategory {
     #[serde(rename = "@name", alias = "@Name")]
     _name: Option<String>,
     #[serde(rename = "@DisplayName")]
@@ -99,7 +99,7 @@ where
 }
 
 impl MarkerCategory {
-    pub fn id(&self) -> String {
+    pub(super) fn id(&self) -> String {
         self._name
             .clone()
             .or_else(|| self.bh_name.clone())
@@ -107,7 +107,7 @@ impl MarkerCategory {
             .clone()
     }
 
-    pub fn display_name(&self) -> String {
+    pub(super) fn display_name(&self) -> String {
         self._display_name
             .clone()
             .or_else(|| self.bh_display_name.clone())
@@ -117,7 +117,7 @@ impl MarkerCategory {
 }
 
 #[derive(Deserialize, Clone, Debug)]
-pub struct POIs {
+pub(super) struct POIs {
     #[serde(rename = "POI", default)]
     pub poi: Vec<POI>,
     #[serde(rename = "Trail", default)]
@@ -125,8 +125,8 @@ pub struct POIs {
 }
 
 #[derive(Deserialize, Clone, Debug)]
-pub struct POI {
-    #[serde(rename = "@MapId", default)]
+pub(super) struct POI {
+    #[serde(rename = "@MapID", default)]
     pub map_id: Option<usize>,
     #[serde(rename = "@xpos")]
     pub x: f32,
@@ -135,38 +135,19 @@ pub struct POI {
     #[serde(rename = "@zpos")]
     pub z: f32,
     #[serde(rename = "@type")]
-    pub kind: String,
+    pub id: String,
     #[serde(rename = "@GUID")]
     pub guid: String,
 }
 
 #[derive(Deserialize, Clone, Debug)]
-pub struct Trail {
+pub(super) struct Trail {
     #[serde(rename = "@type")]
-    pub kind: String,
+    pub id: String,
     #[serde(rename = "@trailData")]
     pub trail_data: String,
     #[serde(rename = "@texture")]
     pub texture: String,
     #[serde(rename = "@GUID")]
     pub guid: Option<String>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_markers() {
-        let iter = std::fs::read_dir("/home/purplg/.config/orrient/markers").unwrap();
-        for path in iter
-            .filter_map(|file| file.ok().map(|file| file.path()))
-            .filter(|file| file.is_file())
-            .filter(|file| file.extension().map(|ext| ext == "xml").unwrap_or_default())
-        {
-            println!("Testing: {:?}", path);
-            let data = std::fs::read_to_string(path).unwrap();
-            let _overlay: OverlayData = quick_xml::de::from_str(&data).unwrap();
-        }
-    }
 }

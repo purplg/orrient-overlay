@@ -21,7 +21,6 @@ pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(UiPlugin);
-        app.add_plugins(UiDebugPlugin::<MainUi>::new());
 
         app.add_plugins(components::Plugin);
         app.add_plugins(routes::Plugin);
@@ -128,28 +127,6 @@ fn move_debug_mesh(mut query: Query<&mut Transform, With<DebugMesh>>, time: Res<
     }
 }
 
-fn spawn_debug_mesh(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    let debug_material = materials.add(StandardMaterial {
-        base_color_texture: Some(images.add(uv_debug_texture())),
-        ..default()
-    });
-
-    commands.spawn((
-        DebugMesh,
-        PbrBundle {
-            mesh: meshes.add(Sphere::default().mesh().ico(5).unwrap()),
-            material: debug_material.clone(),
-            transform: Transform::from_xyz(0.0, 0.0, -10.0),
-            ..default()
-        },
-    ));
-}
-
 pub fn uv_debug_texture() -> Image {
     const TEXTURE_SIZE: usize = 8;
 
@@ -176,4 +153,26 @@ pub fn uv_debug_texture() -> Image {
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::RENDER_WORLD,
     )
+}
+
+fn spawn_debug_mesh(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let debug_material = materials.add(StandardMaterial {
+        base_color_texture: Some(images.add(uv_debug_texture())),
+        ..default()
+    });
+
+    commands.spawn((
+        DebugMesh,
+        PbrBundle {
+            mesh: meshes.add(Sphere::default().mesh().ico(5).unwrap()),
+            material: debug_material.clone(),
+            transform: Transform::from_xyz(0.0, 0.0, -10.0),
+            ..default()
+        },
+    ));
 }

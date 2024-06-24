@@ -107,6 +107,6 @@ fn link(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
         if let Err(e) = tx.send(MumbleLinkMessage::MumbleLinkData(def)) {
             println!("error: {:?}", e);
         };
-        sleep(Duration::from_millis(32));
+        sleep(Duration::from_millis(8));
     }
 }

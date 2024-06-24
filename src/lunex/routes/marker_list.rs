@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_lunex::prelude::*;
-use marker::{MarkerCategory, OverlayData};
 
 use crate::{
     marker::MarkerSet,
@@ -49,28 +48,9 @@ fn build_route(
                                 .width(Ab(800.))
                                 .height(Rl(100.))
                                 .pack::<Base>(),
-                            List::new(flatten_categories(&markers)),
+                            List::new(markers.iter()),
                         ));
                     });
             });
     }
-}
-
-fn flatten_categories(overlay: &OverlayData) -> Vec<ListItem> {
-    fn merge(items: &mut Vec<ListItem>, prefix: &str, category: &MarkerCategory, indent: u8) {
-        let id = format!("{}.{}", prefix, category.id());
-        let item = ListItem::category(id.clone(), category.display_name(), indent);
-        items.push(item);
-        for category in &category.categories {
-            merge(items, &id, category, indent + 1);
-        }
-    }
-
-    let mut items: Vec<ListItem> = vec![];
-    overlay
-        .categories
-        .iter()
-        .for_each(|category| merge(&mut items, "", category, 0));
-
-    items
 }

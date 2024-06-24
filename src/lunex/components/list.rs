@@ -1,12 +1,13 @@
 use bevy::prelude::*;
 use bevy_lunex::prelude::*;
 
+use crate::OrrientEvent;
+
 pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(UiGenericPlugin::<List>::new());
-        app.add_plugins(UiDebugPlugin::<List>::new());
         app.add_systems(Update, build_list.before(UiSystems::Compute));
         app.add_systems(Update, scroll);
         app.add_systems(Update, select);
@@ -19,9 +20,21 @@ pub struct List {
 }
 
 impl List {
-    pub fn new<T: Into<ListItem>>(items: impl IntoIterator<Item = T>) -> Self {
+    pub fn new<T: Into<ListItem>>(items: impl Iterator<Item = T>) -> Self {
         Self {
             items: items.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+impl<'a> Into<ListItem> for marker::MarkerEntry<'a> {
+    fn into(self) -> ListItem {
+        ListItem {
+            id: self.id.clone(),
+            long_id: self.path.join("."),
+            text: self.marker.label.clone(),
+            kind: ListKind::Entry,
+            indent_level: self.path.len(),
         }
     }
 }
@@ -103,35 +116,19 @@ enum ListKind {
 #[derive(Component, Clone)]
 pub struct ListItem {
     pub id: String,
+    pub long_id: String,
     pub text: String,
     pub kind: ListKind,
-    indent_level: u8,
+    indent_level: usize,
 }
 
 impl ListItem {
-    pub fn entry(id: String, text: String, indent_level: u8) -> Self {
+    pub fn entry(id: String, long_id: String, text: String, indent_level: usize) -> Self {
         Self {
             id,
-            text,
-            kind: ListKind::Entry,
-            indent_level,
-        }
-    }
-
-    pub fn category(id: String, text: String, indent_level: u8) -> Self {
-        Self {
-            id,
+            long_id,
             text,
             kind: ListKind::Category,
-            indent_level,
-        }
-    }
-
-    pub fn separator(id: String, text: String, indent_level: u8) -> Self {
-        Self {
-            id: id.into(),
-            text: text.into(),
-            kind: ListKind::Separator,
             indent_level,
         }
     }
@@ -149,10 +146,14 @@ fn scroll(
     }
 }
 
-fn select(mut events: EventReader<UiClickEvent>, query_items: Query<&ListItem>) {
+fn select(
+    mut events: EventReader<UiClickEvent>,
+    mut orrient_events: EventWriter<OrrientEvent>,
+    query_items: Query<&ListItem>,
+) {
     for event in events.read() {
         if let Ok(item) = query_items.get(event.target) {
-            println!("Load markers: {:?}", item.id);
+            orrient_events.send(OrrientEvent::LoadTrail(item.long_id.clone()));
         }
     }
 }
