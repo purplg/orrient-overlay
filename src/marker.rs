@@ -21,13 +21,13 @@ fn setup(mut events: EventWriter<OrrientEvent>) {
 fn load_marker(mut commands: Commands, mut events: EventReader<OrrientEvent>) {
     for event in events.read() {
         if let OrrientEvent::LoadMarkers(filename) = event {
-            let marker_path = xdg::BaseDirectories::with_prefix("orrient")
-                .unwrap()
-                .get_config_home()
-                .join("markers")
-                .join(filename);
-
-            if let Ok(markers) = marker::read(&marker_path) {
+            if let Ok(markers) = marker::read(
+                &dirs::config_dir()
+                    .unwrap()
+                    .join("orrient")
+                    .join("markers")
+                    .join(filename),
+            ) {
                 commands.insert_resource(MarkerSet { markers })
             }
         }
