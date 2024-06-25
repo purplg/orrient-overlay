@@ -10,7 +10,7 @@ use rdev::{listen, Event, EventType::*, Key};
 fn main() {
     let (tx, rx) = crossbeam_channel::unbounded::<MumbleLinkMessage>();
 
-    let socket = UdpSocket::bind("127.0.0.1:5000").unwrap();
+    let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
 
     let tx_input = tx.clone();
     std::thread::spawn(|| input(tx_input));
