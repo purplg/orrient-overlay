@@ -38,7 +38,7 @@ pub fn read(path: &Path) -> Result<Markers, Error> {
         for pois in &data.pois {
             for poi in pois.poi.iter() {
                 if poi.id == long_id {
-                    marker.pois.push(POI {
+                    marker.pois.push(Position {
                         x: poi.x,
                         y: poi.y,
                         z: poi.z,
@@ -98,7 +98,7 @@ impl Markers {
         }
     }
 
-    pub fn pois(&self) -> Vec<POI> {
+    pub fn pois(&self) -> Vec<Position> {
         self.iter()
             .map(|marker| marker.marker.pois())
             .flatten()
@@ -109,7 +109,7 @@ impl Markers {
 #[derive(Clone, Default, Debug)]
 pub struct Marker {
     pub label: String,
-    pub pois: Vec<POI>,
+    pub pois: Vec<Position>,
     pub trail_file: Option<String>,
     pub markers: Markers,
 }
@@ -132,7 +132,7 @@ impl Marker {
         }
     }
 
-    pub fn pois(&self) -> Vec<POI> {
+    pub fn pois(&self) -> Vec<Position> {
         self.iter(vec![])
             .map(|marker| marker.marker.pois.clone())
             .flatten()
@@ -178,7 +178,7 @@ impl<'a> Iterator for Iter<'a> {
 }
 
 #[derive(Clone, Debug)]
-pub struct POI {
+pub struct Position {
     pub x: f32,
     pub y: f32,
     pub z: f32,
