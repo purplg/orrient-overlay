@@ -30,8 +30,7 @@ impl List {
 impl<'a> From<marker::MarkerEntry<'a>> for ListItem {
     fn from(value: marker::MarkerEntry<'a>) -> Self {
         Self {
-            id: value.id.clone(),
-            long_id: value.path.join("."),
+            id: value.path.join("."),
             text: value.marker.label.clone(),
             kind: ListKind::Entry,
             indent_level: value.path.len(),
@@ -116,17 +115,15 @@ pub enum ListKind {
 #[derive(Component, Clone)]
 pub struct ListItem {
     pub id: String,
-    pub long_id: String,
     pub text: String,
     pub kind: ListKind,
     indent_level: usize,
 }
 
 impl ListItem {
-    pub fn entry(id: String, long_id: String, text: String, indent_level: usize) -> Self {
+    pub fn entry(id: String, text: String, indent_level: usize) -> Self {
         Self {
             id,
-            long_id,
             text,
             kind: ListKind::Category,
             indent_level,
@@ -153,7 +150,7 @@ fn select(
 ) {
     for event in events.read() {
         if let Ok(item) = query_items.get(event.target) {
-            orrient_events.send(OrrientEvent::LoadMarker(item.long_id.clone()));
+            orrient_events.send(OrrientEvent::LoadMarker(item.id.clone()));
         }
     }
 }
