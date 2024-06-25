@@ -57,10 +57,15 @@ fn load_trail_system(
 
         let path: Vec<&str> = trail_id.split(".").collect();
         let Some(marker) = &data.get_path(path) else {
+            warn!(
+                "Error when trying to split trail_id into parts: {}",
+                trail_id
+            );
             return;
         };
 
         let Some(trail) = &marker.trail_file else {
+            info!("No trail for this marker category.");
             return;
         };
 
@@ -71,6 +76,7 @@ fn load_trail_system(
             .join(&trail);
 
         let Ok(trail) = trail::from_file(trail_path.as_path()) else {
+            error!("Error when loading trail file at: {:?}", trail_path);
             return;
         };
 
