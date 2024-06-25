@@ -14,7 +14,7 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, load_marker_assets);
         app.add_systems(Update, load_trail.run_if(resource_added::<Trail>));
-        app.add_systems(Update, load_pois.run_if(resource_added::<Trail>));
+        app.add_systems(Update, load_pois.run_if(resource_added::<POIs>));
     }
 }
 
@@ -87,9 +87,7 @@ fn load_trail(mut commands: Commands, trail: Res<Trail>, assets: Res<DebugMarker
 }
 
 fn load_pois(mut commands: Commands, pois: Res<POIs>, assets: Res<DebugMarkerAssets>) {
-    println!("load pois...");
     for pos in &pois.0 {
-        println!("pos: {:?}", pos);
         commands.spawn(PbrBundle {
             mesh: assets.mesh.clone(),
             material: assets.poi_material.clone(),

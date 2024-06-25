@@ -117,22 +117,23 @@ fn load_pois_system(
             return;
         };
 
+        info!("Loading POIs for {}", trail_id);
+
         let path = trail_id.split(".").collect();
         let Some(marker) = data.get_path(path) else {
             return;
         };
 
-        commands.insert_resource(POIs(
-            marker
-                .pois
-                .iter()
-                .map(|poi| Vec3 {
-                    x: poi.x,
-                    y: poi.y,
-                    z: -poi.z,
-                })
-                .collect(),
-        ));
+        let pois: Vec<Vec3> = marker
+            .pois()
+            .iter()
+            .map(|poi| Vec3 {
+                x: poi.x,
+                y: poi.y,
+                z: -poi.z,
+            })
+            .collect();
+        commands.insert_resource(POIs(pois));
     }
 }
 

@@ -23,13 +23,15 @@ pub fn read(path: &Path) -> Result<Markers, Error> {
         let id = category.id();
         path.push(id.clone());
         let long_id = path.join(".");
-        let mut marker = Marker::new(
-            category.display_name(),
-            data.pois
-                .iter()
-                .find_map(|poi| poi.trail.iter().find(|trail| trail.id == long_id))
-                .map(|trail| trail.trail_data.clone()),
-        );
+        let mut marker = Marker::new(category.display_name());
+
+        // Loop through all trails to find any matching one to include
+        // in this marker.
+        marker.trail_file = data
+            .pois
+            .iter()
+            .find_map(|poi| poi.trail.iter().find(|trail| trail.id == long_id))
+            .map(|trail| trail.trail_data.clone());
 
         // Search through all POIs to collect the ones that matches
         // the ID of the marker
@@ -44,7 +46,6 @@ pub fn read(path: &Path) -> Result<Markers, Error> {
                 }
             }
         }
-        println!("marker.pois for {:?}: {:?}", id, marker.pois.len());
 
         // Repeat this recursively for all subcategories as well.
         for category in &category.categories {
@@ -96,6 +97,13 @@ impl Markers {
                 .and_then(|marker| marker.markers.get_path(path))
         }
     }
+
+    pub fn pois(&self) -> Vec<POI> {
+        self.iter()
+            .map(|marker| marker.marker.pois())
+            .flatten()
+            .collect()
+    }
 }
 
 #[derive(Clone, Default, Debug)]
@@ -107,12 +115,12 @@ pub struct Marker {
 }
 
 impl Marker {
-    fn new<L: Into<String>>(label: L, trail_file: Option<String>) -> Self {
+    fn new<L: Into<String>>(label: L) -> Self {
         Self {
             label: label.into(),
             pois: Default::default(),
             markers: Default::default(),
-            trail_file,
+            trail_file: Default::default(),
         }
     }
 
@@ -122,6 +130,13 @@ impl Marker {
             sub: None,
             path,
         }
+    }
+
+    pub fn pois(&self) -> Vec<POI> {
+        self.iter(vec![])
+            .map(|marker| marker.marker.pois.clone())
+            .flatten()
+            .collect()
     }
 }
 
