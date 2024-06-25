@@ -4,9 +4,7 @@ mod link;
 mod marker;
 mod player;
 mod trail;
-#[path = "lunex/mod.rs"]
 mod ui;
-// mod ui;
 
 use bevy::window::{CompositeAlphaMode, PrimaryWindow, WindowResolution};
 use bevy::{
