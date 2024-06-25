@@ -60,7 +60,7 @@ fn build_list(mut commands: Commands, query: Query<(Entity, &List), Added<List>>
                     .id();
 
                 let gap = 0.0;
-                let size = 16.0;
+                let size = 20.0;
                 for (idx, item) in list.items.iter().enumerate() {
                     let root = root.add(idx.to_string());
                     // The text within the list entry.
@@ -72,14 +72,19 @@ fn build_list(mut commands: Commands, query: Query<(Entity, &List), Added<List>>
                             item.clone(),
                             UiText2dBundle {
                                 text: Text::from_section(
-                                    item.text.clone(),
+                                    &item.text,
                                     TextStyle {
+                                        color: Color::GRAY,
                                         font_size: 100.,
                                         ..default()
                                     },
                                 ),
                                 ..default()
                             },
+                            // Hover animation
+                            UiAnimator::<Hover>::new().receiver(true),
+                            UiColor::<Base>::new(Color::GRAY),
+                            UiColor::<Hover>::new(Color::WHITE),
                             UiClickEmitter::SELF,
                             UiScrollEmitter::new(base),
                         ))
@@ -95,6 +100,10 @@ fn build_list(mut commands: Commands, query: Query<(Entity, &List), Added<List>>
                             .y(Ab(idx as f32 * (gap + size)))
                             .pack::<Base>(),
                         UiZoneBundle::default(),
+                        UiAnimator::<Hover>::new()
+                            .forward_speed(5.0)
+                            .backward_speed(1.0),
+                        UiAnimatorPipe::<Hover>::new(vec![entity]),
                         UiClickEmitter::new(entity),
                         UiScrollEmitter::new(base),
                     ));
