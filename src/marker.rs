@@ -83,7 +83,7 @@ fn load_trail_system(mut commands: Commands, marker: Res<Marker>) {
         .unwrap()
         .join("orrient")
         .join("markers")
-        .join(&trail);
+        .join(trail);
 
     let Ok(trail) = trail::from_file(trail_path.as_path()) else {
         error!("Error when loading trail file at: {:?}", trail_path);

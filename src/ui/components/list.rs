@@ -27,14 +27,14 @@ impl List {
     }
 }
 
-impl<'a> Into<ListItem> for marker::MarkerEntry<'a> {
-    fn into(self) -> ListItem {
-        ListItem {
-            id: self.id.clone(),
-            long_id: self.path.join("."),
-            text: self.marker.label.clone(),
+impl<'a> From<marker::MarkerEntry<'a>> for ListItem {
+    fn from(value: marker::MarkerEntry<'a>) -> Self {
+        Self {
+            id: value.id.clone(),
+            long_id: value.path.join("."),
+            text: value.marker.label.clone(),
             kind: ListKind::Entry,
-            indent_level: self.path.len(),
+            indent_level: value.path.len(),
         }
     }
 }
@@ -107,7 +107,7 @@ fn build_list(mut commands: Commands, query: Query<(Entity, &List), Added<List>>
 }
 
 #[derive(Clone)]
-enum ListKind {
+pub enum ListKind {
     Category,
     Entry,
     Separator,
