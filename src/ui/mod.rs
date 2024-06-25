@@ -11,10 +11,11 @@ use bevy::{
             Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
         },
     },
+    window::PrimaryWindow,
 };
 use bevy_lunex::prelude::*;
 
-use crate::marker::MarkerSet;
+use crate::{marker::MarkerSet, OrrientEvent};
 
 pub(crate) struct Plugin;
 
@@ -29,11 +30,9 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Startup, spawn_debug_mesh);
         app.add_systems(Update, move_debug_mesh);
         app.add_systems(Update, load_markers.run_if(resource_added::<MarkerSet>));
+        app.add_systems(Update, toggle_show_ui);
     }
 }
-
-#[derive(Component)]
-pub struct UiRoot;
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Render the 3d camera as a texture
@@ -107,7 +106,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
             ui.spawn((
                 root,
-                UiRoot,
                 UiLayout::solid() //
                     .size((16., 9.))
                     .pack::<Base>(),
@@ -179,4 +177,27 @@ fn spawn_debug_mesh(
             ..default()
         },
     ));
+}
+
+fn toggle_show_ui(
+    mut commands: Commands,
+    mut events: EventReader<OrrientEvent>,
+    mut window: Query<&mut Window, With<PrimaryWindow>>,
+    ui: Query<Entity, With<routes::MarkerList>>,
+) {
+    for event in events.read() {
+        if let OrrientEvent::ToggleUI = event {
+            let mut window = window.single_mut();
+            let visible = !window.cursor.hit_test;
+            if visible {
+                window.cursor.hit_test = true;
+                commands.entity(ui.single()).insert(Visibility::Visible);
+                info!("UI enabled");
+            } else {
+                window.cursor.hit_test = false;
+                commands.entity(ui.single()).insert(Visibility::Hidden);
+                info!("UI disabled");
+            }
+        }
+    }
 }

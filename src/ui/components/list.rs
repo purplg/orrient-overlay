@@ -94,8 +94,6 @@ fn build_list(mut commands: Commands, query: Query<(Entity, &List), Added<List>>
                             .x(item.indent_level as f32 * 8.)
                             .y(Ab(idx as f32 * (gap + size)))
                             .pack::<Base>(),
-                        // Some interactivity stuff so we can capture
-                        // click events to select entries
                         UiZoneBundle::default(),
                         UiClickEmitter::new(entity),
                         UiScrollEmitter::new(base),

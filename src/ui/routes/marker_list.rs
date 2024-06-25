@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 use bevy_lunex::prelude::*;
 
-use crate::{
-    marker::MarkerSet,
-    ui::components::{List, ListItem},
-};
+use crate::{marker::MarkerSet, ui::components::List};
 
 pub(crate) struct Plugin;
 
