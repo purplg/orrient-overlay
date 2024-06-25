@@ -12,6 +12,7 @@ use bevy::{
     window::{Cursor, WindowLevel},
 };
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_lunex::prelude::*;
 
 #[derive(Event)]
 pub enum OrrientEvent {
@@ -67,23 +68,26 @@ fn main() {
 }
 
 fn toggle_hittest_system(
+    mut commands: Commands,
     mut events: EventReader<OrrientEvent>,
     mut window: Query<&mut Window, With<PrimaryWindow>>,
+    ui: Query<Entity, With<ui::UiRoot>>,
 ) {
     for event in events.read() {
         if let OrrientEvent::ToggleUI = event {
             let mut window = window.single_mut();
-            window.cursor.hit_test = !window.cursor.hit_test;
-
-            window.decorations = window.cursor.hit_test;
-            println!(
-                "UI {}",
-                if window.cursor.hit_test {
-                    "enabled"
-                } else {
-                    "disabled"
-                }
-            );
+            let visible = !window.cursor.hit_test;
+            if visible {
+                window.cursor.hit_test = true;
+                window.decorations = true;
+                commands.entity(ui.single()).insert(Visibility::Visible);
+                println!("UI enabled");
+            } else {
+                window.cursor.hit_test = false;
+                window.decorations = false;
+                commands.entity(ui.single()).insert(Visibility::Hidden);
+                println!("UI disabled");
+            }
         }
     }
 }

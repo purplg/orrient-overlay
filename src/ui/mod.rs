@@ -32,6 +32,9 @@ impl bevy::prelude::Plugin for Plugin {
     }
 }
 
+#[derive(Component)]
+pub struct UiRoot;
+
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Render the 3d camera as a texture
     let size = Extent3d {
@@ -104,6 +107,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
             ui.spawn((
                 root,
+                UiRoot,
                 UiLayout::solid() //
                     .size((16., 9.))
                     .pack::<Base>(),
