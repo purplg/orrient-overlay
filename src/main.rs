@@ -25,8 +25,8 @@ pub enum OrrientEvent {
     PlayerPositon(Vec3),
     ToggleUI,
     SavePosition,
+    LoadMarker(String),
     LoadMarkers(String),
-    LoadTrail(String),
 }
 
 fn main() {

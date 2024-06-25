@@ -153,7 +153,7 @@ fn select(
 ) {
     for event in events.read() {
         if let Ok(item) = query_items.get(event.target) {
-            orrient_events.send(OrrientEvent::LoadTrail(item.long_id.clone()));
+            orrient_events.send(OrrientEvent::LoadMarker(item.long_id.clone()));
         }
     }
 }
