@@ -184,9 +184,6 @@ pub struct POI {
     pub z: f32,
 }
 
-#[derive(Clone, Debug)]
-pub struct Trail {}
-
 #[cfg(test)]
 mod tests {
     use super::*;
