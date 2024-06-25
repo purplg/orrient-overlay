@@ -60,7 +60,7 @@ fn build_list(mut commands: Commands, query: Query<(Entity, &List), Added<List>>
                     .id();
 
                 let gap = 0.0;
-                let size = 32.0;
+                let size = 16.0;
                 for (idx, item) in list.items.iter().enumerate() {
                     let root = root.add(idx.to_string());
                     // The text within the list entry.
