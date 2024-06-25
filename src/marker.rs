@@ -24,17 +24,21 @@ fn setup(mut events: EventWriter<OrrientEvent>) {
 
 fn load_marker(mut commands: Commands, mut events: EventReader<OrrientEvent>) {
     for event in events.read() {
-        if let OrrientEvent::LoadMarkers(filename) = event {
-            if let Ok(markers) = marker::read(
-                &dirs::config_dir()
-                    .unwrap()
-                    .join("orrient")
-                    .join("markers")
-                    .join(filename),
-            ) {
-                commands.insert_resource(MarkerSet(markers));
-            }
-        }
+        let OrrientEvent::LoadMarkers(filename) = event else {
+            return;
+        };
+
+        let Ok(markers) = marker::read(
+            &dirs::config_dir()
+                .unwrap()
+                .join("orrient")
+                .join("markers")
+                .join(filename),
+        ) else {
+            return;
+        };
+
+        commands.insert_resource(MarkerSet(markers));
     }
 }
 
@@ -47,32 +51,41 @@ fn load_trail_system(
     data: Res<MarkerSet>,
 ) {
     for event in orrient_events.read() {
-        if let OrrientEvent::LoadTrail(trail_id) = event {
-            let path: Vec<&str> = trail_id.split(".").collect();
-            if let Some(marker) = &data.get_path(path) {
-                if let Some(trail) = &marker.trail_file {
-                    let trail_path = dirs::config_dir()
-                        .unwrap()
-                        .join("orrient")
-                        .join("markers")
-                        .join(&trail);
-                    if let Ok(trail) = trail::from_file(trail_path.as_path()) {
-                        commands.insert_resource(Trail(
-                            trail
-                                .coordinates
-                                .iter()
-                                .map(|coord| Vec3 {
-                                    x: coord.x,
-                                    y: coord.y,
-                                    z: -coord.z,
-                                })
-                                .collect(),
-                        ));
-                        info!("Loaded trail");
-                    }
-                }
-            }
-        }
+        let OrrientEvent::LoadTrail(trail_id) = event else {
+            return;
+        };
+
+        let path: Vec<&str> = trail_id.split(".").collect();
+        let Some(marker) = &data.get_path(path) else {
+            return;
+        };
+
+        let Some(trail) = &marker.trail_file else {
+            return;
+        };
+
+        let trail_path = dirs::config_dir()
+            .unwrap()
+            .join("orrient")
+            .join("markers")
+            .join(&trail);
+
+        let Ok(trail) = trail::from_file(trail_path.as_path()) else {
+            return;
+        };
+
+        commands.insert_resource(Trail(
+            trail
+                .coordinates
+                .iter()
+                .map(|coord| Vec3 {
+                    x: coord.x,
+                    y: coord.y,
+                    z: -coord.z,
+                })
+                .collect(),
+        ));
+        info!("Loaded trail");
     }
 }
 
@@ -85,22 +98,26 @@ fn load_pois_system(
     data: Res<MarkerSet>,
 ) {
     for event in orrient_events.read() {
-        if let OrrientEvent::LoadTrail(trail_id) = event {
-            let path = trail_id.split(".").collect();
-            if let Some(marker) = data.get_path(path) {
-                commands.insert_resource(POIs(
-                    marker
-                        .pois
-                        .iter()
-                        .map(|poi| Vec3 {
-                            x: poi.x,
-                            y: poi.y,
-                            z: -poi.z,
-                        })
-                        .collect(),
-                ));
-            }
-        }
+        let OrrientEvent::LoadTrail(trail_id) = event else {
+            return;
+        };
+
+        let path = trail_id.split(".").collect();
+        let Some(marker) = data.get_path(path) else {
+            return;
+        };
+
+        commands.insert_resource(POIs(
+            marker
+                .pois
+                .iter()
+                .map(|poi| Vec3 {
+                    x: poi.x,
+                    y: poi.y,
+                    z: -poi.z,
+                })
+                .collect(),
+        ));
     }
 }
 
