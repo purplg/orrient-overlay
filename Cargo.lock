@@ -871,6 +871,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_mod_billboard"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70fc73f4c2714b93b4f602236320d20c5b21a622b1cef082152fbabdd40709a1"
+dependencies = [
+ "bevy",
+ "bitflags 2.6.0",
+ "smallvec",
+]
+
+[[package]]
 name = "bevy_mod_picking"
 version = "0.19.1"
 dependencies = [
@@ -2527,6 +2538,7 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_lunex",
+ "bevy_mod_billboard",
  "bincode",
  "crossbeam-channel",
  "dirs",
@@ -2921,6 +2933,7 @@ dependencies = [
 name = "marker"
 version = "0.1.0"
 dependencies = [
+ "petgraph",
  "quick-xml 0.32.0",
  "serde",
 ]

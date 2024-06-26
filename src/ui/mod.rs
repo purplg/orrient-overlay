@@ -15,7 +15,7 @@ use bevy::{
 };
 use bevy_lunex::prelude::*;
 
-use crate::{marker::MarkerSet, OrrientEvent};
+use crate::{marker::MarkerTree, OrrientEvent};
 
 pub(crate) struct Plugin;
 
@@ -29,7 +29,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Startup, setup);
         app.add_systems(Startup, spawn_debug_mesh);
         app.add_systems(Update, move_debug_mesh);
-        app.add_systems(Update, load_markers.run_if(resource_added::<MarkerSet>));
+        app.add_systems(Update, load_markers.run_if(resource_added::<MarkerTree>));
         app.add_systems(Update, toggle_show_ui);
     }
 }

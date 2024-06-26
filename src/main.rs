@@ -3,14 +3,11 @@ mod input;
 mod link;
 mod marker;
 mod player;
-mod trail;
 mod ui;
+mod trail;
 
 use bevy::window::{CompositeAlphaMode, WindowResolution};
-use bevy::{
-    prelude::*,
-    window::{Cursor, WindowLevel},
-};
+use bevy::{prelude::*, window::WindowLevel};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 #[derive(Event)]

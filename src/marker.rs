@@ -10,7 +10,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Startup, setup);
         app.add_systems(
             PreUpdate,
-            load_marker.run_if(resource_exists::<MarkerSet>.and_then(on_event::<OrrientEvent>())),
+            load_marker.run_if(resource_exists::<MarkerTree>.and_then(on_event::<OrrientEvent>())),
         );
         app.add_systems(PreUpdate, load_markers.run_if(on_event::<OrrientEvent>()));
         app.add_systems(
@@ -33,16 +33,20 @@ fn setup(mut events: EventWriter<OrrientEvent>) {
 fn load_marker(
     mut commands: Commands,
     mut events: EventReader<OrrientEvent>,
-    data: Res<MarkerSet>,
+    data: Res<MarkerTree>,
 ) {
     for event in events.read() {
         let OrrientEvent::LoadMarker(marker_id) = event else {
             return;
         };
 
-        let path: Vec<&str> = marker_id.split(".").collect();
-        let Some(marker) = &data.get_path(path) else {
-            warn!("Error when trying to parse marker_id: {}", marker_id);
+        let Some(id) = marker_id.split(".").last() else {
+            warn!("Marker path not found: {}", marker_id);
+            return;
+        };
+
+        let Some(marker) = &data.get(id) else {
+            warn!("Marker ID not found: {}", id);
             return;
         };
 
@@ -66,7 +70,7 @@ fn load_markers(mut commands: Commands, mut events: EventReader<OrrientEvent>) {
             return;
         };
 
-        commands.insert_resource(MarkerSet(markers));
+        commands.insert_resource(MarkerTree(markers));
     }
 }
 
@@ -101,31 +105,40 @@ fn load_trail_system(mut commands: Commands, marker: Res<Marker>) {
             })
             .collect(),
     ));
-    info!("Loaded trail");
+
+    info!("Loaded trail with {} markers", trail.coordinates.len());
 }
 
 #[derive(Resource)]
-pub struct POIs(pub Vec<Vec3>);
+pub struct POIs {
+    pub long_id: String,
+    pub positions: Vec<Vec3>,
+}
 
 fn load_pois_system(
     mut commands: Commands,
     mut orrient_events: EventReader<OrrientEvent>,
-    data: Res<MarkerSet>,
+    data: Res<MarkerTree>,
 ) {
     for event in orrient_events.read() {
-        let OrrientEvent::LoadMarker(trail_id) = event else {
+        let OrrientEvent::LoadMarker(marker_id) = event else {
             return;
         };
 
-        info!("Loading POIs for {}", trail_id);
+        info!("Loading POIs for {}", marker_id);
 
-        let path = trail_id.split(".").collect();
-        let Some(marker) = data.get_path(path) else {
+        let Some(id) = marker_id.split(".").last() else {
+            warn!("Marker path not found: {}", marker_id);
+            return;
+        };
+
+        let Some(marker) = &data.get(id) else {
+            warn!("Marker ID not found: {}", id);
             return;
         };
 
         let pois: Vec<Vec3> = marker
-            .pois()
+            .pois
             .iter()
             .map(|poi| Vec3 {
                 x: poi.x,
@@ -133,12 +146,18 @@ fn load_pois_system(
                 z: -poi.z,
             })
             .collect();
-        commands.insert_resource(POIs(pois));
+
+        info!("Loaded {} POIs.", pois.len());
+
+        commands.insert_resource(POIs {
+            long_id: marker_id.to_string(),
+            positions: pois,
+        });
     }
 }
 
 #[derive(Resource, Clone, Deref, Debug)]
-struct Marker(pub marker::Marker);
+pub struct Marker(pub marker::Marker);
 
 #[derive(Resource, Clone, Deref, Debug)]
-pub struct MarkerSet(pub marker::Markers);
+pub struct MarkerTree(pub marker::MarkerTree);

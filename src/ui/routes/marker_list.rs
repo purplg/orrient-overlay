@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_lunex::prelude::*;
 
-use crate::{marker::MarkerSet, ui::components::List};
+use crate::{marker::MarkerTree, ui::components::List};
 
 pub(crate) struct Plugin;
 
@@ -16,7 +16,7 @@ pub struct MarkerList;
 
 fn build_route(
     mut commands: Commands,
-    markers: Option<Res<MarkerSet>>,
+    markers: Option<Res<MarkerTree>>,
     query: Query<Entity, Added<MarkerList>>,
 ) {
     let Some(markers) = markers else {

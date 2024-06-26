@@ -17,8 +17,10 @@ quick-xml = { version = "0.32.0", features = ["serialize"] }
 bevy-inspector-egui = "0.24.0"
 # bevy_lunex = "0.1.0"
 bevy_lunex = { path = "../bevy_lunex/crates/bevy_lunex/" }
-dirs = "5.0.1"
+# bevy_lunex = { path = "../bevy_lunex/crates/bevy_lunex/", features = ["debug"] }
 # bevy_lunex = { git = "https://github.com/purplg/bevy_lunex.git", branch = "feat/scroll-support" }
+dirs = "5.0.1"
+bevy_mod_billboard = "0.6.0"
 
 [workspace]
 resolver = "2"

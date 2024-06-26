@@ -5,16 +5,24 @@ use bevy::{
         render_resource::{Extent3d, TextureDimension, TextureFormat},
     },
 };
+use bevy_mod_billboard::{plugin::BillboardPlugin, BillboardTextBundle};
 
-use crate::marker::{POIs, Trail};
+use crate::marker::{MarkerTree, POIs, Trail};
 
 pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(BillboardPlugin);
         app.add_systems(Startup, load_marker_assets);
-        app.add_systems(Update, load_trail.run_if(resource_added::<Trail>));
-        app.add_systems(Update, load_pois.run_if(resource_added::<POIs>));
+        app.add_systems(
+            Update,
+            load_trail.run_if(resource_exists_and_changed::<Trail>),
+        );
+        app.add_systems(
+            Update,
+            load_pois.run_if(resource_exists_and_changed::<POIs>),
+        );
     }
 }
 
@@ -86,13 +94,46 @@ fn load_trail(mut commands: Commands, trail: Res<Trail>, assets: Res<DebugMarker
     }
 }
 
-fn load_pois(mut commands: Commands, pois: Res<POIs>, assets: Res<DebugMarkerAssets>) {
-    for pos in &pois.0 {
-        commands.spawn(PbrBundle {
-            mesh: assets.mesh.clone(),
-            material: assets.poi_material.clone(),
-            transform: Transform::from_translation(*pos),
-            ..default()
-        });
+fn load_pois(
+    mut commands: Commands,
+    markers: Res<MarkerTree>,
+    pois: Res<POIs>,
+    assets: Res<DebugMarkerAssets>,
+) {
+    let Some(id) = pois.long_id.split(".").last() else {
+        warn!("Invalid id {}", pois.long_id);
+        return;
+    };
+
+    let Some(marker) = markers.get(id) else {
+        warn!("Marker not found: {}", id);
+        return;
+    };
+
+    let label = marker.poi_label.clone().unwrap_or("POI".to_string());
+
+    for pos in &pois.positions {
+        commands
+            .spawn(PbrBundle {
+                mesh: assets.mesh.clone(),
+                material: assets.poi_material.clone(),
+                transform: Transform::from_translation(*pos),
+                ..default()
+            })
+            .with_children(|parent| {
+                parent.spawn(BillboardTextBundle {
+                    text: Text::from_section(
+                        label.clone(),
+                        TextStyle {
+                            font_size: 100.,
+                            ..default()
+                        },
+                    ),
+                    transform: Transform::from_scale(Vec3::ONE * 0.01)
+                        .with_translation(Vec3::Y * 2.),
+                    ..default()
+                });
+            });
     }
+    info!("Loaded {} POIs", pois.positions.len());
 }

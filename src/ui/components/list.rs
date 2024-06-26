@@ -27,13 +27,13 @@ impl List {
     }
 }
 
-impl<'a> From<marker::MarkerEntry<'a>> for ListItem {
-    fn from(value: marker::MarkerEntry<'a>) -> Self {
+impl<'a> From<marker::MarkerTreeItem<'a>> for ListItem {
+    fn from(value: marker::MarkerTreeItem) -> Self {
         Self {
-            id: value.path.join("."),
+            id: value.id.to_string(),
             text: value.marker.label.clone(),
             kind: ListKind::Entry,
-            indent_level: value.path.len(),
+            indent_level: value.depth,
         }
     }
 }

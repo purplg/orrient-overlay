@@ -70,10 +70,10 @@ fn save_pos_system(
             let player = player.single().translation;
             if let Ok(mut pos) = saved.get_single_mut() {
                 pos.translation = player;
-                println!("position updated");
+                info!("position updated");
             } else {
                 commands.spawn((SavedPosition, Transform::from_translation(player)));
-                println!("new position saved");
+                info!("new position saved");
             }
         }
     }

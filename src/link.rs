@@ -11,7 +11,13 @@ fn run(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
     loop {
         let mut buf = [0; 240];
         let _size = socket.recv(&mut buf);
-        let message: MumbleLinkMessage = bincode::deserialize(&buf).unwrap();
+        let message = match bincode::deserialize(&buf) {
+            Ok(message) => message,
+            Err(err) => {
+                error!("Error decoding MumbleLink message: {:?}", err);
+                continue;
+            }
+        };
         if let Err(e) = tx.send(message) {
             println!("e: {:?}", e);
         }
