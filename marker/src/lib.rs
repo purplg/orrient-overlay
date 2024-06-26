@@ -72,7 +72,7 @@ impl MarkerTreeBuilder {
 
     fn new_from_file(category: &marker::MarkerCategory) -> Self {
         let mut builder = Self::new_empty(category.id().leak());
-        builder.insert_category_recursive(None, category);
+        builder.insert_category_recursive(None, category, 0);
         builder
     }
 
@@ -90,16 +90,17 @@ impl MarkerTreeBuilder {
         &mut self,
         parent: Option<&'static str>,
         category: &marker::MarkerCategory,
+        depth: usize,
     ) {
         let id = category.id().leak();
 
-        let mut marker = Marker::new(category.display_name());
+        let mut marker = Marker::new(category.display_name(), depth);
         marker.poi_label = category.tip_name.clone();
 
         self.insert_marker(parent, id, marker);
 
         for subcat in &category.categories {
-            self.insert_category_recursive(Some(id), &subcat);
+            self.insert_category_recursive(Some(id), &subcat, depth + 1);
         }
     }
 
@@ -133,7 +134,7 @@ impl<'a, VM: VisitMap<&'a str>> Iterator for MarkerTreeIter<'a, VM> {
             self.tree.markers.get(id).map(|marker| MarkerTreeItem {
                 id,
                 marker,
-                depth: 0,
+                depth: self.tree.get(id).unwrap().depth,
             })
         })
     }
@@ -168,15 +169,17 @@ impl MarkerTree {
 #[derive(Clone, Debug)]
 pub struct Marker {
     pub label: String,
+    pub depth: usize,
     pub poi_label: Option<String>,
     pub pois: Vec<Position>,
     pub trail_file: Option<String>,
 }
 
 impl Marker {
-    fn new<L: Into<String>>(label: L) -> Self {
+    fn new<L: Into<String>>(label: L, depth: usize) -> Self {
         Self {
             label: label.into(),
+            depth,
             poi_label: Default::default(),
             pois: Default::default(),
             trail_file: Default::default(),
@@ -202,12 +205,12 @@ mod tests {
     // C   D   F
     fn fake_markers() -> MarkerTree {
         let mut markers = MarkerTreeBuilder::new_empty("A");
-        markers.insert_marker(None, "A", Marker::new("A"));
-        markers.insert_marker(Some("A"), "B", Marker::new("B"));
-        markers.insert_marker(Some("B"), "C", Marker::new("C"));
-        markers.insert_marker(Some("B"), "D", Marker::new("D"));
-        markers.insert_marker(Some("A"), "E", Marker::new("E"));
-        markers.insert_marker(Some("E"), "F", Marker::new("F"));
+        markers.insert_marker(None, "A", Marker::new("A", 0));
+        markers.insert_marker(Some("A"), "B", Marker::new("B", 1));
+        markers.insert_marker(Some("B"), "C", Marker::new("C", 2));
+        markers.insert_marker(Some("B"), "D", Marker::new("D", 2));
+        markers.insert_marker(Some("A"), "E", Marker::new("E", 1));
+        markers.insert_marker(Some("E"), "F", Marker::new("F", 2));
         markers.build()
     }
 
