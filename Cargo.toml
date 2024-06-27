@@ -21,6 +21,8 @@ bevy_lunex = { path = "../bevy_lunex/crates/bevy_lunex/" }
 # bevy_lunex = { git = "https://github.com/purplg/bevy_lunex.git", branch = "feat/scroll-support" }
 dirs = "5.0.1"
 bevy_mod_billboard = "0.6.0"
+bevy_console = "0.11.1"
+clap = "4.5.7"
 
 [workspace]
 resolver = "2"
