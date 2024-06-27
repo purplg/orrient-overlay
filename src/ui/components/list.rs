@@ -85,8 +85,7 @@ fn build_list(mut commands: Commands, query: Query<(Entity, &List), Added<List>>
                             UiAnimator::<Hover>::new().receiver(true),
                             UiColor::<Base>::new(Color::GRAY),
                             UiColor::<Hover>::new(Color::WHITE),
-                            UiClickEmitter::SELF,
-                            UiScrollEmitter::new(base),
+                            Pickable::IGNORE,
                         ))
                         .id();
 
