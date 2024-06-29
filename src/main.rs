@@ -4,8 +4,9 @@ mod input;
 mod link;
 mod marker;
 mod player;
-mod ui;
 mod trail;
+#[path = "ui_sickle/mod.rs"]
+mod ui;
 
 use bevy::window::{CompositeAlphaMode, WindowResolution};
 use bevy::{prelude::*, window::WindowLevel};
@@ -39,6 +40,8 @@ fn main() {
         }),
         ..default()
     }));
+
+    // app.add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin);
 
     // app.add_plugins(WorldInspectorPlugin::new());
 

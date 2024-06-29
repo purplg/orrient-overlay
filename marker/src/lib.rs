@@ -6,6 +6,7 @@ use std::{collections::HashMap, path::Path};
 use petgraph::{
     graphmap::DiGraphMap,
     visit::{Dfs, VisitMap},
+    Direction,
 };
 
 #[derive(Debug)]
@@ -94,7 +95,19 @@ impl MarkerTreeBuilder {
     ) {
         let id = category.id().leak();
 
-        let mut marker = Marker::new(category.display_name(), depth);
+        let mut marker = Marker::new(
+            category.display_name(),
+            if category.is_separator {
+                MarkerKind::Separator
+            } else {
+                if category.categories.len() == 0 {
+                    MarkerKind::Leaf
+                } else {
+                    MarkerKind::Category
+                }
+            },
+            depth,
+        );
         marker.poi_label = category.tip_name.clone();
 
         self.insert_marker(parent, id, marker);
@@ -106,10 +119,10 @@ impl MarkerTreeBuilder {
 
     fn build(mut self) -> MarkerTree {
         let mut graph: DiGraphMap<&'static str, ()> = Default::default();
-        for node in self.nodes.drain(..).rev() {
+        for node in self.nodes.drain(..) {
             graph.add_node(node);
         }
-        for (a, b) in self.edges.drain(..).rev() {
+        for (a, b) in self.edges.drain(..) {
             graph.add_edge(a, b, ());
         }
 
@@ -148,7 +161,7 @@ pub struct MarkerTreeItem<'a> {
 
 #[derive(Clone, Debug)]
 pub struct MarkerTree {
-    root: &'static str,
+    pub root: &'static str,
     graph: DiGraphMap<&'static str, ()>,
     markers: HashMap<&'static str, Marker>,
 }
@@ -158,17 +171,48 @@ impl MarkerTree {
         self.markers.get(id)
     }
 
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = MarkerTreeItem<'a>> {
+    pub fn root<'a>(&'a self) -> Option<MarkerTreeItem<'a>> {
+        self.get(self.root).map(|marker| MarkerTreeItem {
+            id: self.root,
+            marker,
+            depth: marker.depth,
+        })
+    }
+
+    pub fn iter<'a>(&'a self, start: &'a str) -> impl Iterator<Item = MarkerTreeItem<'a>> {
+        self.graph
+            .neighbors_directed(start, Direction::Outgoing)
+            .filter_map(|id| {
+                self.markers.get(id).map(|marker| MarkerTreeItem {
+                    id,
+                    marker,
+                    depth: marker.depth,
+                })
+            })
+    }
+
+    pub fn iter_recursive<'a>(
+        &'a self,
+        start: Option<&'a str>,
+    ) -> impl Iterator<Item = MarkerTreeItem<'a>> {
         MarkerTreeIter {
             tree: self,
-            iter: Dfs::new(&self.graph, self.root),
+            iter: Dfs::new(&self.graph, start.unwrap_or(self.root)),
         }
     }
 }
 
 #[derive(Clone, Debug)]
+pub enum MarkerKind {
+    Category,
+    Leaf,
+    Separator,
+}
+
+#[derive(Clone, Debug)]
 pub struct Marker {
     pub label: String,
+    pub kind: MarkerKind,
     pub depth: usize,
     pub poi_label: Option<String>,
     pub pois: Vec<Position>,
@@ -176,9 +220,43 @@ pub struct Marker {
 }
 
 impl Marker {
-    fn new<L: Into<String>>(label: L, depth: usize) -> Self {
+    fn new<L: Into<String>>(label: L, kind: MarkerKind, depth: usize) -> Self {
         Self {
             label: label.into(),
+            kind,
+            depth,
+            poi_label: Default::default(),
+            pois: Default::default(),
+            trail_file: Default::default(),
+        }
+    }
+
+    fn leaf<L: Into<String>>(label: L, depth: usize) -> Self {
+        Self {
+            label: label.into(),
+            kind: MarkerKind::Leaf,
+            depth,
+            poi_label: Default::default(),
+            pois: Default::default(),
+            trail_file: Default::default(),
+        }
+    }
+
+    fn separator<L: Into<String>>(label: L, depth: usize) -> Self {
+        Self {
+            label: label.into(),
+            kind: MarkerKind::Separator,
+            depth,
+            poi_label: Default::default(),
+            pois: Default::default(),
+            trail_file: Default::default(),
+        }
+    }
+
+    fn category<L: Into<String>>(label: L, depth: usize) -> Self {
+        Self {
+            label: label.into(),
+            kind: MarkerKind::Category,
             depth,
             poi_label: Default::default(),
             pois: Default::default(),
@@ -205,12 +283,12 @@ mod tests {
     // C   D   F
     fn fake_markers() -> MarkerTree {
         let mut markers = MarkerTreeBuilder::new_empty("A");
-        markers.insert_marker(None, "A", Marker::new("A", 0));
-        markers.insert_marker(Some("A"), "B", Marker::new("B", 1));
-        markers.insert_marker(Some("B"), "C", Marker::new("C", 2));
-        markers.insert_marker(Some("B"), "D", Marker::new("D", 2));
-        markers.insert_marker(Some("A"), "E", Marker::new("E", 1));
-        markers.insert_marker(Some("E"), "F", Marker::new("F", 2));
+        markers.insert_marker(None, "A", Marker::category("A", 0));
+        markers.insert_marker(Some("A"), "B", Marker::category("B", 1));
+        markers.insert_marker(Some("B"), "C", Marker::category("C", 2));
+        markers.insert_marker(Some("B"), "D", Marker::category("D", 2));
+        markers.insert_marker(Some("A"), "E", Marker::category("E", 1));
+        markers.insert_marker(Some("E"), "F", Marker::category("F", 2));
         markers.build()
     }
 
@@ -229,7 +307,7 @@ mod tests {
     #[test]
     fn test_iter() {
         let markers = fake_markers();
-        let mut iter = markers.iter();
+        let mut iter = markers.iter_recursive();
         assert_eq!(iter.next().unwrap().id, "A");
         assert_eq!(iter.next().unwrap().id, "B");
         assert_eq!(iter.next().unwrap().id, "C");
