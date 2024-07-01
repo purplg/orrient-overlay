@@ -5,7 +5,6 @@ mod link;
 mod marker;
 mod player;
 mod trail;
-#[path = "ui_sickle/mod.rs"]
 mod ui;
 
 use bevy::window::{CompositeAlphaMode, WindowResolution};
