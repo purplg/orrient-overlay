@@ -36,7 +36,10 @@ impl bevy::prelude::Plugin for Plugin {
 }
 
 #[derive(Component)]
-struct MarkerView;
+struct MarkerWindow;
+
+#[derive(Component)]
+struct MarkerList;
 
 #[derive(Component)]
 struct FileBrowser;
@@ -61,27 +64,29 @@ fn setup(mut commands: Commands) {
             TargetCamera(camera),
         ),
         |container| {
-            container.floating_panel(
-                FloatingPanelConfig {
-                    title: Some("Markers".into()),
-                    ..default()
-                },
-                FloatingPanelLayout {
-                    size: (1920., 1080.).into(),
-                    position: Some((100., 100.).into()),
-                    ..default()
-                },
-                |panel| {
-                    panel
-                        .spawn((
-                            NodeBundle::default(),
-                            MarkerView, //
-                        ))
-                        .style()
-                        .width(Val::Percent(100.))
-                        .height(Val::Percent(100.));
-                },
-            );
+            container
+                .floating_panel(
+                    FloatingPanelConfig {
+                        title: Some("Markers".into()),
+                        ..default()
+                    },
+                    FloatingPanelLayout {
+                        size: (1920., 1080.).into(),
+                        position: Some((100., 100.).into()),
+                        ..default()
+                    },
+                    |panel| {
+                        panel
+                            .spawn((
+                                NodeBundle::default(),
+                                MarkerList, //
+                            ))
+                            .style()
+                            .width(Val::Percent(100.))
+                            .height(Val::Percent(100.));
+                    },
+                )
+                .insert(MarkerWindow);
         },
     );
 }
@@ -141,7 +146,7 @@ fn tree_item(
 fn show_markers(
     mut commands: Commands,
     markers: Res<MarkerTree>,
-    query: Query<Entity, With<MarkerView>>,
+    query: Query<Entity, With<MarkerList>>,
 ) {
     commands
         .ui_builder(query.single())
@@ -173,7 +178,7 @@ fn show_markers(
         .width(Val::Percent(100.));
 }
 
-fn remove_markers(mut commands: Commands, query: Query<Entity, With<MarkerView>>) {
+fn remove_markers(mut commands: Commands, query: Query<Entity, With<MarkerList>>) {
     commands.entity(query.single()).despawn_descendants();
 }
 
@@ -244,10 +249,9 @@ fn checkbox_events(
 }
 
 fn toggle_show_ui(
-    mut commands: Commands,
     mut events: EventReader<UiEvent>,
     mut window: Query<&mut Window, With<PrimaryWindow>>,
-    ui: Query<Entity, With<MarkerView>>,
+    mut ui: Query<&mut FloatingPanelConfig, With<MarkerWindow>>,
 ) {
     for event in events.read() {
         if let UiEvent::ToggleUI = event {
@@ -255,11 +259,11 @@ fn toggle_show_ui(
             let visible = !window.cursor.hit_test;
             if visible {
                 window.cursor.hit_test = true;
-                commands.entity(ui.single()).insert(Visibility::Visible);
+                ui.single_mut().folded = false;
                 info!("UI enabled");
             } else {
                 window.cursor.hit_test = false;
-                commands.entity(ui.single()).insert(Visibility::Hidden);
+                ui.single_mut().folded = true;
                 info!("UI disabled");
             }
         }
