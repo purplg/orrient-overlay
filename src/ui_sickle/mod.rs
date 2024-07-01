@@ -9,7 +9,7 @@ use sickle_ui::{
     SickleUiPlugin,
 };
 
-use crate::{marker::MarkerTree, OrrientEvent};
+use crate::{marker::MarkerTree, UiEvent};
 
 pub(crate) struct Plugin;
 
@@ -24,8 +24,8 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Update, checkbox);
         app.add_systems(Update, checkbox_events);
         app.add_systems(Update, menu_interaction);
-        app.add_systems(Update, show_file_open.run_if(on_event::<OrrientEvent>()));
-        app.add_systems(Update, hide_file_open.run_if(on_event::<OrrientEvent>()));
+        app.add_systems(Update, show_file_open.run_if(on_event::<UiEvent>()));
+        app.add_systems(Update, hide_file_open.run_if(on_event::<UiEvent>()));
         app.add_systems(
             Update,
             (remove_markers, show_markers)
@@ -42,7 +42,7 @@ struct MarkerView;
 struct FileBrowser;
 
 #[derive(Component)]
-struct OrrientMenuItem(OrrientEvent);
+struct OrrientMenuItem(UiEvent);
 
 fn setup(mut commands: Commands) {
     let camera = commands
@@ -158,7 +158,7 @@ fn show_markers(
                                 name: "Open markers...".into(),
                                 ..default()
                             })
-                            .insert(OrrientMenuItem(OrrientEvent::ShowMarkerBrowser));
+                            .insert(OrrientMenuItem(UiEvent::ShowMarkerBrowser));
                     },
                 );
             });
@@ -224,7 +224,7 @@ fn checkbox(
 fn checkbox_events(
     mut query: Query<(&mut Checkbox, &MarkerItem)>,
     mut checkbox_events: EventReader<CheckboxEvent>,
-    mut orrient_events: EventWriter<OrrientEvent>,
+    mut events: EventWriter<UiEvent>,
 ) {
     for event in checkbox_events.read() {
         let event_id = event.id().to_string();
@@ -238,7 +238,7 @@ fn checkbox_events(
         }) {
             checkbox.checked = event.enabled();
             if checkbox.checked {
-                orrient_events.send(OrrientEvent::LoadMarker(event_id));
+                events.send(UiEvent::LoadMarker(event_id));
             }
         }
     }
@@ -246,12 +246,12 @@ fn checkbox_events(
 
 fn toggle_show_ui(
     mut commands: Commands,
-    mut events: EventReader<OrrientEvent>,
+    mut events: EventReader<UiEvent>,
     mut window: Query<&mut Window, With<PrimaryWindow>>,
     ui: Query<Entity, With<MarkerView>>,
 ) {
     for event in events.read() {
-        if let OrrientEvent::ToggleUI = event {
+        if let UiEvent::ToggleUI = event {
             let mut window = window.single_mut();
             let visible = !window.cursor.hit_test;
             if visible {
@@ -271,12 +271,12 @@ fn show_file_open(
     mut commands: Commands,
     query: Query<(), With<FileBrowser>>,
     window: Query<&Window, With<PrimaryWindow>>,
-    mut events: EventReader<OrrientEvent>,
+    mut events: EventReader<UiEvent>,
 ) {
     // Wait for ShowFileBrowser event.
     if !events
         .read()
-        .any(|event| matches!(event, OrrientEvent::ShowMarkerBrowser))
+        .any(|event| matches!(event, UiEvent::ShowMarkerBrowser))
     {
         return;
     }
@@ -326,7 +326,7 @@ fn show_file_open(
                         name: filename.clone(),
                         ..default()
                     })
-                    .insert(OrrientMenuItem(OrrientEvent::LoadMarkers(filename)));
+                    .insert(OrrientMenuItem(UiEvent::LoadMarkers(filename)));
             }
         },
     );
@@ -335,11 +335,11 @@ fn show_file_open(
 fn hide_file_open(
     mut commands: Commands,
     query: Query<Entity, With<FileBrowser>>,
-    mut events: EventReader<OrrientEvent>,
+    mut events: EventReader<UiEvent>,
 ) {
     for event in events.read() {
         match event {
-            OrrientEvent::LoadMarkers(_) => break,
+            UiEvent::LoadMarkers(_) => break,
             _ => return,
         }
     }
@@ -353,7 +353,7 @@ fn hide_file_open(
 
 fn menu_interaction(
     query: Query<(&MenuItem, &OrrientMenuItem), Changed<MenuItem>>,
-    mut events: EventWriter<OrrientEvent>,
+    mut events: EventWriter<UiEvent>,
 ) {
     for (menu_item, orrient_menu_item) in &query {
         if menu_item.interacted() {

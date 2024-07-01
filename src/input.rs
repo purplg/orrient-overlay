@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::OrrientEvent;
+use crate::UiEvent;
 
 pub(crate) struct Plugin;
 
@@ -10,8 +10,8 @@ impl bevy::prelude::Plugin for Plugin {
     }
 }
 
-fn update(input: Res<ButtonInput<KeyCode>>, mut mumble_link_event: EventWriter<OrrientEvent>) {
+fn update(input: Res<ButtonInput<KeyCode>>, mut mumble_link_event: EventWriter<UiEvent>) {
     if input.just_pressed(KeyCode::Escape) {
-        mumble_link_event.send(OrrientEvent::ToggleUI);
+        mumble_link_event.send(UiEvent::ToggleUI);
     }
 }

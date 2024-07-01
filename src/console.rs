@@ -3,7 +3,7 @@ use std::ffi::OsStr;
 use bevy::prelude::*;
 use bevy_console::{clap::Parser, AddConsoleCommand, ConsoleCommand, ConsolePlugin};
 
-use crate::OrrientEvent;
+use crate::UiEvent;
 
 pub(crate) struct Plugin;
 
@@ -45,7 +45,7 @@ struct LoadMarkers {
     file: String,
 }
 
-fn load_command(mut log: ConsoleCommand<LoadMarkers>, mut events: EventWriter<OrrientEvent>) {
+fn load_command(mut log: ConsoleCommand<LoadMarkers>, mut events: EventWriter<UiEvent>) {
     if let Some(Ok(LoadMarkers { file })) = log.take() {
         if dirs::config_dir()
             .unwrap()
@@ -54,7 +54,7 @@ fn load_command(mut log: ConsoleCommand<LoadMarkers>, mut events: EventWriter<Or
             .join(&file)
             .exists()
         {
-            events.send(OrrientEvent::LoadMarkers(file));
+            events.send(UiEvent::LoadMarkers(file));
             log.ok()
         } else {
             log.failed()

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use marker::trail;
 
-use crate::OrrientEvent;
+use crate::UiEvent;
 
 pub(crate) struct Plugin;
 
@@ -10,9 +10,9 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Startup, setup);
         app.add_systems(
             PreUpdate,
-            load_marker.run_if(resource_exists::<MarkerTree>.and_then(on_event::<OrrientEvent>())),
+            load_marker.run_if(resource_exists::<MarkerTree>.and_then(on_event::<UiEvent>())),
         );
-        app.add_systems(PreUpdate, load_markers.run_if(on_event::<OrrientEvent>()));
+        app.add_systems(PreUpdate, load_markers.run_if(on_event::<UiEvent>()));
         app.add_systems(
             Update,
             load_trail_system.run_if(resource_exists_and_changed::<Marker>),
@@ -24,19 +24,13 @@ impl bevy::prelude::Plugin for Plugin {
     }
 }
 
-fn setup(mut events: EventWriter<OrrientEvent>) {
-    events.send(OrrientEvent::LoadMarkers(
-        "tw_lws03e05_draconismons.xml".into(),
-    ));
+fn setup(mut events: EventWriter<UiEvent>) {
+    events.send(UiEvent::LoadMarkers("tw_lws03e05_draconismons.xml".into()));
 }
 
-fn load_marker(
-    mut commands: Commands,
-    mut events: EventReader<OrrientEvent>,
-    data: Res<MarkerTree>,
-) {
+fn load_marker(mut commands: Commands, mut events: EventReader<UiEvent>, data: Res<MarkerTree>) {
     for event in events.read() {
-        let OrrientEvent::LoadMarker(marker_id) = event else {
+        let UiEvent::LoadMarker(marker_id) = event else {
             return;
         };
 
@@ -54,9 +48,9 @@ fn load_marker(
     }
 }
 
-fn load_markers(mut commands: Commands, mut events: EventReader<OrrientEvent>) {
+fn load_markers(mut commands: Commands, mut events: EventReader<UiEvent>) {
     for event in events.read() {
-        let OrrientEvent::LoadMarkers(filename) = event else {
+        let UiEvent::LoadMarkers(filename) = event else {
             return;
         };
 
@@ -117,11 +111,11 @@ pub struct POIs {
 
 fn load_pois_system(
     mut commands: Commands,
-    mut orrient_events: EventReader<OrrientEvent>,
+    mut orrient_events: EventReader<UiEvent>,
     data: Res<MarkerTree>,
 ) {
     for event in orrient_events.read() {
-        let OrrientEvent::LoadMarker(marker_id) = event else {
+        let UiEvent::LoadMarker(marker_id) = event else {
             return;
         };
 

@@ -12,15 +12,19 @@ use bevy::window::{CompositeAlphaMode, WindowResolution};
 use bevy::{prelude::*, window::WindowLevel};
 
 #[derive(Event, Clone, Debug)]
-pub enum OrrientEvent {
+pub enum WorldEvent {
     CameraUpdate {
         position: Vec3,
         facing: Vec3,
         fov: f32,
     },
     PlayerPositon(Vec3),
-    ToggleUI,
     SavePosition,
+}
+
+#[derive(Event, Clone, Debug)]
+pub enum UiEvent {
+    ToggleUI,
     ShowMarkerBrowser,
     LoadMarker(String),
     LoadMarkers(String),
@@ -45,7 +49,9 @@ fn main() {
     // use bevy_inspector_egui::quick::WorldInspectorPlugin;
     // app.add_plugins(WorldInspectorPlugin::new());
 
-    app.add_event::<OrrientEvent>();
+    app.add_event::<WorldEvent>();
+    app.add_event::<UiEvent>();
+
     app.insert_resource(ClearColor(Color::NONE));
 
     app.add_plugins(camera::Plugin);

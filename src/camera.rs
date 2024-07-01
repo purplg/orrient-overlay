@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::OrrientEvent;
+use crate::WorldEvent;
 
 pub(crate) struct Plugin;
 
@@ -11,11 +11,11 @@ impl bevy::prelude::Plugin for Plugin {
 }
 
 fn camera_system(
-    mut events: EventReader<OrrientEvent>,
+    mut events: EventReader<WorldEvent>,
     mut camera: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
 ) {
     for event in events.read() {
-        if let OrrientEvent::CameraUpdate {
+        if let WorldEvent::CameraUpdate {
             position,
             facing,
             fov,

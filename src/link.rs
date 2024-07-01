@@ -4,7 +4,7 @@ use std::net::UdpSocket;
 
 use mumblelink::MumbleLinkMessage;
 
-use crate::OrrientEvent;
+use crate::{UiEvent, WorldEvent};
 
 fn run(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
     let socket = UdpSocket::bind("127.0.0.1:5001").unwrap();
@@ -40,7 +40,11 @@ impl bevy::prelude::Plugin for Plugin {
 #[derive(Resource, Deref)]
 struct MumbleLinkMessageReceiver(pub Receiver<MumbleLinkMessage>);
 
-fn socket_system(rx: Res<MumbleLinkMessageReceiver>, mut events: EventWriter<OrrientEvent>) {
+fn socket_system(
+    rx: Res<MumbleLinkMessageReceiver>,
+    mut world_events: EventWriter<WorldEvent>,
+    mut ui_events: EventWriter<UiEvent>,
+) {
     let mut message: Option<MumbleLinkMessage> = None;
 
     // Only care about latest
@@ -61,7 +65,7 @@ fn socket_system(rx: Res<MumbleLinkMessageReceiver>, mut events: EventWriter<Orr
                 data.camera.front[2],
             );
 
-            events.send(OrrientEvent::CameraUpdate {
+            world_events.send(WorldEvent::CameraUpdate {
                 position: Vec3::new(
                     data.camera.position[0],
                     data.camera.position[1],
@@ -71,17 +75,17 @@ fn socket_system(rx: Res<MumbleLinkMessageReceiver>, mut events: EventWriter<Orr
                 fov: data.identity.fov,
             });
 
-            events.send(OrrientEvent::PlayerPositon(Vec3 {
+            world_events.send(WorldEvent::PlayerPositon(Vec3 {
                 x: data.avatar.position[0],
                 y: data.avatar.position[1],
                 z: -data.avatar.position[2],
             }));
         }
         MumbleLinkMessage::Toggle => {
-            events.send(OrrientEvent::ToggleUI);
+            ui_events.send(UiEvent::ToggleUI);
         }
         MumbleLinkMessage::Save => {
-            events.send(OrrientEvent::SavePosition);
+            world_events.send(WorldEvent::SavePosition);
         }
     }
 }
