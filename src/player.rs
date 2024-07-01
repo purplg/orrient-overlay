@@ -17,7 +17,7 @@ impl bevy::prelude::Plugin for Plugin {
 }
 
 #[derive(Component)]
-struct Player;
+pub struct Player;
 
 fn setup(mut commands: Commands) {
     let mut entity = commands.spawn_empty();

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_mod_billboard::BillboardTextBundle;
 use marker::trail;
 
-use crate::{trail::DebugMarkerAssets, UiEvent};
+use crate::{player::Player, trail::DebugMarkerAssets, UiEvent, WorldEvent};
 
 pub(crate) struct Plugin;
 
@@ -14,6 +14,10 @@ impl bevy::prelude::Plugin for Plugin {
             load_marker.run_if(resource_exists::<MarkerTree>.and_then(on_event::<UiEvent>())),
         );
         app.add_systems(PreUpdate, load_markers.run_if(on_event::<UiEvent>()));
+        app.add_systems(
+            Update,
+            disappear_nearby_system.run_if(on_event::<WorldEvent>()),
+        );
         app.add_systems(
             Update,
             load_trail_system.run_if(resource_exists_and_changed::<Marker>),
@@ -107,6 +111,23 @@ fn load_trail_system(mut commands: Commands, marker: Res<Marker>) {
 #[derive(Component)]
 struct POI(String);
 
+#[derive(Component)]
+struct DisappearNearby;
+
+fn disappear_nearby_system(
+    mut commands: Commands,
+    query: Query<(Entity, &Transform), With<DisappearNearby>>,
+    player: Query<&Transform, With<Player>>,
+) {
+    if let Ok(player) = player.get_single() {
+        for (entity, transform) in &query {
+            if transform.translation.distance_squared(player.translation) < 10. {
+                commands.entity(entity).despawn_recursive();
+            }
+        }
+    }
+}
+
 fn load_pois_system(
     mut commands: Commands,
     mut ui_events: EventReader<UiEvent>,
@@ -141,30 +162,36 @@ fn load_pois_system(
             .collect();
 
         for poi in &pois {
-            commands
-                .spawn((
-                    PbrBundle {
-                        mesh: assets.mesh.clone(),
-                        material: assets.poi_material.clone(),
-                        transform: Transform::from_translation(*poi),
-                        ..default()
-                    },
-                    POI(id.to_string()),
-                ))
-                .with_children(|parent| {
-                    parent.spawn(BillboardTextBundle {
-                        text: Text::from_section(
-                            marker.label.clone(),
-                            TextStyle {
-                                font_size: 100.,
-                                ..default()
-                            },
-                        ),
-                        transform: Transform::from_scale(Vec3::ONE * 0.01)
-                            .with_translation(Vec3::Y * 2.),
-                        ..default()
-                    });
+            let mut builder = commands.spawn((
+                PbrBundle {
+                    mesh: assets.mesh.clone(),
+                    material: assets.poi_material.clone(),
+                    transform: Transform::from_translation(*poi),
+                    ..default()
+                },
+                POI(id.to_string()),
+            ));
+
+            builder.with_children(|parent| {
+                parent.spawn(BillboardTextBundle {
+                    text: Text::from_section(
+                        marker.label.clone(),
+                        TextStyle {
+                            font_size: 100.,
+                            ..default()
+                        },
+                    ),
+                    transform: Transform::from_scale(Vec3::ONE * 0.01)
+                        .with_translation(Vec3::Y * 2.),
+                    ..default()
                 });
+            });
+
+            if let Some(marker::Behavior::ReappearDaily) = marker.behavior {
+                builder.insert(DisappearNearby);
+            } else if let Some(marker::Behavior::DisappearOnUse) = marker.behavior {
+                builder.insert(DisappearNearby);
+            }
         }
 
         info!("Loaded {} POIs.", pois.len());

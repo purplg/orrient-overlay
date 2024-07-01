@@ -73,29 +73,29 @@ impl MarkerTreeBuilder {
 
     fn new_from_file(category: &marker::MarkerCategory) -> Self {
         let mut builder = Self::new_empty(category.id().leak());
-        builder.insert_category_recursive(None, category, 0);
+        builder.insert_category_recursive(category, 0, None);
         builder
     }
 
-    fn insert_marker(&mut self, parent: Option<&'static str>, id: &'static str, marker: Marker) {
+    fn insert_marker(&mut self, id: &'static str, marker: Marker, parent: Option<&Marker>) {
         self.markers.insert(id, marker);
 
         self.nodes.push(id);
 
         if let Some(parent) = parent {
-            self.edges.push((parent, id));
+            self.edges.push((parent.id.clone().leak(), id));
         }
     }
 
     fn insert_category_recursive(
         &mut self,
-        parent: Option<&'static str>,
         category: &marker::MarkerCategory,
         depth: usize,
+        parent: Option<&Marker>,
     ) {
-        let id = category.id().leak();
-
+        let id: &str = category.id().leak();
         let mut marker = Marker::new(
+            id,
             category.display_name(),
             if category.is_separator {
                 MarkerKind::Separator
@@ -108,13 +108,19 @@ impl MarkerTreeBuilder {
             },
             depth,
         );
+
+        if let Some(parent) = parent {
+            marker.copy_from_parent(parent);
+        }
+
         marker.poi_tip = category.tip_name.clone();
         marker.poi_description = category.tip_description.clone();
+        marker.behavior = Behavior::from_category(&category);
 
-        self.insert_marker(parent, id, marker);
+        self.insert_marker(id, marker.clone(), parent);
 
         for subcat in &category.categories {
-            self.insert_category_recursive(Some(id), &subcat, depth + 1);
+            self.insert_category_recursive(&subcat, depth + 1, Some(&marker));
         }
     }
 
@@ -203,18 +209,56 @@ impl MarkerTree {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum MarkerKind {
     Category,
     Leaf,
     Separator,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum Behavior {
+    AlwaysVisible,             // 0
+    ReappearOnMapChange,       // 1
+    ReappearDaily,             // 2
+    DisappearOnUse,            // 3
+    ReappearAfterTime(f32),    // 4
+    ReappearMapReset,          // 5
+    ReappearInstanceChange,    // 6
+    ReappearDailyPerCharacter, // 7
+}
+
+impl Behavior {
+    fn from_category(category: &marker::MarkerCategory) -> Option<Behavior> {
+        if let Some(behavior) = category.behavior {
+            match behavior {
+                0 => Some(Self::AlwaysVisible),
+                1 => Some(Self::ReappearOnMapChange),
+                2 => Some(Self::ReappearDaily),
+                3 => Some(Self::DisappearOnUse),
+                4 => Some(Self::ReappearAfterTime(
+                    category
+                        .reset_length
+                        .expect("resetLength must be defined to use Behavior 4"),
+                )),
+                5 => Some(Self::ReappearMapReset),
+                6 => Some(Self::ReappearInstanceChange),
+                7 => Some(Self::ReappearDailyPerCharacter),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Marker {
+    pub id: String,
     pub label: String,
     pub kind: MarkerKind,
     pub depth: usize,
+    pub behavior: Option<Behavior>,
     pub poi_tip: Option<String>,
     pub poi_description: Option<String>,
     pub pois: Vec<Position>,
@@ -222,11 +266,18 @@ pub struct Marker {
 }
 
 impl Marker {
-    fn new<L: Into<String>>(label: L, kind: MarkerKind, depth: usize) -> Self {
+    fn new(
+        id: impl Into<String>,
+        label: impl Into<String>,
+        kind: MarkerKind,
+        depth: usize,
+    ) -> Self {
         Self {
+            id: id.into(),
             label: label.into(),
             kind,
             depth,
+            behavior: Default::default(),
             poi_tip: Default::default(),
             poi_description: Default::default(),
             pois: Default::default(),
@@ -234,40 +285,8 @@ impl Marker {
         }
     }
 
-    fn leaf<L: Into<String>>(label: L, depth: usize) -> Self {
-        Self {
-            label: label.into(),
-            kind: MarkerKind::Leaf,
-            depth,
-            poi_tip: Default::default(),
-            poi_description: Default::default(),
-            pois: Default::default(),
-            trail_file: Default::default(),
-        }
-    }
-
-    fn separator<L: Into<String>>(label: L, depth: usize) -> Self {
-        Self {
-            label: label.into(),
-            kind: MarkerKind::Separator,
-            depth,
-            poi_tip: Default::default(),
-            poi_description: Default::default(),
-            pois: Default::default(),
-            trail_file: Default::default(),
-        }
-    }
-
-    fn category<L: Into<String>>(label: L, depth: usize) -> Self {
-        Self {
-            label: label.into(),
-            kind: MarkerKind::Category,
-            depth,
-            poi_tip: Default::default(),
-            poi_description: Default::default(),
-            pois: Default::default(),
-            trail_file: Default::default(),
-        }
+    fn copy_from_parent(&mut self, parent: &Marker) {
+        self.behavior = parent.behavior;
     }
 }
 
