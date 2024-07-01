@@ -1,3 +1,5 @@
+use std::ffi::OsStr;
+
 use bevy::{prelude::*, window::PrimaryWindow};
 use marker::MarkerKind;
 use sickle_ui::{
@@ -21,6 +23,9 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Update, toggle_show_ui);
         app.add_systems(Update, checkbox);
         app.add_systems(Update, checkbox_events);
+        app.add_systems(Update, menu_interaction);
+        app.add_systems(Update, show_file_open.run_if(on_event::<OrrientEvent>()));
+        app.add_systems(Update, hide_file_open.run_if(on_event::<OrrientEvent>()));
         app.add_systems(
             Update,
             (remove_markers, show_markers)
@@ -32,6 +37,12 @@ impl bevy::prelude::Plugin for Plugin {
 
 #[derive(Component)]
 struct MarkerView;
+
+#[derive(Component)]
+struct FileBrowser;
+
+#[derive(Component)]
+struct OrrientMenuItem(OrrientEvent);
 
 fn setup(mut commands: Commands) {
     let camera = commands
@@ -134,11 +145,32 @@ fn show_markers(
 ) {
     commands
         .ui_builder(query.single())
-        .scroll_view(None, |scroll_view| {
-            if let Some(item) = markers.root() {
-                tree_item(&item, scroll_view, &markers);
-            }
-        });
+        .column(|parent| {
+            parent.menu_bar(|parent| {
+                parent.menu(
+                    MenuConfig {
+                        name: "File".into(),
+                        ..default()
+                    },
+                    |parent| {
+                        parent
+                            .menu_item(MenuItemConfig {
+                                name: "Open markers...".into(),
+                                ..default()
+                            })
+                            .insert(OrrientMenuItem(OrrientEvent::ShowMarkerBrowser));
+                    },
+                );
+            });
+
+            parent.scroll_view(None, |scroll_view| {
+                if let Some(item) = markers.root() {
+                    tree_item(&item, scroll_view, &markers);
+                }
+            });
+        })
+        .style()
+        .width(Val::Percent(100.));
 }
 
 fn remove_markers(mut commands: Commands, query: Query<Entity, With<MarkerView>>) {
@@ -231,6 +263,101 @@ fn toggle_show_ui(
                 commands.entity(ui.single()).insert(Visibility::Hidden);
                 info!("UI disabled");
             }
+        }
+    }
+}
+
+fn show_file_open(
+    mut commands: Commands,
+    query: Query<(), With<FileBrowser>>,
+    window: Query<&Window, With<PrimaryWindow>>,
+    mut events: EventReader<OrrientEvent>,
+) {
+    // Wait for ShowFileBrowser event.
+    if !events
+        .read()
+        .any(|event| matches!(event, OrrientEvent::ShowMarkerBrowser))
+    {
+        return;
+    }
+
+    // Already open
+    if query.get_single().is_ok() {
+        return;
+    }
+
+    let window = window.single();
+
+    let root = commands
+        .spawn((
+            NodeBundle::default(), //
+            FileBrowser,
+        ))
+        .id();
+
+    let size = Vec2::new(800., 600.);
+    let position = Vec2::new(window.width() * 0.5 - size.x * 0.5, 200.);
+    commands.ui_builder(root).floating_panel(
+        FloatingPanelConfig {
+            title: Some("Open Markers".into()),
+            draggable: false,
+            resizable: false,
+            foldable: false,
+            closable: false,
+            ..default()
+        },
+        FloatingPanelLayout {
+            size,
+            position: Some(position),
+            ..default()
+        },
+        |parent| {
+            let dir = &dirs::config_dir().unwrap().join("orrient").join("markers");
+            let iter = std::fs::read_dir(dir).unwrap();
+            for item in iter
+                .filter_map(Result::ok)
+                .map(|file| file.path())
+                .filter(|file| file.is_file())
+                .filter(|file| Some(OsStr::new("xml")) == file.extension())
+            {
+                let filename: String = item.file_name().unwrap().to_string_lossy().into();
+                parent
+                    .menu_item(MenuItemConfig {
+                        name: filename.clone(),
+                        ..default()
+                    })
+                    .insert(OrrientMenuItem(OrrientEvent::LoadMarkers(filename)));
+            }
+        },
+    );
+}
+
+fn hide_file_open(
+    mut commands: Commands,
+    query: Query<Entity, With<FileBrowser>>,
+    mut events: EventReader<OrrientEvent>,
+) {
+    for event in events.read() {
+        match event {
+            OrrientEvent::LoadMarkers(_) => break,
+            _ => return,
+        }
+    }
+
+    let Ok(browser) = query.get_single() else {
+        return;
+    };
+
+    commands.entity(browser).despawn_recursive();
+}
+
+fn menu_interaction(
+    query: Query<(&MenuItem, &OrrientMenuItem), Changed<MenuItem>>,
+    mut events: EventWriter<OrrientEvent>,
+) {
+    for (menu_item, orrient_menu_item) in &query {
+        if menu_item.interacted() {
+            events.send(orrient_menu_item.0.clone());
         }
     }
 }
