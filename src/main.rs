@@ -27,6 +27,7 @@ pub enum UiEvent {
     ToggleUI,
     ShowMarkerBrowser,
     LoadMarker(String),
+    UnloadMarker(String),
     LoadMarkers(String),
 }
 

@@ -1,7 +1,8 @@
 use bevy::prelude::*;
+use bevy_mod_billboard::BillboardTextBundle;
 use marker::trail;
 
-use crate::UiEvent;
+use crate::{trail::DebugMarkerAssets, UiEvent};
 
 pub(crate) struct Plugin;
 
@@ -19,7 +20,7 @@ impl bevy::prelude::Plugin for Plugin {
         );
         app.add_systems(
             Update,
-            load_pois_system.run_if(resource_exists_and_changed::<Marker>),
+            (load_pois_system, unload_pois_system).run_if(on_event::<UiEvent>()),
         );
     }
 }
@@ -103,18 +104,16 @@ fn load_trail_system(mut commands: Commands, marker: Res<Marker>) {
     info!("Loaded trail with {} markers", trail.coordinates.len());
 }
 
-#[derive(Resource)]
-pub struct POIs {
-    pub long_id: String,
-    pub positions: Vec<Vec3>,
-}
+#[derive(Component)]
+struct POI(String);
 
 fn load_pois_system(
     mut commands: Commands,
-    mut orrient_events: EventReader<UiEvent>,
+    mut ui_events: EventReader<UiEvent>,
     data: Res<MarkerTree>,
+    assets: Res<DebugMarkerAssets>,
 ) {
-    for event in orrient_events.read() {
+    for event in ui_events.read() {
         let UiEvent::LoadMarker(marker_id) = event else {
             return;
         };
@@ -141,12 +140,54 @@ fn load_pois_system(
             })
             .collect();
 
-        info!("Loaded {} POIs.", pois.len());
+        let label = marker.poi_label.clone().unwrap_or("POI".to_string());
 
-        commands.insert_resource(POIs {
-            long_id: marker_id.to_string(),
-            positions: pois,
-        });
+        for poi in &pois {
+            commands
+                .spawn((
+                    PbrBundle {
+                        mesh: assets.mesh.clone(),
+                        material: assets.poi_material.clone(),
+                        transform: Transform::from_translation(*poi),
+                        ..default()
+                    },
+                    POI(id.to_string()),
+                ))
+                .with_children(|parent| {
+                    parent.spawn(BillboardTextBundle {
+                        text: Text::from_section(
+                            label.clone(),
+                            TextStyle {
+                                font_size: 100.,
+                                ..default()
+                            },
+                        ),
+                        transform: Transform::from_scale(Vec3::ONE * 0.01)
+                            .with_translation(Vec3::Y * 2.),
+                        ..default()
+                    });
+                });
+        }
+
+        info!("Loaded {} POIs.", pois.len());
+    }
+}
+
+fn unload_pois_system(
+    mut commands: Commands,
+    mut ui_events: EventReader<UiEvent>,
+    poi_query: Query<(Entity, &POI)>,
+) {
+    for event in ui_events.read() {
+        let UiEvent::UnloadMarker(marker_id) = event else {
+            return;
+        };
+
+        for (entity, poi) in &poi_query {
+            if poi.0 == *marker_id {
+                commands.entity(entity).despawn_recursive();
+            }
+        }
     }
 }
 

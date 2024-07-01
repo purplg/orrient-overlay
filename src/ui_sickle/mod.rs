@@ -201,18 +201,21 @@ impl CheckboxEvent {
 
 fn checkbox(
     query: Query<(&Checkbox, &MarkerItem), Changed<Checkbox>>,
-    mut events: EventWriter<CheckboxEvent>,
+    mut checkbox_events: EventWriter<CheckboxEvent>,
+    mut ui_events: EventWriter<UiEvent>,
     markers: Res<MarkerTree>,
 ) {
     for (checkbox, item) in query.iter() {
         if checkbox.checked {
-            events.send_batch(
+            ui_events.send(UiEvent::LoadMarker(item.0.to_string()));
+            checkbox_events.send_batch(
                 markers
                     .iter(&item.0)
                     .map(|item| CheckboxEvent::Enable(item.id.to_string())),
             );
         } else {
-            events.send_batch(
+            ui_events.send(UiEvent::UnloadMarker(item.0.to_string()));
+            checkbox_events.send_batch(
                 markers
                     .iter(&item.0)
                     .map(|item| CheckboxEvent::Disable(item.id.to_string())),
@@ -224,7 +227,6 @@ fn checkbox(
 fn checkbox_events(
     mut query: Query<(&mut Checkbox, &MarkerItem)>,
     mut checkbox_events: EventReader<CheckboxEvent>,
-    mut events: EventWriter<UiEvent>,
 ) {
     for event in checkbox_events.read() {
         let event_id = event.id().to_string();
@@ -237,9 +239,6 @@ fn checkbox_events(
             }
         }) {
             checkbox.checked = event.enabled();
-            if checkbox.checked {
-                events.send(UiEvent::LoadMarker(event_id));
-            }
         }
     }
 }

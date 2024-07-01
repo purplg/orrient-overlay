@@ -5,9 +5,9 @@ use bevy::{
         render_resource::{Extent3d, TextureDimension, TextureFormat},
     },
 };
-use bevy_mod_billboard::{plugin::BillboardPlugin, BillboardTextBundle};
+use bevy_mod_billboard::plugin::BillboardPlugin;
 
-use crate::marker::{MarkerTree, POIs, Trail};
+use crate::marker::Trail;
 
 pub(crate) struct Plugin;
 
@@ -19,18 +19,14 @@ impl bevy::prelude::Plugin for Plugin {
             Update,
             load_trail.run_if(resource_exists_and_changed::<Trail>),
         );
-        app.add_systems(
-            Update,
-            load_pois.run_if(resource_exists_and_changed::<POIs>),
-        );
     }
 }
 
 #[derive(Resource)]
 pub struct DebugMarkerAssets {
-    mesh: Handle<Mesh>,
-    trail_material: Handle<StandardMaterial>,
-    poi_material: Handle<StandardMaterial>,
+    pub mesh: Handle<Mesh>,
+    pub trail_material: Handle<StandardMaterial>,
+    pub poi_material: Handle<StandardMaterial>,
 }
 
 pub fn uv_debug_texture() -> Image {
@@ -92,48 +88,4 @@ fn load_trail(mut commands: Commands, trail: Res<Trail>, assets: Res<DebugMarker
             ..default()
         });
     }
-}
-
-fn load_pois(
-    mut commands: Commands,
-    markers: Res<MarkerTree>,
-    pois: Res<POIs>,
-    assets: Res<DebugMarkerAssets>,
-) {
-    let Some(id) = pois.long_id.split(".").last() else {
-        warn!("Invalid id {}", pois.long_id);
-        return;
-    };
-
-    let Some(marker) = markers.get(id) else {
-        warn!("Marker not found: {}", id);
-        return;
-    };
-
-    let label = marker.poi_label.clone().unwrap_or("POI".to_string());
-
-    for pos in &pois.positions {
-        commands
-            .spawn(PbrBundle {
-                mesh: assets.mesh.clone(),
-                material: assets.poi_material.clone(),
-                transform: Transform::from_translation(*pos),
-                ..default()
-            })
-            .with_children(|parent| {
-                parent.spawn(BillboardTextBundle {
-                    text: Text::from_section(
-                        label.clone(),
-                        TextStyle {
-                            font_size: 100.,
-                            ..default()
-                        },
-                    ),
-                    transform: Transform::from_scale(Vec3::ONE * 0.01)
-                        .with_translation(Vec3::Y * 2.),
-                    ..default()
-                });
-            });
-    }
-    info!("Loaded {} POIs", pois.positions.len());
 }
