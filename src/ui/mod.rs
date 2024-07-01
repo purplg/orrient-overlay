@@ -5,7 +5,10 @@ use marker::MarkerKind;
 use sickle_ui::{
     ui_builder::{UiBuilder, UiBuilderExt, UiRoot},
     ui_style::*,
-    widgets::{container::UiContainerExt, prelude::*, scroll_view::UiScrollViewExt},
+    widgets::{
+        container::UiContainerExt, floating_panel::FloatingPanel, prelude::*,
+        scroll_view::UiScrollViewExt,
+    },
     SickleUiPlugin,
 };
 
@@ -24,6 +27,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Update, checkbox);
         app.add_systems(Update, checkbox_events);
         app.add_systems(Update, menu_interaction);
+        app.add_systems(Update, (tool_tip_hover, tool_tip_position));
         app.add_systems(Update, show_file_open.run_if(on_event::<UiEvent>()));
         app.add_systems(Update, hide_file_open.run_if(on_event::<UiEvent>()));
         app.add_systems(
@@ -60,7 +64,10 @@ fn setup(mut commands: Commands) {
 
     commands.ui_builder(UiRoot).container(
         (
-            NodeBundle::default(), //
+            NodeBundle {
+                background_color: Color::NONE.into(),
+                ..default()
+            },
             TargetCamera(camera),
         ),
         |container| {
@@ -87,12 +94,43 @@ fn setup(mut commands: Commands) {
                     },
                 )
                 .insert(MarkerWindow);
+
+            container
+                .floating_panel(
+                    FloatingPanelConfig {
+                        title: None,
+                        draggable: false,
+                        resizable: false,
+                        foldable: false,
+                        closable: false,
+                        ..default()
+                    },
+                    FloatingPanelLayout {
+                        size: (300., 50.).into(),
+                        position: None,
+                        droppable: false,
+                    },
+                    |panel| {
+                        panel.spawn((
+                            TextBundle::from_sections([
+                                TextSection::new("", TextStyle::default()),
+                                TextSection::new("", TextStyle::default()),
+                            ]),
+                            ToolTipText,
+                        ));
+                    },
+                )
+                .insert(ToolTipWindow);
         },
     );
 }
 
 #[derive(Component)]
-struct MarkerItem(String);
+struct MarkerItem {
+    id: String,
+    tip: Option<String>,
+    description: Option<String>,
+}
 
 fn tree_item(
     item: &marker::MarkerTreeItem<'_>,
@@ -103,7 +141,6 @@ fn tree_item(
         .row(|parent| {
             parent
                 .checkbox(Some(""), false) //
-                .insert(MarkerItem(item.id.to_string()))
                 .style()
                 .width(Val::Px(42.));
 
@@ -118,7 +155,11 @@ fn tree_item(
                                 let label = subitem.marker.label.clone();
                                 parent
                                     .checkbox(Some(label), false)
-                                    .insert(MarkerItem(subitem.id.to_string()))
+                                    .insert(MarkerItem {
+                                        id: subitem.id.to_string(),
+                                        tip: subitem.marker.poi_tip.clone(),
+                                        description: subitem.marker.poi_description.clone(),
+                                    })
                                     .style()
                                     .width(Val::Percent(100.))
                                     .left(Val::Px(10. * subitem.depth as f32));
@@ -135,6 +176,11 @@ fn tree_item(
                 })
                 .style()
                 .padding(UiRect::vertical(Val::Px(3.)));
+        })
+        .insert(MarkerItem {
+            id: item.id.to_string(),
+            tip: item.marker.poi_tip.clone(),
+            description: item.marker.poi_description.clone(),
         })
         .style()
         .align_items(AlignItems::FlexStart)
@@ -212,17 +258,17 @@ fn checkbox(
 ) {
     for (checkbox, item) in query.iter() {
         if checkbox.checked {
-            ui_events.send(UiEvent::LoadMarker(item.0.to_string()));
+            ui_events.send(UiEvent::LoadMarker(item.id.clone()));
             checkbox_events.send_batch(
                 markers
-                    .iter(&item.0)
+                    .iter(&item.id)
                     .map(|item| CheckboxEvent::Enable(item.id.to_string())),
             );
         } else {
-            ui_events.send(UiEvent::UnloadMarker(item.0.to_string()));
+            ui_events.send(UiEvent::UnloadMarker(item.id.clone()));
             checkbox_events.send_batch(
                 markers
-                    .iter(&item.0)
+                    .iter(&item.id)
                     .map(|item| CheckboxEvent::Disable(item.id.to_string())),
             );
         }
@@ -237,7 +283,7 @@ fn checkbox_events(
         let event_id = event.id().to_string();
 
         if let Some(mut checkbox) = query.iter_mut().find_map(|(checkbox, item)| {
-            if item.0 == event_id {
+            if item.id == event_id {
                 Some(checkbox)
             } else {
                 None
@@ -361,6 +407,58 @@ fn menu_interaction(
     for (menu_item, orrient_menu_item) in &query {
         if menu_item.interacted() {
             events.send(orrient_menu_item.0.clone());
+        }
+    }
+}
+
+#[derive(Component)]
+struct ToolTipWindow;
+
+#[derive(Component)]
+struct ToolTipText;
+
+fn tool_tip_hover(
+    mut tooltip: Query<&mut Visibility, With<ToolTipWindow>>,
+    mut text: Query<&mut Text, With<ToolTipText>>,
+    interaction: Query<(&MarkerItem, &Interaction)>,
+) {
+    let Ok(mut visibility) = tooltip.get_single_mut() else {
+        return;
+    };
+
+    for (item, interaction) in &interaction {
+        match interaction {
+            Interaction::Hovered => {
+                if *visibility == Visibility::Hidden {
+                    *visibility = Visibility::Inherited;
+                }
+                if let Ok(mut text) = text.get_single_mut() {
+                    if let Some(tip) = &item.tip {
+                        if text.sections[0].value != *tip {
+                            text.sections[0] = format!("{}\n", tip.as_str()).into();
+                            text.sections[1] = item.description.clone().unwrap_or_default().into();
+                        }
+                    }
+                }
+                return;
+            }
+            _ => {}
+        }
+    }
+
+    if *visibility != Visibility::Hidden {
+        *visibility = Visibility::Hidden;
+    }
+}
+
+fn tool_tip_position(
+    mut commands: Commands,
+    mut query: Query<Entity, With<ToolTipWindow>>,
+    window: Query<&Window, With<PrimaryWindow>>,
+) {
+    for entity in &mut query {
+        if let Some(cursor) = window.single().cursor_position() {
+            commands.style(entity).absolute_position(cursor);
         }
     }
 }

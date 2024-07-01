@@ -140,8 +140,6 @@ fn load_pois_system(
             })
             .collect();
 
-        let label = marker.poi_label.clone().unwrap_or("POI".to_string());
-
         for poi in &pois {
             commands
                 .spawn((
@@ -156,7 +154,7 @@ fn load_pois_system(
                 .with_children(|parent| {
                     parent.spawn(BillboardTextBundle {
                         text: Text::from_section(
-                            label.clone(),
+                            marker.label.clone(),
                             TextStyle {
                                 font_size: 100.,
                                 ..default()

@@ -108,7 +108,8 @@ impl MarkerTreeBuilder {
             },
             depth,
         );
-        marker.poi_label = category.tip_name.clone();
+        marker.poi_tip = category.tip_name.clone();
+        marker.poi_description = category.tip_description.clone();
 
         self.insert_marker(parent, id, marker);
 
@@ -214,7 +215,8 @@ pub struct Marker {
     pub label: String,
     pub kind: MarkerKind,
     pub depth: usize,
-    pub poi_label: Option<String>,
+    pub poi_tip: Option<String>,
+    pub poi_description: Option<String>,
     pub pois: Vec<Position>,
     pub trail_file: Option<String>,
 }
@@ -225,7 +227,8 @@ impl Marker {
             label: label.into(),
             kind,
             depth,
-            poi_label: Default::default(),
+            poi_tip: Default::default(),
+            poi_description: Default::default(),
             pois: Default::default(),
             trail_file: Default::default(),
         }
@@ -236,7 +239,8 @@ impl Marker {
             label: label.into(),
             kind: MarkerKind::Leaf,
             depth,
-            poi_label: Default::default(),
+            poi_tip: Default::default(),
+            poi_description: Default::default(),
             pois: Default::default(),
             trail_file: Default::default(),
         }
@@ -247,7 +251,8 @@ impl Marker {
             label: label.into(),
             kind: MarkerKind::Separator,
             depth,
-            poi_label: Default::default(),
+            poi_tip: Default::default(),
+            poi_description: Default::default(),
             pois: Default::default(),
             trail_file: Default::default(),
         }
@@ -258,7 +263,8 @@ impl Marker {
             label: label.into(),
             kind: MarkerKind::Category,
             depth,
-            poi_label: Default::default(),
+            poi_tip: Default::default(),
+            poi_description: Default::default(),
             pois: Default::default(),
             trail_file: Default::default(),
         }
