@@ -21,7 +21,7 @@ bevy_lunex = { path = "../bevy_lunex/crates/bevy_lunex/" }
 # bevy_lunex = { git = "https://github.com/purplg/bevy_lunex.git", branch = "feat/scroll-support" }
 dirs = "5.0.1"
 bevy_mod_billboard = "0.6.0"
-sickle_ui = { rev = "a548517", git = "https://github.com/UmbraLuminosa/sickle_ui" }
+sickle_ui = { rev = "d09e1c98d608fd5ca99b21fad1c15a6321d466b6", git = "https://github.com/UmbraLuminosa/sickle_ui" }
 bevy_console = "0.11.1"
 clap = "4.5.7"
 

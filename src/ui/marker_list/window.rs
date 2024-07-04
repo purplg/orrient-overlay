@@ -2,13 +2,13 @@ use bevy::{prelude::*, window::PrimaryWindow};
 use marker::MarkerKind;
 use sickle_ui::{
     ui_builder::{UiBuilder, UiBuilderExt as _},
-    ui_style::*,
+    ui_style::generated::*,
     widgets::prelude::*,
 };
 
 use crate::{marker::MarkerTree, ui::OrrientMenuItem, UiEvent};
 
-use super::tooltip::{self, UiToolTipExt as _};
+use super::tooltip::UiToolTipExt as _;
 
 pub(crate) struct Plugin;
 
@@ -45,7 +45,7 @@ pub trait UiMarkerWindowExt {
     fn marker_window(&mut self);
 }
 
-impl UiMarkerWindowExt for UiBuilder<'_, '_, '_, Entity> {
+impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
     fn marker_window(&mut self) {
         self.floating_panel(
             FloatingPanelConfig {
@@ -76,13 +76,13 @@ impl UiMarkerWindowExt for UiBuilder<'_, '_, '_, Entity> {
 
 fn tree_item(
     item: &marker::MarkerTreeItem<'_>,
-    parent: &mut UiBuilder<'_, '_, '_, Entity>,
+    parent: &mut UiBuilder<'_, Entity>,
     markers: &MarkerTree,
 ) {
     parent
         .row(|parent| {
             parent
-                .checkbox(Some(""), false) //
+                .checkbox(None, false) //
                 .style()
                 .width(Val::Px(42.));
 

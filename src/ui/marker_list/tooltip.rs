@@ -1,4 +1,5 @@
 use bevy::{prelude::*, window::PrimaryWindow};
+use manual::SetAbsolutePositionExt as _;
 use sickle_ui::{ui_builder::UiBuilder, ui_style::*, widgets::prelude::*};
 
 use super::window::MarkerItem;
@@ -18,7 +19,7 @@ pub trait UiToolTipExt {
     fn enable_tooltip(&mut self);
 }
 
-impl UiToolTipExt for UiBuilder<'_, '_, '_, Entity> {
+impl UiToolTipExt for UiBuilder<'_, Entity> {
     fn enable_tooltip(&mut self) {
         self.floating_panel(
             FloatingPanelConfig {
