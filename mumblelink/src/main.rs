@@ -2,6 +2,7 @@ use std::net::UdpSocket;
 use std::thread::sleep;
 use std::time::Duration;
 
+use bincode::Options as _;
 use mumblelink::{MumbleLinkDataDef, MumbleLinkMessage};
 use mumblelink_reader::mumble_link::MumbleLinkReader;
 use mumblelink_reader::mumble_link_handler::MumbleLinkHandler;
@@ -17,7 +18,10 @@ fn main() {
     std::thread::spawn(|| link(tx));
 
     while let Ok(message) = rx.recv() {
-        let buf = bincode::serialize(&message).unwrap();
+        let buf = bincode::DefaultOptions::new()
+            .allow_trailing_bytes()
+            .serialize(&message)
+            .unwrap();
         let _ = socket.send_to(buf.as_slice(), "127.0.0.1:5001");
     }
 }

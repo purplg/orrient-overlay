@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bincode::Options as _;
 use crossbeam_channel::Receiver;
 use std::net::UdpSocket;
 
@@ -11,7 +12,10 @@ fn run(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
     loop {
         let mut buf = [0; 240];
         let _size = socket.recv(&mut buf);
-        let message = match bincode::deserialize(&buf) {
+        let message = match bincode::DefaultOptions::new()
+            .allow_trailing_bytes()
+            .deserialize(&buf)
+        {
             Ok(message) => message,
             Err(err) => {
                 error!("Error decoding MumbleLink message: {:?}", err);
