@@ -1,7 +1,9 @@
+mod debug_panel;
 mod marker_list;
 
 use bevy::{prelude::*, window::PrimaryWindow};
 
+use debug_panel::UiDebugPanelExt as _;
 use marker_list::window::UiMarkerWindowExt as _;
 use sickle_ui::{
     ui_builder::{UiBuilderExt as _, UiRoot},
@@ -19,6 +21,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_plugins(SickleUiPlugin);
 
         app.add_plugins(marker_list::Plugin);
+        app.add_plugins(debug_panel::Plugin);
 
         app.add_systems(Startup, setup);
         app.add_systems(Update, show_file_open.run_if(on_event::<UiEvent>()));
@@ -53,6 +56,7 @@ fn setup(mut commands: Commands) {
         ),
         |container| {
             container.marker_window();
+            container.debug_panel();
         },
     );
 }
