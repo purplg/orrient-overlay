@@ -83,6 +83,11 @@ fn tree_item(
         .row(|parent| {
             parent
                 .checkbox(None, false) //
+                .insert(MarkerItem {
+                    id: item.id.to_string(),
+                    tip: item.marker.poi_tip.clone(),
+                    description: item.marker.poi_description.clone(),
+                })
                 .style()
                 .width(Val::Px(42.));
 
@@ -118,11 +123,6 @@ fn tree_item(
                 })
                 .style()
                 .padding(UiRect::vertical(Val::Px(3.)));
-        })
-        .insert(MarkerItem {
-            id: item.id.to_string(),
-            tip: item.marker.poi_tip.clone(),
-            description: item.marker.poi_description.clone(),
         })
         .style()
         .align_items(AlignItems::FlexStart)
