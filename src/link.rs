@@ -49,47 +49,37 @@ fn socket_system(
     mut world_events: EventWriter<WorldEvent>,
     mut ui_events: EventWriter<UiEvent>,
 ) {
-    let mut message: Option<MumbleLinkMessage> = None;
+    while let Ok(message) = rx.try_recv() {
+        match message {
+            MumbleLinkMessage::MumbleLinkData(data) => {
+                let facing = Vec3::new(
+                    data.camera.front[0],
+                    data.camera.front[1],
+                    data.camera.front[2],
+                );
 
-    // Only care about latest
-    while let Ok(inner) = rx.try_recv() {
-        message = Some(inner);
-    }
+                world_events.send(WorldEvent::CameraUpdate {
+                    position: Vec3::new(
+                        data.camera.position[0],
+                        data.camera.position[1],
+                        -data.camera.position[2],
+                    ),
+                    facing,
+                    fov: data.identity.fov,
+                });
 
-    let Some(message) = message else {
-        return;
-    };
-
-    match message {
-        MumbleLinkMessage::MumbleLinkData(data) => {
-            // events.send(MumbleLinkEvent::Data(data));
-            let facing = Vec3::new(
-                data.camera.front[0],
-                data.camera.front[1],
-                data.camera.front[2],
-            );
-
-            world_events.send(WorldEvent::CameraUpdate {
-                position: Vec3::new(
-                    data.camera.position[0],
-                    data.camera.position[1],
-                    -data.camera.position[2],
-                ),
-                facing,
-                fov: data.identity.fov,
-            });
-
-            world_events.send(WorldEvent::PlayerPositon(Vec3 {
-                x: data.avatar.position[0],
-                y: data.avatar.position[1],
-                z: -data.avatar.position[2],
-            }));
-        }
-        MumbleLinkMessage::Toggle => {
-            ui_events.send(UiEvent::ToggleUI);
-        }
-        MumbleLinkMessage::Save => {
-            world_events.send(WorldEvent::SavePosition);
+                world_events.send(WorldEvent::PlayerPositon(Vec3 {
+                    x: data.avatar.position[0],
+                    y: data.avatar.position[1],
+                    z: -data.avatar.position[2],
+                }));
+            }
+            MumbleLinkMessage::Toggle => {
+                ui_events.send(UiEvent::ToggleUI);
+            }
+            MumbleLinkMessage::Save => {
+                world_events.send(WorldEvent::SavePosition);
+            }
         }
     }
 }
