@@ -6,6 +6,7 @@ use bevy::{
     },
 };
 use bevy_mod_billboard::plugin::BillboardPlugin;
+use smesh::smesh::{SMesh, VertexId};
 
 use crate::marker::Trail;
 
@@ -22,9 +23,13 @@ impl bevy::prelude::Plugin for Plugin {
     }
 }
 
+#[derive(Component)]
+struct TrailMesh;
+
 #[derive(Resource)]
 pub struct DebugMarkerAssets {
     pub mesh: Handle<Mesh>,
+    pub trails_mesh: Option<Handle<Mesh>>,
     pub trail_material: Handle<StandardMaterial>,
     pub poi_material: Handle<StandardMaterial>,
 }
@@ -66,6 +71,7 @@ fn load_marker_assets(
     let mesh = meshes.add(Sphere::default().mesh().ico(5).unwrap());
     commands.insert_resource(DebugMarkerAssets {
         mesh,
+        trails_mesh: None,
         trail_material: materials.add(StandardMaterial {
             base_color_texture: Some(images.add(uv_debug_texture())),
             base_color: Color::BLUE,
@@ -79,13 +85,66 @@ fn load_marker_assets(
     })
 }
 
-fn load_trail(mut commands: Commands, trail: Res<Trail>, assets: Res<DebugMarkerAssets>) {
-    for pos in trail.0.iter() {
-        commands.spawn(PbrBundle {
-            mesh: assets.mesh.clone(),
-            material: assets.trail_material.clone(),
-            transform: Transform::from_translation(*pos).with_scale(Vec3::ONE * 0.5),
-            ..default()
-        });
+fn load_trail(
+    mut commands: Commands,
+    trail: Res<Trail>,
+    mut assets: ResMut<DebugMarkerAssets>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    trails: Query<Entity, With<TrailMesh>>,
+) {
+    if let Some(trail_mesh) = &assets.trails_mesh {
+        commands.entity(trails.single()).despawn_recursive();
+        meshes.remove(trail_mesh);
     }
+
+    let width = 0.2;
+    let mut smesh = SMesh::new();
+
+    let mut iter = trail.0.iter().copied();
+
+    let mut previous_pos: Vec3;
+    let mut previous_left: VertexId;
+    let mut previous_right: VertexId;
+
+    if let (Some(prev_pos), Some(next_pos)) = (iter.next(), iter.next()) {
+        let forward = *Direction3d::new_unchecked((next_pos - prev_pos).normalize());
+        let prev_left_vertex = smesh.add_vertex(prev_pos + forward.cross(Vec3::NEG_Y) * width);
+        let prev_right_vertex = smesh.add_vertex(prev_pos + forward.cross(Vec3::Y) * width);
+        let next_left_vertex = smesh.add_vertex(next_pos + forward.cross(Vec3::NEG_Y) * width);
+        let next_right_vertex = smesh.add_vertex(next_pos + forward.cross(Vec3::Y) * width);
+        let _ = smesh.add_face(vec![
+            prev_left_vertex,
+            prev_right_vertex,
+            next_right_vertex,
+            next_left_vertex,
+        ]);
+        previous_pos = next_pos;
+        previous_left = next_left_vertex;
+        previous_right = next_right_vertex;
+    } else {
+        return;
+    }
+
+    for next_pos in trail.0.iter().copied() {
+        let forward = *Direction3d::new_unchecked((next_pos - previous_pos).normalize());
+
+        let next_left = smesh.add_vertex(next_pos + forward.cross(Vec3::NEG_Y) * width);
+        let next_right = smesh.add_vertex(next_pos + forward.cross(Vec3::Y) * width);
+        let _ = smesh.add_face(vec![previous_left, previous_right, next_right, next_left]);
+        previous_pos = next_pos;
+        previous_left = next_left;
+        previous_right = next_right;
+    }
+
+    let trail_mesh = meshes.add(Mesh::from(smesh));
+    assets.trails_mesh = Some(trail_mesh.clone());
+
+    commands.spawn((
+        TrailMesh,
+        PbrBundle {
+            mesh: trail_mesh,
+            material: assets.trail_material.clone(),
+            ..default()
+        },
+    ));
 }
