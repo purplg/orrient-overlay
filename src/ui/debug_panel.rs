@@ -92,17 +92,14 @@ fn update_player_position(
     mut events: EventReader<WorldEvent>,
 ) {
     for event in events.read() {
-        match event {
-            WorldEvent::PlayerPositon(pos) => {
-                for (mut text, position_component) in &mut query {
-                    text.sections[0].value = match position_component {
-                        DebugText::PlayerX => format!("x: {}", pos.x),
-                        DebugText::PlayerY => format!("y: {}", pos.y),
-                        DebugText::PlayerZ => format!("z: {}", pos.z),
-                    };
-                }
+        if let WorldEvent::PlayerPositon(pos) = event {
+            for (mut text, position_component) in &mut query {
+                text.sections[0].value = match position_component {
+                    DebugText::PlayerX => format!("x: {}", pos.x),
+                    DebugText::PlayerY => format!("y: {}", pos.y),
+                    DebugText::PlayerZ => format!("z: {}", pos.z),
+                };
             }
-            _ => {}
         }
     }
 }
@@ -112,12 +109,9 @@ fn update_map_id(
     mut events: EventReader<WorldEvent>,
 ) {
     for event in events.read() {
-        match event {
-            WorldEvent::MapUpdate(map_id) => {
-                let mut text = query.single_mut();
-                text.sections[0].value = format!("{}", map_id);
-            }
-            _ => {}
+        if let WorldEvent::MapUpdate(map_id) = event {
+            let mut text = query.single_mut();
+            text.sections[0].value = format!("{}", map_id);
         }
     }
 }

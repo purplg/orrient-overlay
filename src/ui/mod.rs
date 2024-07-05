@@ -134,7 +134,7 @@ fn hide_file_open(
     for event in events.read() {
         match event {
             UiEvent::LoadMarkers(_) => break,
-            _ => return,
+            _ => continue,
         }
     }
 

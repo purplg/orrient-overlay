@@ -37,25 +37,6 @@ fn update_position_system(
     }
 }
 
-fn position(
-    mut gizmos: Gizmos,
-    player: Query<&Transform, With<Player>>,
-    saved: Query<&Transform, With<SavedPosition>>,
-) {
-    let position = Vec3::new(0., 120., 0.);
-    gizmos.sphere(position, Quat::default(), 1.0, Color::RED);
-
-    if let Ok(saved_pos) = saved.get_single() {
-        let pos = saved_pos.translation;
-        gizmos.sphere(pos, Quat::default(), 1.0, Color::FUCHSIA);
-    }
-
-    let player = player.single().translation;
-    gizmos.arrow(player, player + Vec3::X, Color::RED);
-    gizmos.arrow(player, player + Vec3::Y, Color::GREEN);
-    gizmos.arrow(player, player + Vec3::Z, Color::BLUE);
-}
-
 #[derive(Component)]
 struct SavedPosition;
 

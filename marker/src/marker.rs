@@ -121,13 +121,13 @@ impl MarkerCategory {
 #[derive(Deserialize, Clone, Debug)]
 pub(super) struct POIs {
     #[serde(rename = "POI", default)]
-    pub poi: Vec<POI>,
+    pub poi: Vec<Poi>,
     #[serde(rename = "Trail", default)]
     pub trail: Vec<Trail>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
-pub(super) struct POI {
+pub(super) struct Poi {
     #[serde(rename = "@MapID", default)]
     pub map_id: Option<usize>,
     #[serde(rename = "@xpos")]

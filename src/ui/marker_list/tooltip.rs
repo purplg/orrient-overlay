@@ -62,22 +62,19 @@ fn tool_tip_hover(
     };
 
     for (item, interaction) in &interaction {
-        match interaction {
-            Interaction::Hovered => {
-                if *visibility == Visibility::Hidden {
-                    *visibility = Visibility::Inherited;
-                }
-                if let Ok(mut text) = text.get_single_mut() {
-                    if let Some(tip) = &item.tip {
-                        if text.sections[0].value != *tip {
-                            text.sections[0] = format!("{}\n", tip.as_str()).into();
-                            text.sections[1] = item.description.clone().unwrap_or_default().into();
-                        }
+        if let Interaction::Hovered = interaction {
+            if *visibility == Visibility::Hidden {
+                *visibility = Visibility::Inherited;
+            }
+            if let Ok(mut text) = text.get_single_mut() {
+                if let Some(tip) = &item.tip {
+                    if text.sections[0].value != *tip {
+                        text.sections[0] = format!("{}\n", tip.as_str()).into();
+                        text.sections[1] = item.description.clone().unwrap_or_default().into();
                     }
                 }
-                return;
             }
-            _ => {}
+            return;
         }
     }
 

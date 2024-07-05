@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub enum MumbleLinkMessage {
-    MumbleLinkData(MumbleLinkDataDef),
+    MumbleLinkData(Box<MumbleLinkDataDef>),
     Toggle,
     Save,
 }

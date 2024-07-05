@@ -36,7 +36,7 @@ pub fn read(path: &Path) -> Result<MarkerTree, Error> {
                         return false;
                     };
                     tree.indexes
-                        .get(&trail_id.to_string())
+                        .get(trail_id)
                         .map(|node_index| node_index == index)
                         .unwrap_or_default()
                 })
@@ -73,9 +73,9 @@ impl<'a, VM: VisitMap<NodeIndex>> Iterator for MarkerTreeIter<'a, VM> {
     type Item = &'a Marker;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next(&self.tree.graph).and_then(|id| {
-            self.tree.markers.get(&id)
-        })
+        self.iter
+            .next(&self.tree.graph)
+            .and_then(|id| self.tree.markers.get(&id))
     }
 }
 
@@ -124,12 +124,10 @@ impl MarkerTree {
     ) {
         let kind = if category.is_separator {
             MarkerKind::Separator
+        } else if category.categories.is_empty() {
+            MarkerKind::Leaf
         } else {
-            if category.categories.len() == 0 {
-                MarkerKind::Leaf
-            } else {
-                MarkerKind::Category
-            }
+            MarkerKind::Category
         };
 
         let parent = parent_id.and_then(|parent_id: NodeIndex| self.markers.get(&parent_id));
@@ -141,7 +139,7 @@ impl MarkerTree {
 
         marker.poi_tip = category.tip_name.clone();
         marker.poi_description = category.tip_description.clone();
-        marker.behavior = Behavior::from_category(&category);
+        marker.behavior = Behavior::from_category(category);
 
         let node_id = self.insert_marker(marker.clone(), parent_id);
 
@@ -150,12 +148,12 @@ impl MarkerTree {
         }
 
         for subcat in &category.categories {
-            self.insert_category_recursive(&subcat, depth + 1, Some(node_id));
+            self.insert_category_recursive(subcat, depth + 1, Some(node_id));
         }
     }
 
     fn add_poi(&mut self, id: String, position: Position) {
-        if let Some(mut pois) = self.pois.get_mut(&id) {
+        if let Some(pois) = self.pois.get_mut(&id) {
             pois.push(position);
         } else {
             self.pois.insert(id, vec![position]);
@@ -273,10 +271,6 @@ impl Marker {
         }
     }
 
-    fn category(id: impl Into<String>, label: impl Into<String>, depth: usize) -> Self {
-        Self::new(id, label, MarkerKind::Category, depth)
-    }
-
     fn new_from_parent(
         id: impl Into<String>,
         label: impl Into<String>,
@@ -299,6 +293,12 @@ pub struct Position {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    impl Marker {
+        fn category(id: impl Into<String>, label: impl Into<String>, depth: usize) -> Self {
+            Self::new(id, label, MarkerKind::Category, depth)
+        }
+    }
 
     //     A
     //    / \

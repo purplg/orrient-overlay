@@ -92,7 +92,7 @@ fn tree_item(item: &marker::Marker, parent: &mut UiBuilder<'_, Entity>, markers:
                     for subitem in markers.iter(&item.id) {
                         match subitem.kind {
                             MarkerKind::Category => {
-                                tree_item(&subitem, parent, markers);
+                                tree_item(subitem, parent, markers);
                             }
                             MarkerKind::Leaf => {
                                 let label = subitem.label.clone();

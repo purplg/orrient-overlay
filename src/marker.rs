@@ -113,7 +113,7 @@ fn load_trail_system(mut commands: Commands, marker: Res<Marker>) {
 }
 
 #[derive(Component)]
-struct POI(String);
+struct Poi(String);
 
 #[derive(Component)]
 struct DisappearNearby;
@@ -160,7 +160,7 @@ fn load_pois_system(
         };
 
         let pois = pois
-            .into_iter()
+            .iter()
             .map(|poi| Vec3 {
                 x: poi.x,
                 y: poi.y,
@@ -176,7 +176,7 @@ fn load_pois_system(
                     transform: Transform::from_translation(*poi),
                     ..default()
                 },
-                POI(id.to_string()),
+                Poi(id.to_string()),
             ));
 
             builder.with_children(|parent| {
@@ -208,7 +208,7 @@ fn load_pois_system(
 fn unload_pois_system(
     mut commands: Commands,
     mut ui_events: EventReader<UiEvent>,
-    poi_query: Query<(Entity, &POI)>,
+    poi_query: Query<(Entity, &Poi)>,
 ) {
     for event in ui_events.read() {
         let UiEvent::UnloadMarker(marker_id) = event else {
