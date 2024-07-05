@@ -34,13 +34,8 @@ fn load_marker(mut commands: Commands, mut events: EventReader<UiEvent>, data: R
             return;
         };
 
-        let Some(id) = marker_id.split(".").last() else {
-            warn!("Marker path not found: {}", marker_id);
-            return;
-        };
-
-        let Some(marker) = &data.get(id) else {
-            warn!("Marker ID not found: {}", id);
+        let Some(marker) = &data.get(marker_id) else {
+            warn!("Marker ID not found: {}", marker_id);
             return;
         };
 
@@ -128,13 +123,8 @@ fn load_pois_system(
 
         info!("Loading POIs for {}", marker_id);
 
-        let Some(id) = marker_id.split(".").last() else {
-            warn!("Marker path not found: {}", marker_id);
-            return;
-        };
-
-        let Some(marker) = &data.get(id) else {
-            warn!("Marker ID not found: {}", id);
+        let Some(marker) = &data.get(marker_id) else {
+            warn!("Marker ID not found: {}", marker_id);
             return;
         };
 
@@ -159,7 +149,7 @@ fn load_pois_system(
                     transform: Transform::from_translation(*poi),
                     ..default()
                 },
-                Poi(id.to_string()),
+                Poi(marker_id.to_string()),
             ));
 
             builder.with_children(|parent| {

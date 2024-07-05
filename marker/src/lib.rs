@@ -52,11 +52,9 @@ fn read_file(tree: &mut MarkerTree, path: &Path) -> Result<(), Error> {
             .iter()
             .find_map(|poi| {
                 poi.trail.iter().find(|trail| {
-                    let Some(trail_id) = trail.id.split(".").last() else {
-                        return false;
-                    };
+                    let trail_id = MarkerID::from(&trail.id);
                     tree.indexes
-                        .get(trail_id)
+                        .get(&trail_id)
                         .map(|node_index| node_index == index)
                         .unwrap_or_default()
                 })
@@ -66,12 +64,8 @@ fn read_file(tree: &mut MarkerTree, path: &Path) -> Result<(), Error> {
 
     for pois in &data.pois {
         for poi in pois.poi.iter() {
-            let Some(poi_id) = poi.id.split(".").last() else {
-                continue;
-            };
-
             tree.add_poi(
-                poi_id.to_string(),
+                &poi.id,
                 Position {
                     x: poi.x,
                     y: poi.y,
@@ -99,6 +93,35 @@ impl<'a, VM: VisitMap<NodeIndex>> Iterator for MarkerTreeIter<'a, VM> {
     }
 }
 
+#[derive(Hash, Clone, Debug, PartialEq, Eq)]
+pub struct MarkerID(String);
+
+impl Deref for MarkerID {
+    type Target = String;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'a> From<&'a str> for MarkerID {
+    fn from(value: &'a str) -> Self {
+        MarkerID(value.to_owned())
+    }
+}
+
+impl<'a> From<&'a String> for MarkerID {
+    fn from(value: &'a String) -> Self {
+        MarkerID(value.to_owned())
+    }
+}
+
+impl From<String> for MarkerID {
+    fn from(value: String) -> Self {
+        MarkerID(value)
+    }
+}
+
 #[derive(Clone, Default, Debug)]
 pub struct MarkerTree {
     /// Keeps track of the number of indices in the graph so we can
@@ -110,7 +133,7 @@ pub struct MarkerTree {
     roots: HashSet<NodeIndex>,
 
     /// Lookup an index by it's string ID
-    indexes: HashMap<String, NodeIndex>,
+    indexes: HashMap<MarkerID, NodeIndex>,
 
     /// Lookup a marker by its index
     markers: HashMap<NodeIndex, Marker>,
@@ -119,7 +142,7 @@ pub struct MarkerTree {
     graph: DiGraph<NodeIndex, ()>,
 
     /// POIs associated with markers
-    pois: HashMap<String, Vec<Position>>,
+    pois: HashMap<MarkerID, Vec<Position>>,
 }
 
 impl MarkerTree {
@@ -128,20 +151,16 @@ impl MarkerTree {
     }
 
     fn insert_marker(&mut self, marker: Marker, parent: Option<NodeIndex>) -> NodeIndex {
-        let node_id: NodeIndex = self
-            .indexes
-            .get(&marker.id)
-            .map(ToOwned::to_owned)
-            .unwrap_or_else(|| {
-                NodeIndex::new({
-                    let i = self.count;
-                    self.count += 1;
-                    i
-                })
-            });
+        let node_id: NodeIndex = self.index_of(marker.id.as_str()).unwrap_or_else(|| {
+            NodeIndex::new({
+                let i = self.count;
+                self.count += 1;
+                i
+            })
+        });
 
         self.markers.insert(node_id, marker.clone());
-        self.indexes.insert(marker.id, node_id);
+        self.indexes.insert(marker.id.into(), node_id);
 
         self.graph.add_node(node_id);
 
@@ -188,7 +207,8 @@ impl MarkerTree {
         }
     }
 
-    fn add_poi(&mut self, id: String, position: Position) {
+    fn add_poi(&mut self, id: impl Into<MarkerID>, position: Position) {
+        let id = id.into();
         if let Some(pois) = self.pois.get_mut(&id) {
             pois.push(position);
         } else {
@@ -196,17 +216,21 @@ impl MarkerTree {
         }
     }
 
-    pub fn get_pois(&self, id: &String) -> Option<&Vec<Position>> {
-        self.pois.get(id)
+    fn index_of(&self, id: impl Into<MarkerID>) -> Option<NodeIndex> {
+        self.indexes.get(&id.into()).cloned()
     }
 
-    pub fn get(&self, id: &str) -> Option<&Marker> {
-        let node_id = self.indexes.get(id).unwrap();
+    pub fn get_pois(&self, id: impl Into<MarkerID>) -> Option<&Vec<Position>> {
+        self.pois.get(&id.into())
+    }
+
+    pub fn get(&self, id: impl Into<MarkerID>) -> Option<&Marker> {
+        let node_id = self.indexes.get(&id.into()).unwrap();
         self.markers.get(node_id)
     }
 
-    pub fn get_mut(&mut self, id: &str) -> Option<&mut Marker> {
-        let node_id = self.indexes.get(id).unwrap();
+    pub fn get_mut(&mut self, id: impl Into<MarkerID>) -> Option<&mut Marker> {
+        let node_id = self.indexes.get(&id.into()).unwrap();
         self.markers.get_mut(node_id)
     }
 
@@ -217,18 +241,21 @@ impl MarkerTree {
             .collect()
     }
 
-    pub fn iter<'a>(&'a self, start: &'a str) -> impl Iterator<Item = &'a Marker> {
-        let start_id = self.indexes.get(start).unwrap();
+    pub fn iter<'a>(&'a self, start: impl Into<MarkerID>) -> impl Iterator<Item = &'a Marker> {
+        let start_id = self.index_of(start).unwrap();
         self.graph
-            .neighbors_directed(*start_id, Direction::Outgoing)
+            .neighbors_directed(start_id, Direction::Outgoing)
             .filter_map(|id| self.markers.get(&id))
     }
 
-    pub fn iter_recursive<'a>(&'a self, start: &'a str) -> impl Iterator<Item = &'a Marker> {
-        let start_id = self.indexes.get(start).unwrap();
+    pub fn iter_recursive<'a>(
+        &'a self,
+        start: impl Into<MarkerID>,
+    ) -> impl Iterator<Item = &'a Marker> {
+        let start_id = self.index_of(start).unwrap();
         MarkerTreeIter {
             tree: self,
-            iter: Dfs::new(&self.graph, *start_id),
+            iter: Dfs::new(&self.graph, start_id),
         }
     }
 }
@@ -313,7 +340,12 @@ impl Marker {
         kind: MarkerKind,
         parent: &Marker,
     ) -> Self {
-        let mut marker = Self::new(id, label, kind, parent.depth);
+        let mut marker = Self::new(
+            format!("{}.{}", parent.id, id.into()),
+            label,
+            kind,
+            parent.depth,
+        );
         marker.behavior = parent.behavior;
         marker
     }
