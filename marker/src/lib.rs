@@ -16,7 +16,7 @@ pub enum Error {
 }
 
 pub fn read(path: &Path) -> Result<MarkerTree, Error> {
-    let content = std::fs::read_to_string(path).map_err(Error::FsErr)?;
+    let content = std::fs::read_to_string(path).map_err(Error::FsErr)?.replace("&", "&amp;");
     let data: marker::OverlayData = quick_xml::de::from_str(&content).map_err(Error::DeErr)?;
 
     let Some(root) = data.categories.first() else {
@@ -300,37 +300,39 @@ mod tests {
         }
     }
 
-    //     A
-    //    / \
-    //   B   E
-    //  / \   \
-    // C   D   F
+    //     A            G
+    //    / \          / \
+    //   B   E        H   I
+    //  / \   \         / | \
+    // C   D   F       J  K  L
     fn fake_markers() -> MarkerTree {
         let mut markers = MarkerTree::new();
         let a_id = markers.insert_marker(Marker::category("A", "A Name", 0), None);
         let b_id = markers.insert_marker(Marker::category("B", "B Name", 1), Some(a_id));
-        let c_id = markers.insert_marker(Marker::category("C", "C Name", 2), Some(b_id));
-        let d_id = markers.insert_marker(Marker::category("D", "D Name", 2), Some(b_id));
+        let _c_id = markers.insert_marker(Marker::category("C", "C Name", 2), Some(b_id));
+        let _d_id = markers.insert_marker(Marker::category("D", "D Name", 2), Some(b_id));
         let e_id = markers.insert_marker(Marker::category("E", "E Name", 1), Some(a_id));
-        let f_id = markers.insert_marker(Marker::category("F", "F Name", 2), Some(e_id));
+        let _f_id = markers.insert_marker(Marker::category("F", "F Name", 2), Some(e_id));
 
         let g_id = markers.insert_marker(Marker::category("G", "G Name", 0), None);
-        let h_id = markers.insert_marker(Marker::category("H", "H Name", 1), Some(g_id));
-        let i_id = markers.insert_marker(Marker::category("I", "I Name", 2), Some(h_id));
-        let j_id = markers.insert_marker(Marker::category("J", "J Name", 2), Some(h_id));
-        let k_id = markers.insert_marker(Marker::category("K", "K Name", 1), Some(g_id));
-        let l_id = markers.insert_marker(Marker::category("L", "L Name", 2), Some(k_id));
+        let _h_id = markers.insert_marker(Marker::category("H", "H Name", 1), Some(g_id));
+        let i_id = markers.insert_marker(Marker::category("I", "I Name", 2), Some(g_id));
+        let _j_id = markers.insert_marker(Marker::category("J", "J Name", 2), Some(i_id));
+        let _k_id = markers.insert_marker(Marker::category("K", "K Name", 1), Some(i_id));
+        let _l_id = markers.insert_marker(Marker::category("L", "L Name", 2), Some(i_id));
         markers
     }
 
-    // #[test]
+    #[test]
     fn test_real_data() {
-        let iter = std::fs::read_dir("/home/purplg/.config/orrient/markers").unwrap();
+        let iter =
+            std::fs::read_dir(dirs::config_dir().unwrap().join("orrient").join("markers")).unwrap();
         for path in iter
             .filter_map(|file| file.ok().map(|file| file.path()))
             .filter(|file| file.is_file())
             .filter(|file| file.extension().map(|ext| ext == "xml").unwrap_or_default())
         {
+            println!("Testing file: {:?}", path);
             read(&path).unwrap();
         }
     }
@@ -339,6 +341,12 @@ mod tests {
     fn test_iter() {
         let markers = fake_markers();
         let mut iter = markers.iter_recursive("A");
+
+        //     A
+        //    / \
+        //   B   E
+        //  / \   \
+        // C   D   F
         assert_eq!(iter.next().unwrap().id, "A");
         assert_eq!(iter.next().unwrap().id, "B");
         assert_eq!(iter.next().unwrap().id, "C");
@@ -347,6 +355,11 @@ mod tests {
         assert_eq!(iter.next().unwrap().id, "F");
         assert!(iter.next().is_none());
 
+        //   G
+        //  / \
+        // H   I
+        //   / | \
+        //  J  K  L
         let mut iter = markers.iter_recursive("G");
         assert_eq!(iter.next().unwrap().id, "G");
         assert_eq!(iter.next().unwrap().id, "H");
@@ -356,33 +369,24 @@ mod tests {
         assert_eq!(iter.next().unwrap().id, "L");
         assert!(iter.next().is_none());
 
+        //     A
+        //    / \
+        //   B   E
+        //  / \   \
+        // C   D   F
         let mut iter = markers.iter_recursive("B");
         assert_eq!(iter.next().unwrap().id, "B");
         assert_eq!(iter.next().unwrap().id, "C");
         assert_eq!(iter.next().unwrap().id, "D");
         assert!(iter.next().is_none());
 
+        //     A
+        //    / \
+        //   B   E
+        //  / \   \
+        // C   D   F
         let mut iter = markers.iter_recursive("C");
         assert_eq!(iter.next().unwrap().id, "C");
         assert!(iter.next().is_none());
     }
-
-    // #[test]
-    // fn test_real_get_path() {
-    //     let markers: MarkerTree = read(Path::new(
-    //         "/home/purplg/.config/orrient/markers/tw_lws03e05_draconismons.xml",
-    //     ))
-    //     .unwrap();
-
-    //     markers
-    //         .get_path(vec![
-    //             "tw_guides",
-    //             "tw_lws3",
-    //             "tw_lws3_draconismons",
-    //             "tw_lws3_draconismons_primordialorchids",
-    //             "tw_lws3_draconismons_primordialorchids_toggletrail",
-    //             "tw_lws3_draconismons_primordialorchids_toggletrail_p1",
-    //         ])
-    //         .unwrap();
-    // }
 }
