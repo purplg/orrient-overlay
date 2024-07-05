@@ -48,6 +48,7 @@ fn socket_system(
     rx: Res<MumbleLinkMessageReceiver>,
     mut world_events: EventWriter<WorldEvent>,
     mut ui_events: EventWriter<UiEvent>,
+    mut prev_mapid: Local<usize>,
 ) {
     while let Ok(message) = rx.try_recv() {
         match message {
@@ -73,6 +74,11 @@ fn socket_system(
                     y: data.avatar.position[1],
                     z: -data.avatar.position[2],
                 }));
+
+                if *prev_mapid != data.identity.map_id {
+                    world_events.send(WorldEvent::MapUpdate(data.identity.map_id));
+                    *prev_mapid = data.identity.map_id;
+                }
             }
             MumbleLinkMessage::Toggle => {
                 ui_events.send(UiEvent::ToggleUI);

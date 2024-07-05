@@ -18,6 +18,7 @@ pub enum WorldEvent {
         fov: f32,
     },
     PlayerPositon(Vec3),
+    MapUpdate(usize),
     SavePosition,
 }
 

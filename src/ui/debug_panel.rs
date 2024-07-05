@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 use sickle_ui::{ui_builder::UiBuilder, ui_style::generated::*, widgets::prelude::*};
 
-use crate::player::Player;
+use crate::WorldEvent;
 
 pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, update);
+        app.add_systems(Update, (update_player_position, update_map_id));
     }
 }
 
@@ -15,11 +15,14 @@ impl bevy::prelude::Plugin for Plugin {
 struct DebugPanel;
 
 #[derive(Component)]
-enum PlayerPosition {
-    X,
-    Y,
-    Z,
+enum DebugText {
+    PlayerX,
+    PlayerY,
+    PlayerZ,
 }
+
+#[derive(Component)]
+struct MapIdText;
 
 pub trait UiDebugPanelExt {
     fn debug_panel(&mut self);
@@ -46,24 +49,36 @@ impl UiDebugPanelExt for UiBuilder<'_, Entity> {
                         parent.column(|parent| {
                             parent.spawn((
                                 TextBundle::from_section("".to_string(), TextStyle::default()),
-                                PlayerPosition::X,
+                                DebugText::PlayerX,
                             ));
                         });
                         parent.column(|parent| {
                             parent.spawn((
                                 TextBundle::from_section("".to_string(), TextStyle::default()),
-                                PlayerPosition::Y,
+                                DebugText::PlayerY,
                             ));
                         });
                         parent.column(|parent| {
                             parent.spawn((
                                 TextBundle::from_section("".to_string(), TextStyle::default()),
-                                PlayerPosition::Z,
+                                DebugText::PlayerZ,
                             ));
                         });
                     })
                     .style()
                     .justify_content(JustifyContent::SpaceEvenly);
+
+                parent.row(|parent| {
+                    parent.label(LabelConfig::from("Map Id"));
+                });
+                parent.row(|parent| {
+                    parent.column(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section("".to_string(), TextStyle::default()),
+                            MapIdText,
+                        ));
+                    });
+                });
             },
         )
         .insert(DebugPanel)
@@ -72,13 +87,37 @@ impl UiDebugPanelExt for UiBuilder<'_, Entity> {
     }
 }
 
-fn update(mut query: Query<(&mut Text, &PlayerPosition)>, player: Query<&Transform, With<Player>>) {
-    let pos = player.single();
-    for (mut text, position_component) in &mut query {
-        text.sections[0].value = match position_component {
-            PlayerPosition::X => format!("x: {}", pos.translation.x),
-            PlayerPosition::Y => format!("y: {}", pos.translation.y),
-            PlayerPosition::Z => format!("z: {}", pos.translation.z),
-        };
+fn update_player_position(
+    mut query: Query<(&mut Text, &DebugText)>,
+    mut events: EventReader<WorldEvent>,
+) {
+    for event in events.read() {
+        match event {
+            WorldEvent::PlayerPositon(pos) => {
+                for (mut text, position_component) in &mut query {
+                    text.sections[0].value = match position_component {
+                        DebugText::PlayerX => format!("x: {}", pos.x),
+                        DebugText::PlayerY => format!("y: {}", pos.y),
+                        DebugText::PlayerZ => format!("z: {}", pos.z),
+                    };
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+fn update_map_id(
+    mut query: Query<&mut Text, With<MapIdText>>,
+    mut events: EventReader<WorldEvent>,
+) {
+    for event in events.read() {
+        match event {
+            WorldEvent::MapUpdate(map_id) => {
+                let mut text = query.single_mut();
+                text.sections[0].value = format!("{}", map_id);
+            }
+            _ => {}
+        }
     }
 }
