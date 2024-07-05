@@ -1,4 +1,5 @@
 use bevy::{prelude::*, window::PrimaryWindow};
+use generated::SetZIndexExt;
 use manual::SetAbsolutePositionExt as _;
 use sickle_ui::{ui_builder::UiBuilder, ui_style::*, widgets::prelude::*};
 
@@ -45,7 +46,9 @@ impl UiToolTipExt for UiBuilder<'_, Entity> {
                 ));
             },
         )
-        .insert(ToolTipWindow);
+        .insert(ToolTipWindow)
+        .style()
+        .z_index(ZIndex::Global(100));
     }
 }
 
@@ -90,7 +93,9 @@ fn tool_tip_position(
 ) {
     for entity in &mut query {
         if let Some(cursor) = window.single().cursor_position() {
-            commands.style(entity).absolute_position(cursor);
+            commands
+                .style(entity)
+                .absolute_position(cursor + Vec2::new(20., -120.));
         }
     }
 }
