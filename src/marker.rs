@@ -13,7 +13,6 @@ impl bevy::prelude::Plugin for Plugin {
             PreUpdate,
             load_marker.run_if(resource_exists::<MarkerTree>.and_then(on_event::<UiEvent>())),
         );
-        app.add_systems(PreUpdate, load_markers.run_if(on_event::<UiEvent>()));
         app.add_systems(
             Update,
             disappear_nearby_system.run_if(on_event::<WorldEvent>()),
@@ -27,10 +26,6 @@ impl bevy::prelude::Plugin for Plugin {
             (load_pois_system, unload_pois_system).run_if(on_event::<UiEvent>()),
         );
     }
-}
-
-fn setup(mut events: EventWriter<UiEvent>) {
-    events.send(UiEvent::LoadMarkers("dw_coral.xml".into()));
 }
 
 fn load_marker(mut commands: Commands, mut events: EventReader<UiEvent>, data: Res<MarkerTree>) {
@@ -53,28 +48,16 @@ fn load_marker(mut commands: Commands, mut events: EventReader<UiEvent>, data: R
     }
 }
 
-fn load_markers(mut commands: Commands, mut events: EventReader<UiEvent>) {
-    for event in events.read() {
-        let UiEvent::LoadMarkers(filename) = event else {
+fn setup(mut commands: Commands) {
+    let markers = match marker::read(&dirs::config_dir().unwrap().join("orrient").join("markers")) {
+        Ok(markers) => markers,
+        Err(err) => {
+            println!("Error when loading markers: {:?}", err);
             return;
-        };
+        }
+    };
 
-        let markers = match marker::read(
-            &dirs::config_dir()
-                .unwrap()
-                .join("orrient")
-                .join("markers")
-                .join(filename),
-        ) {
-            Ok(markers) => markers,
-            Err(err) => {
-                println!("Error loading markers from {}: {:?}", filename, err);
-                return;
-            }
-        };
-
-        commands.insert_resource(MarkerTree(markers));
-    }
+    commands.insert_resource(MarkerTree(markers));
 }
 
 #[derive(Resource)]

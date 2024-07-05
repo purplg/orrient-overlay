@@ -1,6 +1,8 @@
 mod marker;
 pub mod trail;
 
+use std::collections::HashSet;
+use std::ops::Deref;
 use std::{collections::HashMap, path::Path};
 
 use petgraph::graph::DiGraph;
@@ -15,15 +17,33 @@ pub enum Error {
     DeErr(quick_xml::de::DeError),
 }
 
-pub fn read(path: &Path) -> Result<MarkerTree, Error> {
-    let content = std::fs::read_to_string(path).map_err(Error::FsErr)?.replace("&", "&amp;");
+pub fn read(directory: &Path) -> Result<MarkerTree, Error> {
+    let mut tree = MarkerTree::new();
+
+    let iter = std::fs::read_dir(directory).unwrap();
+    for path in iter
+        .filter_map(|file| file.ok().map(|file| file.path()))
+        .filter(|file| file.is_file())
+        .filter(|file| file.extension().map(|ext| ext == "xml").unwrap_or_default())
+    {
+        read_file(&mut tree, &path).unwrap();
+    }
+
+    Ok(tree)
+}
+
+fn read_file(tree: &mut MarkerTree, path: &Path) -> Result<(), Error> {
+    let content = std::fs::read_to_string(path)
+        .map_err(Error::FsErr)?
+        .replace("&", "&amp;");
+
     let data: marker::OverlayData = quick_xml::de::from_str(&content).map_err(Error::DeErr)?;
 
     let Some(root) = data.categories.first() else {
         return Err(Error::EmptyCategory);
     };
 
-    let mut tree = MarkerTree::new_from_file(root);
+    tree.insert_category_recursive(root, 0, None);
 
     // Loop through markers to populate any associated Trails or POIs.
     for (index, marker) in &mut tree.markers {
@@ -61,7 +81,7 @@ pub fn read(path: &Path) -> Result<MarkerTree, Error> {
         }
     }
 
-    Ok(tree)
+    Ok(())
 }
 
 pub struct MarkerTreeIter<'a, VM: VisitMap<NodeIndex>> {
@@ -82,7 +102,7 @@ impl<'a, VM: VisitMap<NodeIndex>> Iterator for MarkerTreeIter<'a, VM> {
 #[derive(Clone, Default, Debug)]
 pub struct MarkerTree {
     count: usize,
-    roots: Vec<NodeIndex>,
+    roots: HashSet<NodeIndex>,
     indexes: HashMap<String, NodeIndex>,
     markers: HashMap<NodeIndex, Marker>,
     graph: DiGraph<NodeIndex, ()>,
@@ -94,15 +114,18 @@ impl MarkerTree {
         Self::default()
     }
 
-    fn new_from_file(category: &marker::MarkerCategory) -> Self {
-        let mut builder = Self::new();
-        builder.insert_category_recursive(category, 0, None);
-        builder
-    }
-
     fn insert_marker(&mut self, marker: Marker, parent: Option<NodeIndex>) -> NodeIndex {
-        let node_id = NodeIndex::new(self.count);
-        self.count += 1;
+        let node_id: NodeIndex = self
+            .indexes
+            .get(&marker.id)
+            .map(ToOwned::to_owned)
+            .unwrap_or_else(|| {
+                NodeIndex::new({
+                    let i = self.count;
+                    self.count += 1;
+                    i
+                })
+            });
 
         self.markers.insert(node_id, marker.clone());
         self.indexes.insert(marker.id, node_id);
@@ -144,7 +167,7 @@ impl MarkerTree {
         let node_id = self.insert_marker(marker.clone(), parent_id);
 
         if parent_id.is_none() {
-            self.roots.push(node_id);
+            self.roots.insert(node_id);
         }
 
         for subcat in &category.categories {
@@ -325,16 +348,7 @@ mod tests {
 
     #[test]
     fn test_real_data() {
-        let iter =
-            std::fs::read_dir(dirs::config_dir().unwrap().join("orrient").join("markers")).unwrap();
-        for path in iter
-            .filter_map(|file| file.ok().map(|file| file.path()))
-            .filter(|file| file.is_file())
-            .filter(|file| file.extension().map(|ext| ext == "xml").unwrap_or_default())
-        {
-            println!("Testing file: {:?}", path);
-            read(&path).unwrap();
-        }
+        read(&dirs::config_dir().unwrap().join("orrient").join("markers")).unwrap();
     }
 
     #[test]

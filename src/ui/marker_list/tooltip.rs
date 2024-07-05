@@ -66,7 +66,7 @@ fn tool_tip_hover(
 
     for (item, interaction) in &interaction {
         if let Interaction::Hovered = interaction {
-            if *visibility == Visibility::Hidden {
+            if *visibility == Visibility::Hidden && item.tip.is_some() {
                 *visibility = Visibility::Inherited;
             }
             if let Ok(mut text) = text.get_single_mut() {

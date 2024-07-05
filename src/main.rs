@@ -28,7 +28,6 @@ pub enum UiEvent {
     ShowMarkerBrowser,
     LoadMarker(String),
     UnloadMarker(String),
-    LoadMarkers(String),
 }
 
 fn main() {
