@@ -39,39 +39,37 @@ fn read_file(tree: &mut MarkerTree, path: &Path) -> Result<(), Error> {
 
     let data: marker::OverlayData = quick_xml::de::from_str(&content).map_err(Error::DeErr)?;
 
-    let Some(root) = data.categories.first() else {
-        return Err(Error::EmptyCategory);
-    };
+    for root in data.categories {
+        tree.insert_category_recursive(&root, 0, None);
 
-    tree.insert_category_recursive(root, 0, None);
-
-    // Loop through markers to populate any associated Trails or POIs.
-    for (index, marker) in &mut tree.markers {
-        marker.trail_file = data
-            .pois
-            .iter()
-            .find_map(|poi| {
-                poi.trail.iter().find(|trail| {
-                    let trail_id = MarkerID::from(&trail.id);
-                    tree.indexes
-                        .get(&trail_id)
-                        .map(|node_index| node_index == index)
-                        .unwrap_or_default()
+        // Loop through markers to populate any associated Trails or POIs.
+        for (index, marker) in &mut tree.markers {
+            marker.trail_file = data
+                .pois
+                .iter()
+                .find_map(|poi| {
+                    poi.trail.iter().find(|trail| {
+                        let trail_id = MarkerID::from(&trail.id);
+                        tree.indexes
+                            .get(&trail_id)
+                            .map(|node_index| node_index == index)
+                            .unwrap_or_default()
+                    })
                 })
-            })
-            .map(|marker| marker.trail_data.clone());
-    }
+                .map(|marker| marker.trail_data.clone());
+        }
 
-    for pois in &data.pois {
-        for poi in pois.poi.iter() {
-            tree.add_poi(
-                &poi.id,
-                Position {
-                    x: poi.x,
-                    y: poi.y,
-                    z: poi.z,
-                },
-            );
+        for pois in &data.pois {
+            for poi in pois.poi.iter() {
+                tree.add_poi(
+                    &poi.id,
+                    Position {
+                        x: poi.x,
+                        y: poi.y,
+                        z: poi.z,
+                    },
+                );
+            }
         }
     }
 

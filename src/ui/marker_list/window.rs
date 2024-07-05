@@ -154,7 +154,6 @@ fn show_markers(
 
             parent.scroll_view(None, |scroll_view| {
                 for item in markers.roots() {
-                    println!("var: {:?}", item);
                     tree_item(item, scroll_view, &markers);
                 }
             });

@@ -13,7 +13,7 @@ mumblelink = { path = "mumblelink" }
 marker = { path = "marker" }
 mumblelink_reader = "0.3.5"
 serde = { version = "1.0.203", features = ["derive"] }
-quick-xml = { version = "0.32.0", features = ["serialize"] }
+quick-xml = { version = "0.32.0", features = ["serialize", "overlapped-lists"] }
 bevy-inspector-egui = "0.24.0"
 dirs = "5.0.1"
 bevy_mod_billboard = "0.6.0"
