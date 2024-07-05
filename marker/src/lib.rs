@@ -1,15 +1,17 @@
-mod marker;
+mod model;
 pub mod trail;
 
 use std::collections::{HashSet, VecDeque};
+use std::convert::identity;
 use std::ops::Deref;
 use std::{collections::HashMap, path::Path};
 
-use log::warn;
+use log::{info, warn};
 use petgraph::graph::DiGraph;
 use petgraph::graph::NodeIndex;
 use petgraph::visit::{Dfs, VisitMap};
 use petgraph::Direction;
+use quick_xml::events::attributes::Attributes;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::name::QName;
 use quick_xml::Reader;
@@ -18,7 +20,6 @@ use quick_xml::Reader;
 pub enum Error {
     EmptyCategory,
     IoErr(std::io::Error),
-    DeErr(quick_xml::de::DeError),
     Xml(quick_xml::Error),
     FieldErr(String),
     UnknownField(String),
@@ -27,7 +28,7 @@ pub enum Error {
 }
 
 pub fn read(directory: &Path) -> Result<MarkerTree, Error> {
-    let mut tree = MarkerTree::new();
+    let mut tree = MarkerTreeBuilder::default();
 
     let iter = std::fs::read_dir(directory).unwrap();
     for path in iter
@@ -40,15 +41,15 @@ pub fn read(directory: &Path) -> Result<MarkerTree, Error> {
 
     println!("tree.roots: {:?}", tree.roots());
 
-    Ok(tree)
+    Ok(tree.build())
 }
 
 #[derive(Debug)]
 enum Tag {
     OverlayData,
-    MarkerCategory(marker::MarkerCategory),
+    Marker(Marker),
     POIs,
-    POI(marker::Poi),
+    POI(model::Poi),
     Route,
     UnknownField(String),
     CorruptField(String),
@@ -58,11 +59,9 @@ impl Tag {
     fn from_element(element: BytesStart) -> Result<Tag, Error> {
         let tag = match element.name() {
             QName(b"OverlayData") => Tag::OverlayData,
-            QName(b"MarkerCategory") => {
-                Tag::MarkerCategory(marker::MarkerCategory::from_attrs(element.attributes()))
-            }
+            QName(b"MarkerCategory") => Tag::Marker(Marker::from_attrs(element.attributes())?),
             QName(b"POIs") => Tag::POIs,
-            QName(b"POI") => Tag::POI(marker::Poi::from_attrs(element.attributes())?),
+            QName(b"POI") => Tag::POI(model::Poi::from_attrs(element.attributes())?),
             QName(field) => Tag::UnknownField(String::from_utf8_lossy(field).to_string()),
         };
 
@@ -70,10 +69,9 @@ impl Tag {
     }
 }
 
-fn read_file(tree: &mut MarkerTree, path: &Path) -> Result<(), Error> {
+fn read_file(tree: &mut MarkerTreeBuilder, path: &Path) -> Result<(), Error> {
     let mut reader = Reader::from_file(path).map_err(Error::Xml)?;
     let mut buf = Vec::new();
-    let mut marker_stack: VecDeque<NodeIndex> = Default::default();
 
     loop {
         match reader.read_event_into(&mut buf) {
@@ -85,85 +83,67 @@ fn read_file(tree: &mut MarkerTree, path: &Path) -> Result<(), Error> {
                         continue;
                     }
                 };
-                match &tag {
-                    Tag::OverlayData => {}
-                    Tag::MarkerCategory(category) => {
-                        let marker = Marker::new(
-                            category.id(),
-                            category.display_name(),
-                            MarkerKind::Category,
-                            marker_stack.len(),
-                        );
-                        let id = tree.insert_marker(marker, marker_stack.front().copied());
-                        marker_stack.push_front(id);
+                match tag {
+                    Tag::OverlayData => {
+                        tree.new_root();
+                    }
+                    Tag::Marker(marker) => {
+                        tree.add_marker(marker);
                     }
                     Tag::POIs => {}
-                    Tag::POI(poi) => {}
+                    Tag::POI(poi) => {
+                        tree.add_poi(poi.id, poi.x, poi.y, poi.z);
+                    }
                     Tag::Route => {}
                     Tag::UnknownField(_) => {}
                     Tag::CorruptField(_) => todo!(),
                 }
-                println!("{}<{:?}>", " ".repeat(marker_stack.len()), tag);
+                // println!("{}<{:?}>", " ".repeat(marker_stack.len()), tag);
+            }
+            Ok(Event::Empty(element)) => {
+                let tag = match Tag::from_element(element) {
+                    Ok(tag) => tag,
+                    Err(err) => {
+                        warn!("Error parsing tag: {:?}", err);
+                        continue;
+                    }
+                };
+                match tag {
+                    Tag::OverlayData => {
+                        tree.new_root();
+                    }
+                    Tag::Marker(marker) => {
+                        tree.add_marker(marker);
+                    }
+                    Tag::POIs => {}
+                    Tag::POI(poi) => {
+                        tree.add_poi(poi.id, poi.x, poi.y, poi.z);
+                    }
+                    Tag::Route => {}
+                    Tag::UnknownField(_) => {}
+                    Tag::CorruptField(_) => todo!(),
+                }
+                tree.up();
             }
             Ok(Event::Comment(e)) => {
                 // info!("comment: {:?}", e);
             }
-            Ok(Event::Text(e)) => {
-                // info!("text: {:?}", e);
+            Ok(Event::Text(e)) => {}
+            Ok(Event::End(_)) => {
+                tree.up();
             }
-            Ok(Event::Empty(e)) => {
-                // info!("empty: {:?}", e);
+            Ok(Event::Eof) => {
+                break;
             }
-            Ok(Event::End(element)) => {
-                println!(
-                    "{}</{}>",
-                    " ".repeat(marker_stack.len()),
-                    String::from_utf8(element.name().0.to_vec()).unwrap()
-                );
-                marker_stack.pop_front();
+            Ok(unknown_event) => {
+                warn!("unknown_event: {:?}", unknown_event);
+                break;
             }
-            Ok(Event::Eof) => break,
-            Ok(unknown_event) => warn!("unknown_event: {:?}", unknown_event),
             Err(err) => panic!("Error at position {}: {:?}", reader.buffer_position(), err),
         }
     }
 
-    // let data: marker::OverlayData = quick_xml::de::from_str(&content).map_err(Error::DeErr)?;
-
-    // for root in data.categories {
-    //     tree.insert_category_recursive(&root, 0, None);
-
-    //     // Loop through markers to populate any associated Trails or POIs.
-    //     for (index, marker) in &mut tree.markers {
-    //         marker.trail_file = data
-    //             .pois
-    //             .iter()
-    //             .find_map(|poi| {
-    //                 poi.trail.iter().find(|trail| {
-    //                     let trail_id = MarkerID::from(&trail.id);
-    //                     tree.indexes
-    //                         .get(&trail_id)
-    //                         .map(|node_index| node_index == index)
-    //                         .unwrap_or_default()
-    //                 })
-    //             })
-    //             .map(|marker| marker.trail_data.clone());
-    //     }
-
-    //     for pois in &data.pois {
-    //         for poi in pois.poi.iter() {
-    //             tree.add_poi(
-    //                 &poi.id,
-    //                 Position {
-    //                     x: poi.x,
-    //                     y: poi.y,
-    //                     z: poi.z,
-    //                 },
-    //             );
-    //         }
-    //     }
-    // }
-
+    tree.new_root();
     Ok(())
 }
 
@@ -211,12 +191,84 @@ impl From<String> for MarkerID {
     }
 }
 
-#[derive(Clone, Default, Debug)]
-pub struct MarkerTree {
-    /// Keeps track of the number of indices in the graph so we can
-    /// generate unique indices.
+#[derive(Default, Debug)]
+struct MarkerTreeBuilder {
+    tree: MarkerTree,
+
+    /// The number of indices in the graph so to generate unique
+    /// indices.
     count: usize,
 
+    /// The path in the tree we currently are located.
+    parent_id: VecDeque<NodeIndex>,
+}
+
+impl Deref for MarkerTreeBuilder {
+    type Target = MarkerTree;
+
+    fn deref(&self) -> &Self::Target {
+        &self.tree
+    }
+}
+
+impl MarkerTreeBuilder {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn add_marker(&mut self, mut marker: Marker) -> &mut Self {
+        let node_id = self.get_or_create_index(&marker.id);
+        self.tree.graph.add_node(node_id);
+
+        if let Some(parent_id) = self.parent_id.front() {
+            self.tree.graph.add_edge(*parent_id, node_id, ());
+            let parent_marker = self.tree.markers.get(parent_id).unwrap();
+            marker.copy_from_parent(parent_marker);
+        } else {
+            self.tree.roots.insert(node_id);
+        }
+
+        self.parent_id.push_front(node_id);
+        self.tree.markers.insert(node_id, marker.clone());
+        self.tree.indexes.insert(marker.id.into(), node_id);
+        self
+    }
+
+    fn add_poi(&mut self, id: impl Into<MarkerID>, x: f32, y: f32, z: f32) {
+        let position = Position { x, y, z };
+        let id = id.into();
+        if let Some(pois) = self.tree.pois.get_mut(&id) {
+            pois.push(position);
+        } else {
+            self.tree.pois.insert(id, vec![position]);
+        }
+    }
+
+    fn get_or_create_index(&mut self, marker_id: impl Into<MarkerID>) -> NodeIndex {
+        self.tree.index_of(marker_id).unwrap_or_else(|| {
+            NodeIndex::new({
+                let i = self.count;
+                self.count += 1;
+                i
+            })
+        })
+    }
+
+    fn up(&mut self) {
+        self.parent_id.pop_front();
+    }
+
+    fn new_root(&mut self) {
+        self.parent_id.clear();
+    }
+
+    fn build(self) -> MarkerTree {
+        self.tree
+    }
+}
+
+#[derive(Clone, Default, Debug)]
+pub struct MarkerTree {
     /// Nodes without any parents. Useful for iterating through all
     /// content in the graph.
     roots: HashSet<NodeIndex>,
@@ -239,73 +291,40 @@ impl MarkerTree {
         Self::default()
     }
 
-    fn insert_marker(&mut self, marker: Marker, parent: Option<NodeIndex>) -> NodeIndex {
-        let node_id: NodeIndex = self.index_of(marker.id.as_str()).unwrap_or_else(|| {
-            NodeIndex::new({
-                let i = self.count;
-                self.count += 1;
-                i
-            })
-        });
-        if parent.is_none() {
-            self.roots.insert(node_id);
-        }
+    // fn insert_category_recursive(
+    //     &mut self,
+    //     category: &marker::MarkerCategory,
+    //     depth: usize,
+    //     parent_id: Option<NodeIndex>,
+    // ) {
+    //     let kind = if category.is_separator {
+    //         MarkerKind::Separator
+    //     } else if category.categories.is_empty() {
+    //         MarkerKind::Leaf
+    //     } else {
+    //         MarkerKind::Category
+    //     };
 
-        self.markers.insert(node_id, marker.clone());
-        self.indexes.insert(marker.id.into(), node_id);
+    //     let parent = parent_id.and_then(|parent_id: NodeIndex| self.markers.get(&parent_id));
+    //     let mut marker = Marker::new(category.id, category.display_name, kind, depth);
+    //     if let Some(parent) = parent {
+    //         marker.copy_from_parent(parent);
+    //     }
 
-        self.graph.add_node(node_id);
+    //     marker.poi_tip = category.tip_name.clone();
+    //     marker.poi_description = category.tip_description.clone();
+    //     marker.behavior = Behavior::from_category(category);
 
-        if let Some(parent) = parent {
-            self.graph.add_edge(parent, node_id, ());
-        }
+    //     let node_id = self.insert_marker(marker.clone(), parent_id);
 
-        node_id
-    }
+    //     if parent_id.is_none() {
+    //         self.roots.insert(node_id);
+    //     }
 
-    fn insert_category_recursive(
-        &mut self,
-        category: &marker::MarkerCategory,
-        depth: usize,
-        parent_id: Option<NodeIndex>,
-    ) {
-        let kind = if category.is_separator {
-            MarkerKind::Separator
-        } else if category.categories.is_empty() {
-            MarkerKind::Leaf
-        } else {
-            MarkerKind::Category
-        };
-
-        let parent = parent_id.and_then(|parent_id: NodeIndex| self.markers.get(&parent_id));
-        let mut marker = Marker::new(category.id(), category.display_name(), kind, depth);
-        if let Some(parent) = parent {
-            marker.copy_from_parent(parent);
-        }
-
-        marker.poi_tip = category.tip_name.clone();
-        marker.poi_description = category.tip_description.clone();
-        marker.behavior = Behavior::from_category(category);
-
-        let node_id = self.insert_marker(marker.clone(), parent_id);
-
-        if parent_id.is_none() {
-            self.roots.insert(node_id);
-        }
-
-        for subcat in &category.categories {
-            self.insert_category_recursive(subcat, depth + 1, Some(node_id));
-        }
-    }
-
-    fn add_poi(&mut self, id: impl Into<MarkerID>, position: Position) {
-        let id = id.into();
-        if let Some(pois) = self.pois.get_mut(&id) {
-            pois.push(position);
-        } else {
-            self.pois.insert(id, vec![position]);
-        }
-    }
+    //     for subcat in &category.categories {
+    //         self.insert_category_recursive(subcat, depth + 1, Some(node_id));
+    //     }
+    // }
 
     fn index_of(&self, id: impl Into<MarkerID>) -> Option<NodeIndex> {
         self.indexes.get(&id.into()).cloned()
@@ -351,8 +370,9 @@ impl MarkerTree {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum MarkerKind {
+    #[default]
     Category,
     Leaf,
     Separator,
@@ -371,7 +391,7 @@ pub enum Behavior {
 }
 
 impl Behavior {
-    fn from_category(category: &marker::MarkerCategory) -> Option<Behavior> {
+    fn from_category(category: model::MarkerCategory) -> Option<Behavior> {
         if let Some(behavior) = category.behavior {
             match behavior {
                 0 => Some(Self::AlwaysVisible),
@@ -394,7 +414,7 @@ impl Behavior {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Marker {
     pub id: String,
     pub label: String,
@@ -407,26 +427,47 @@ pub struct Marker {
 }
 
 impl Marker {
-    fn new(
-        id: impl Into<String>,
-        label: impl Into<String>,
-        kind: MarkerKind,
-        depth: usize,
-    ) -> Self {
+    fn new(id: impl Into<String>, label: impl Into<String>, kind: MarkerKind) -> Self {
         Self {
             id: id.into(),
             label: label.into(),
             kind,
-            depth,
-            behavior: Default::default(),
-            poi_tip: Default::default(),
-            poi_description: Default::default(),
-            trail_file: Default::default(),
+            ..Default::default()
         }
     }
 
     fn copy_from_parent(&mut self, parent: &Marker) {
-        self.behavior = parent.behavior;
+        self.id = format!("{}.{}", parent.id, self.id);
+        self.depth = parent.depth + 1;
+        self.behavior = self.behavior.or(parent.behavior);
+    }
+
+    fn from_attrs(attrs: Attributes) -> Result<Self, Error> {
+        let mut this = Self::default();
+
+        for attr in attrs.map(Result::ok).filter_map(identity) {
+            let Ok(key) = String::from_utf8(attr.key.0.to_vec()) else {
+                warn!("Key is not UTF-8 encoded: {:?}", attr);
+                continue;
+            };
+
+            let Ok(value) = String::from_utf8(attr.value.to_vec()) else {
+                warn!("Value is not UTF-8 encoded: {:?}", attr);
+                continue;
+            };
+
+            match key.to_lowercase().as_str() {
+                "name" => this.id = value,
+                "displayname" => this.label = value,
+                "isseparator" => {
+                    if "true" == value.to_lowercase() {
+                        this.kind = MarkerKind::Separator
+                    };
+                }
+                _ => {}
+            }
+        }
+        Ok(this)
     }
 }
 
@@ -442,8 +483,8 @@ mod tests {
     use super::*;
 
     impl Marker {
-        fn category(id: impl Into<String>, label: impl Into<String>, depth: usize) -> Self {
-            Self::new(id, label, MarkerKind::Category, depth)
+        fn category(id: impl Into<String>, label: impl Into<String>) -> Self {
+            Self::new(id, label, MarkerKind::Category)
         }
     }
 
@@ -453,21 +494,28 @@ mod tests {
     //  / \   \         / | \
     // C   D   F       J  K  L
     fn fake_markers() -> MarkerTree {
-        let mut markers = MarkerTree::new();
-        let a_id = markers.insert_marker(Marker::category("A", "A Name", 0), None);
-        let b_id = markers.insert_marker(Marker::category("B", "B Name", 1), Some(a_id));
-        let _c_id = markers.insert_marker(Marker::category("C", "C Name", 2), Some(b_id));
-        let _d_id = markers.insert_marker(Marker::category("D", "D Name", 2), Some(b_id));
-        let e_id = markers.insert_marker(Marker::category("E", "E Name", 1), Some(a_id));
-        let _f_id = markers.insert_marker(Marker::category("F", "F Name", 2), Some(e_id));
+        let mut markers = MarkerTreeBuilder::new();
+        markers.add_marker(Marker::category("A", "A Name"));
+        markers.add_marker(Marker::category("B", "B Name"));
+        markers.add_marker(Marker::category("C", "C Name"));
+        markers.up();
+        markers.add_marker(Marker::category("D", "D Name"));
+        markers.up();
+        markers.up();
+        markers.add_marker(Marker::category("E", "E Name"));
+        markers.add_marker(Marker::category("F", "F Name"));
 
-        let g_id = markers.insert_marker(Marker::category("G", "G Name", 0), None);
-        let _h_id = markers.insert_marker(Marker::category("H", "H Name", 1), Some(g_id));
-        let i_id = markers.insert_marker(Marker::category("I", "I Name", 2), Some(g_id));
-        let _j_id = markers.insert_marker(Marker::category("J", "J Name", 2), Some(i_id));
-        let _k_id = markers.insert_marker(Marker::category("K", "K Name", 1), Some(i_id));
-        let _l_id = markers.insert_marker(Marker::category("L", "L Name", 2), Some(i_id));
-        markers
+        markers.new_root();
+        markers.add_marker(Marker::category("G", "G Name"));
+        markers.add_marker(Marker::category("H", "H Name"));
+        markers.up();
+        markers.add_marker(Marker::category("I", "I Name"));
+        markers.add_marker(Marker::category("J", "J Name"));
+        markers.up();
+        markers.add_marker(Marker::category("K", "K Name"));
+        markers.up();
+        markers.add_marker(Marker::category("L", "L Name"));
+        markers.build()
     }
 
     #[test]
@@ -480,6 +528,14 @@ mod tests {
     #[test]
     fn test_iter() {
         let markers = fake_markers();
+        println!(
+            "markers: {:?}",
+            markers
+                .roots()
+                .iter()
+                .map(|a| a.id.clone())
+                .collect::<Vec<_>>()
+        );
         let mut iter = markers.iter_recursive("A");
 
         //     A
@@ -488,11 +544,11 @@ mod tests {
         //  / \   \
         // C   D   F
         assert_eq!(iter.next().unwrap().id, "A");
-        assert_eq!(iter.next().unwrap().id, "B");
-        assert_eq!(iter.next().unwrap().id, "C");
-        assert_eq!(iter.next().unwrap().id, "D");
-        assert_eq!(iter.next().unwrap().id, "E");
-        assert_eq!(iter.next().unwrap().id, "F");
+        assert_eq!(iter.next().unwrap().id, "A.B");
+        assert_eq!(iter.next().unwrap().id, "A.B.C");
+        assert_eq!(iter.next().unwrap().id, "A.B.D");
+        assert_eq!(iter.next().unwrap().id, "A.E");
+        assert_eq!(iter.next().unwrap().id, "A.E.F");
         assert!(iter.next().is_none());
 
         //   G
@@ -502,11 +558,11 @@ mod tests {
         //  J  K  L
         let mut iter = markers.iter_recursive("G");
         assert_eq!(iter.next().unwrap().id, "G");
-        assert_eq!(iter.next().unwrap().id, "H");
-        assert_eq!(iter.next().unwrap().id, "I");
-        assert_eq!(iter.next().unwrap().id, "J");
-        assert_eq!(iter.next().unwrap().id, "K");
-        assert_eq!(iter.next().unwrap().id, "L");
+        assert_eq!(iter.next().unwrap().id, "G.H");
+        assert_eq!(iter.next().unwrap().id, "G.I");
+        assert_eq!(iter.next().unwrap().id, "G.I.J");
+        assert_eq!(iter.next().unwrap().id, "G.I.K");
+        assert_eq!(iter.next().unwrap().id, "G.I.L");
         assert!(iter.next().is_none());
 
         //     A
@@ -514,10 +570,10 @@ mod tests {
         //   B   E
         //  / \   \
         // C   D   F
-        let mut iter = markers.iter_recursive("B");
-        assert_eq!(iter.next().unwrap().id, "B");
-        assert_eq!(iter.next().unwrap().id, "C");
-        assert_eq!(iter.next().unwrap().id, "D");
+        let mut iter = markers.iter_recursive("A.B");
+        assert_eq!(iter.next().unwrap().id, "A.B");
+        assert_eq!(iter.next().unwrap().id, "A.B.C");
+        assert_eq!(iter.next().unwrap().id, "A.B.D");
         assert!(iter.next().is_none());
 
         //     A
@@ -525,8 +581,8 @@ mod tests {
         //   B   E
         //  / \   \
         // C   D   F
-        let mut iter = markers.iter_recursive("C");
-        assert_eq!(iter.next().unwrap().id, "C");
+        let mut iter = markers.iter_recursive("A.B.C");
+        assert_eq!(iter.next().unwrap().id, "A.B.C");
         assert!(iter.next().is_none());
     }
 }

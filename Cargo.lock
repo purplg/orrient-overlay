@@ -2904,7 +2904,6 @@ dependencies = [
  "log",
  "petgraph",
  "quick-xml 0.32.0",
- "serde",
 ]
 
 [[package]]
