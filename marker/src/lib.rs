@@ -3,11 +3,10 @@ pub mod trail;
 
 use std::{collections::HashMap, path::Path};
 
-use petgraph::{
-    graphmap::DiGraphMap,
-    visit::{Dfs, VisitMap},
-    Direction,
-};
+use petgraph::graph::DiGraph;
+use petgraph::graph::NodeIndex;
+use petgraph::visit::{Dfs, VisitMap};
+use petgraph::Direction;
 
 #[derive(Debug)]
 pub enum Error {
@@ -24,187 +23,178 @@ pub fn read(path: &Path) -> Result<MarkerTree, Error> {
         return Err(Error::EmptyCategory);
     };
 
-    let mut builder = MarkerTreeBuilder::new_from_file(root);
+    let mut tree = MarkerTree::new_from_file(root);
 
     // Loop through markers to populate any associated Trails or POIs.
-    for (id, marker) in &mut builder.markers {
+    for (index, marker) in &mut tree.markers {
         marker.trail_file = data
             .pois
             .iter()
             .find_map(|poi| {
-                poi.trail
-                    .iter()
-                    .find(|trail| trail.id.split(".").last() == Some(id))
+                poi.trail.iter().find(|trail| {
+                    let Some(trail_id) = trail.id.split(".").last() else {
+                        return false;
+                    };
+                    tree.indexes
+                        .get(&trail_id.to_string())
+                        .map(|node_index| node_index == index)
+                        .unwrap_or_default()
+                })
             })
-            .map(|trail| trail.trail_data.clone());
+            .map(|marker| marker.trail_data.clone());
+    }
 
-        for pois in &data.pois {
-            for poi in pois.poi.iter() {
-                if poi.id.split(".").last() == Some(id) {
-                    marker.pois.push(Position {
-                        x: poi.x,
-                        y: poi.y,
-                        z: poi.z,
-                    });
-                }
-            }
+    for pois in &data.pois {
+        for poi in pois.poi.iter() {
+            let Some(poi_id) = poi.id.split(".").last() else {
+                continue;
+            };
+
+            tree.add_poi(
+                poi_id.to_string(),
+                Position {
+                    x: poi.x,
+                    y: poi.y,
+                    z: poi.z,
+                },
+            );
         }
     }
 
-    Ok(builder.build())
+    Ok(tree)
 }
 
-struct MarkerTreeBuilder {
-    root: &'static str,
-    nodes: Vec<&'static str>,
-    edges: Vec<(&'static str, &'static str)>,
-    markers: HashMap<&'static str, Marker>,
+pub struct MarkerTreeIter<'a, VM: VisitMap<NodeIndex>> {
+    tree: &'a MarkerTree,
+    iter: Dfs<NodeIndex, VM>,
 }
 
-impl MarkerTreeBuilder {
-    fn new_empty(root: &'static str) -> Self {
-        Self {
-            root,
-            nodes: Default::default(),
-            edges: Default::default(),
-            markers: Default::default(),
-        }
+impl<'a, VM: VisitMap<NodeIndex>> Iterator for MarkerTreeIter<'a, VM> {
+    type Item = &'a Marker;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next(&self.tree.graph).and_then(|id| {
+            self.tree.markers.get(&id)
+        })
+    }
+}
+
+#[derive(Clone, Default, Debug)]
+pub struct MarkerTree {
+    count: usize,
+    roots: Vec<NodeIndex>,
+    indexes: HashMap<String, NodeIndex>,
+    markers: HashMap<NodeIndex, Marker>,
+    graph: DiGraph<NodeIndex, ()>,
+    pois: HashMap<String, Vec<Position>>,
+}
+
+impl MarkerTree {
+    fn new() -> Self {
+        Self::default()
     }
 
     fn new_from_file(category: &marker::MarkerCategory) -> Self {
-        let mut builder = Self::new_empty(category.id().leak());
+        let mut builder = Self::new();
         builder.insert_category_recursive(category, 0, None);
         builder
     }
 
-    fn insert_marker(&mut self, id: &'static str, marker: Marker, parent: Option<&Marker>) {
-        self.markers.insert(id, marker);
+    fn insert_marker(&mut self, marker: Marker, parent: Option<NodeIndex>) -> NodeIndex {
+        let node_id = NodeIndex::new(self.count);
+        self.count += 1;
 
-        self.nodes.push(id);
+        self.markers.insert(node_id, marker.clone());
+        self.indexes.insert(marker.id, node_id);
+
+        self.graph.add_node(node_id);
 
         if let Some(parent) = parent {
-            self.edges.push((parent.id.clone().leak(), id));
+            self.graph.add_edge(parent, node_id, ());
         }
+
+        node_id
     }
 
     fn insert_category_recursive(
         &mut self,
         category: &marker::MarkerCategory,
         depth: usize,
-        parent: Option<&Marker>,
+        parent_id: Option<NodeIndex>,
     ) {
-        let id: &str = category.id().leak();
-        let mut marker = Marker::new(
-            id,
-            category.display_name(),
-            if category.is_separator {
-                MarkerKind::Separator
+        let kind = if category.is_separator {
+            MarkerKind::Separator
+        } else {
+            if category.categories.len() == 0 {
+                MarkerKind::Leaf
             } else {
-                if category.categories.len() == 0 {
-                    MarkerKind::Leaf
-                } else {
-                    MarkerKind::Category
-                }
-            },
-            depth,
-        );
+                MarkerKind::Category
+            }
+        };
 
-        if let Some(parent) = parent {
-            marker.copy_from_parent(parent);
-        }
+        let parent = parent_id.and_then(|parent_id: NodeIndex| self.markers.get(&parent_id));
+        let mut marker = if let Some(parent) = parent {
+            Marker::new_from_parent(category.id(), category.display_name(), kind, parent)
+        } else {
+            Marker::new(category.id(), category.display_name(), kind, depth)
+        };
 
         marker.poi_tip = category.tip_name.clone();
         marker.poi_description = category.tip_description.clone();
         marker.behavior = Behavior::from_category(&category);
 
-        self.insert_marker(id, marker.clone(), parent);
+        let node_id = self.insert_marker(marker.clone(), parent_id);
+
+        if parent_id.is_none() {
+            self.roots.push(node_id);
+        }
 
         for subcat in &category.categories {
-            self.insert_category_recursive(&subcat, depth + 1, Some(&marker));
+            self.insert_category_recursive(&subcat, depth + 1, Some(node_id));
         }
     }
 
-    fn build(mut self) -> MarkerTree {
-        let mut graph: DiGraphMap<&'static str, ()> = Default::default();
-        for node in self.nodes.drain(..) {
-            graph.add_node(node);
-        }
-        for (a, b) in self.edges.drain(..) {
-            graph.add_edge(a, b, ());
-        }
-
-        MarkerTree {
-            root: self.root,
-            graph,
-            markers: self.markers,
+    fn add_poi(&mut self, id: String, position: Position) {
+        if let Some(mut pois) = self.pois.get_mut(&id) {
+            pois.push(position);
+        } else {
+            self.pois.insert(id, vec![position]);
         }
     }
-}
 
-pub struct MarkerTreeIter<'a, VM: VisitMap<&'a str>> {
-    tree: &'a MarkerTree,
-    iter: Dfs<&'a str, VM>,
-}
-
-impl<'a, VM: VisitMap<&'a str>> Iterator for MarkerTreeIter<'a, VM> {
-    type Item = MarkerTreeItem<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next(&self.tree.graph).and_then(|id| {
-            self.tree.markers.get(id).map(|marker| MarkerTreeItem {
-                id,
-                marker,
-                depth: self.tree.get(id).unwrap().depth,
-            })
-        })
+    pub fn get_pois(&self, id: &String) -> Option<&Vec<Position>> {
+        self.pois.get(id)
     }
-}
 
-pub struct MarkerTreeItem<'a> {
-    pub id: &'a str,
-    pub marker: &'a Marker,
-    pub depth: usize,
-}
-
-#[derive(Clone, Debug)]
-pub struct MarkerTree {
-    pub root: &'static str,
-    graph: DiGraphMap<&'static str, ()>,
-    markers: HashMap<&'static str, Marker>,
-}
-
-impl MarkerTree {
     pub fn get(&self, id: &str) -> Option<&Marker> {
-        self.markers.get(id)
+        let node_id = self.indexes.get(id).unwrap();
+        self.markers.get(node_id)
     }
 
-    pub fn root<'a>(&'a self) -> Option<MarkerTreeItem<'a>> {
-        self.get(self.root).map(|marker| MarkerTreeItem {
-            id: self.root,
-            marker,
-            depth: marker.depth,
-        })
+    pub fn get_mut(&mut self, id: &str) -> Option<&mut Marker> {
+        let node_id = self.indexes.get(id).unwrap();
+        self.markers.get_mut(node_id)
     }
 
-    pub fn iter<'a>(&'a self, start: &'a str) -> impl Iterator<Item = MarkerTreeItem<'a>> {
+    pub fn roots(&self) -> Vec<&Marker> {
+        self.roots
+            .iter()
+            .filter_map(|index| self.markers.get(index))
+            .collect()
+    }
+
+    pub fn iter<'a>(&'a self, start: &'a str) -> impl Iterator<Item = &'a Marker> {
+        let start_id = self.indexes.get(start).unwrap();
         self.graph
-            .neighbors_directed(start, Direction::Outgoing)
-            .filter_map(|id| {
-                self.markers.get(id).map(|marker| MarkerTreeItem {
-                    id,
-                    marker,
-                    depth: marker.depth,
-                })
-            })
+            .neighbors_directed(*start_id, Direction::Outgoing)
+            .filter_map(|id| self.markers.get(&id))
     }
 
-    pub fn iter_recursive<'a>(
-        &'a self,
-        start: Option<&'a str>,
-    ) -> impl Iterator<Item = MarkerTreeItem<'a>> {
+    pub fn iter_recursive<'a>(&'a self, start: &'a str) -> impl Iterator<Item = &'a Marker> {
+        let start_id = self.indexes.get(start).unwrap();
         MarkerTreeIter {
             tree: self,
-            iter: Dfs::new(&self.graph, start.unwrap_or(self.root)),
+            iter: Dfs::new(&self.graph, *start_id),
         }
     }
 }
@@ -261,7 +251,6 @@ pub struct Marker {
     pub behavior: Option<Behavior>,
     pub poi_tip: Option<String>,
     pub poi_description: Option<String>,
-    pub pois: Vec<Position>,
     pub trail_file: Option<String>,
 }
 
@@ -280,13 +269,23 @@ impl Marker {
             behavior: Default::default(),
             poi_tip: Default::default(),
             poi_description: Default::default(),
-            pois: Default::default(),
             trail_file: Default::default(),
         }
     }
 
-    fn copy_from_parent(&mut self, parent: &Marker) {
-        self.behavior = parent.behavior;
+    fn category(id: impl Into<String>, label: impl Into<String>, depth: usize) -> Self {
+        Self::new(id, label, MarkerKind::Category, depth)
+    }
+
+    fn new_from_parent(
+        id: impl Into<String>,
+        label: impl Into<String>,
+        kind: MarkerKind,
+        parent: &Marker,
+    ) -> Self {
+        let mut marker = Self::new(id, label, kind, parent.depth);
+        marker.behavior = parent.behavior;
+        marker
     }
 }
 
@@ -307,14 +306,21 @@ mod tests {
     //  / \   \
     // C   D   F
     fn fake_markers() -> MarkerTree {
-        let mut markers = MarkerTreeBuilder::new_empty("A");
-        markers.insert_marker(None, "A", Marker::category("A", 0));
-        markers.insert_marker(Some("A"), "B", Marker::category("B", 1));
-        markers.insert_marker(Some("B"), "C", Marker::category("C", 2));
-        markers.insert_marker(Some("B"), "D", Marker::category("D", 2));
-        markers.insert_marker(Some("A"), "E", Marker::category("E", 1));
-        markers.insert_marker(Some("E"), "F", Marker::category("F", 2));
-        markers.build()
+        let mut markers = MarkerTree::new();
+        let a_id = markers.insert_marker(Marker::category("A", "A Name", 0), None);
+        let b_id = markers.insert_marker(Marker::category("B", "B Name", 1), Some(a_id));
+        let c_id = markers.insert_marker(Marker::category("C", "C Name", 2), Some(b_id));
+        let d_id = markers.insert_marker(Marker::category("D", "D Name", 2), Some(b_id));
+        let e_id = markers.insert_marker(Marker::category("E", "E Name", 1), Some(a_id));
+        let f_id = markers.insert_marker(Marker::category("F", "F Name", 2), Some(e_id));
+
+        let g_id = markers.insert_marker(Marker::category("G", "G Name", 0), None);
+        let h_id = markers.insert_marker(Marker::category("H", "H Name", 1), Some(g_id));
+        let i_id = markers.insert_marker(Marker::category("I", "I Name", 2), Some(h_id));
+        let j_id = markers.insert_marker(Marker::category("J", "J Name", 2), Some(h_id));
+        let k_id = markers.insert_marker(Marker::category("K", "K Name", 1), Some(g_id));
+        let l_id = markers.insert_marker(Marker::category("L", "L Name", 2), Some(k_id));
+        markers
     }
 
     // #[test]
@@ -332,45 +338,51 @@ mod tests {
     #[test]
     fn test_iter() {
         let markers = fake_markers();
-        let mut iter = markers.iter_recursive();
+        let mut iter = markers.iter_recursive("A");
         assert_eq!(iter.next().unwrap().id, "A");
         assert_eq!(iter.next().unwrap().id, "B");
         assert_eq!(iter.next().unwrap().id, "C");
         assert_eq!(iter.next().unwrap().id, "D");
         assert_eq!(iter.next().unwrap().id, "E");
         assert_eq!(iter.next().unwrap().id, "F");
+        assert!(iter.next().is_none());
+
+        let mut iter = markers.iter_recursive("G");
+        assert_eq!(iter.next().unwrap().id, "G");
+        assert_eq!(iter.next().unwrap().id, "H");
+        assert_eq!(iter.next().unwrap().id, "I");
+        assert_eq!(iter.next().unwrap().id, "J");
+        assert_eq!(iter.next().unwrap().id, "K");
+        assert_eq!(iter.next().unwrap().id, "L");
+        assert!(iter.next().is_none());
+
+        let mut iter = markers.iter_recursive("B");
+        assert_eq!(iter.next().unwrap().id, "B");
+        assert_eq!(iter.next().unwrap().id, "C");
+        assert_eq!(iter.next().unwrap().id, "D");
+        assert!(iter.next().is_none());
+
+        let mut iter = markers.iter_recursive("C");
+        assert_eq!(iter.next().unwrap().id, "C");
+        assert!(iter.next().is_none());
     }
 
     // #[test]
-    fn test_get_path() {
-        let markers = fake_markers();
-        assert_eq!(markers.get_path(vec!["1"]).unwrap().label, "1 name");
-        assert_eq!(
-            markers.get_path(vec!["1", "1.1"]).unwrap().label,
-            "1.1 name"
-        );
-        assert_eq!(
-            markers.get_path(vec!["1", "1.2"]).unwrap().label,
-            "1.2 name"
-        );
-    }
+    // fn test_real_get_path() {
+    //     let markers: MarkerTree = read(Path::new(
+    //         "/home/purplg/.config/orrient/markers/tw_lws03e05_draconismons.xml",
+    //     ))
+    //     .unwrap();
 
-    // #[test]
-    fn test_real_get_path() {
-        let markers: MarkerTree = read(Path::new(
-            "/home/purplg/.config/orrient/markers/tw_lws03e05_draconismons.xml",
-        ))
-        .unwrap();
-
-        markers
-            .get_path(vec![
-                "tw_guides",
-                "tw_lws3",
-                "tw_lws3_draconismons",
-                "tw_lws3_draconismons_primordialorchids",
-                "tw_lws3_draconismons_primordialorchids_toggletrail",
-                "tw_lws3_draconismons_primordialorchids_toggletrail_p1",
-            ])
-            .unwrap();
-    }
+    //     markers
+    //         .get_path(vec![
+    //             "tw_guides",
+    //             "tw_lws3",
+    //             "tw_lws3_draconismons",
+    //             "tw_lws3_draconismons_primordialorchids",
+    //             "tw_lws3_draconismons_primordialorchids_toggletrail",
+    //             "tw_lws3_draconismons_primordialorchids_toggletrail_p1",
+    //         ])
+    //         .unwrap();
+    // }
 }

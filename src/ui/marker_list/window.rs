@@ -74,38 +74,34 @@ impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
     }
 }
 
-fn tree_item(
-    item: &marker::MarkerTreeItem<'_>,
-    parent: &mut UiBuilder<'_, Entity>,
-    markers: &MarkerTree,
-) {
+fn tree_item(item: &marker::Marker, parent: &mut UiBuilder<'_, Entity>, markers: &MarkerTree) {
     parent
         .row(|parent| {
             parent
                 .checkbox(None, false) //
                 .insert(MarkerItem {
                     id: item.id.to_string(),
-                    tip: item.marker.poi_tip.clone(),
-                    description: item.marker.poi_description.clone(),
+                    tip: item.poi_tip.clone(),
+                    description: item.poi_description.clone(),
                 })
                 .style()
                 .width(Val::Px(42.));
 
             parent
-                .foldable(&item.marker.label, true, false, |parent| {
-                    for subitem in markers.iter(item.id) {
-                        match subitem.marker.kind {
+                .foldable(&item.label, true, false, |parent| {
+                    for subitem in markers.iter(&item.id) {
+                        match subitem.kind {
                             MarkerKind::Category => {
                                 tree_item(&subitem, parent, markers);
                             }
                             MarkerKind::Leaf => {
-                                let label = subitem.marker.label.clone();
+                                let label = subitem.label.clone();
                                 parent
                                     .checkbox(Some(label), false)
                                     .insert(MarkerItem {
                                         id: subitem.id.to_string(),
-                                        tip: subitem.marker.poi_tip.clone(),
-                                        description: subitem.marker.poi_description.clone(),
+                                        tip: subitem.poi_tip.clone(),
+                                        description: subitem.poi_description.clone(),
                                     })
                                     .style()
                                     .width(Val::Percent(100.))
@@ -113,7 +109,7 @@ fn tree_item(
                             }
                             MarkerKind::Separator => {
                                 parent
-                                    .label(LabelConfig::from(&subitem.marker.label))
+                                    .label(LabelConfig::from(&subitem.label))
                                     .style()
                                     .width(Val::Percent(100.))
                                     .background_color(Color::BLACK);
@@ -157,8 +153,8 @@ fn show_markers(
             });
 
             parent.scroll_view(None, |scroll_view| {
-                if let Some(item) = markers.root() {
-                    tree_item(&item, scroll_view, &markers);
+                if let Some(item) = markers.roots().first() {
+                    tree_item(item, scroll_view, &markers);
                 }
             });
         })

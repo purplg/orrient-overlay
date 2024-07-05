@@ -30,7 +30,7 @@ impl bevy::prelude::Plugin for Plugin {
 }
 
 fn setup(mut events: EventWriter<UiEvent>) {
-    events.send(UiEvent::LoadMarkers("tw_lws03e05_draconismons.xml".into()));
+    events.send(UiEvent::LoadMarkers("dw_coral.xml".into()));
 }
 
 fn load_marker(mut commands: Commands, mut events: EventReader<UiEvent>, data: Res<MarkerTree>) {
@@ -59,14 +59,18 @@ fn load_markers(mut commands: Commands, mut events: EventReader<UiEvent>) {
             return;
         };
 
-        let Ok(markers) = marker::read(
+        let markers = match marker::read(
             &dirs::config_dir()
                 .unwrap()
                 .join("orrient")
                 .join("markers")
                 .join(filename),
-        ) else {
-            return;
+        ) {
+            Ok(markers) => markers,
+            Err(err) => {
+                println!("Error loading markers from {}: {:?}", filename, err);
+                return;
+            }
         };
 
         commands.insert_resource(MarkerTree(markers));
@@ -151,15 +155,18 @@ fn load_pois_system(
             return;
         };
 
-        let pois: Vec<Vec3> = marker
-            .pois
-            .iter()
+        let Some(pois) = data.get_pois(&marker.id) else {
+            return;
+        };
+
+        let pois = pois
+            .into_iter()
             .map(|poi| Vec3 {
                 x: poi.x,
                 y: poi.y,
                 z: -poi.z,
             })
-            .collect();
+            .collect::<Vec<_>>();
 
         for poi in &pois {
             let mut builder = commands.spawn((
