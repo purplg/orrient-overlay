@@ -131,11 +131,11 @@ fn hide_file_open(
     query: Query<Entity, With<FileBrowser>>,
     mut events: EventReader<UiEvent>,
 ) {
-    for event in events.read() {
-        match event {
-            UiEvent::LoadMarkers(_) => break,
-            _ => continue,
-        }
+    if !events
+        .read()
+        .any(|event| matches!(event, UiEvent::LoadMarkers(_)))
+    {
+        return;
     }
 
     let Ok(browser) = query.get_single() else {
