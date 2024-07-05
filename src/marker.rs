@@ -188,11 +188,14 @@ fn unload_pois_system(
             return;
         };
 
+        let mut count = 0;
         for (entity, poi) in &poi_query {
             if poi.0 == *marker_id {
                 commands.entity(entity).despawn_recursive();
+                count += 1;
             }
         }
+        info!("Unloaded {} POIs.", count);
     }
 }
 
