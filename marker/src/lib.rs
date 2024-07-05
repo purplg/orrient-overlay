@@ -1,20 +1,29 @@
 mod marker;
 pub mod trail;
 
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::ops::Deref;
 use std::{collections::HashMap, path::Path};
 
+use log::warn;
 use petgraph::graph::DiGraph;
 use petgraph::graph::NodeIndex;
 use petgraph::visit::{Dfs, VisitMap};
 use petgraph::Direction;
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::name::QName;
+use quick_xml::Reader;
 
 #[derive(Debug)]
 pub enum Error {
     EmptyCategory,
-    FsErr(std::io::Error),
+    IoErr(std::io::Error),
     DeErr(quick_xml::de::DeError),
+    Xml(quick_xml::Error),
+    FieldErr(String),
+    UnknownField(String),
+    AttrErr(quick_xml::events::attributes::AttrError),
+    Utf8Error(std::string::FromUtf8Error),
 }
 
 pub fn read(directory: &Path) -> Result<MarkerTree, Error> {
@@ -29,49 +38,131 @@ pub fn read(directory: &Path) -> Result<MarkerTree, Error> {
         read_file(&mut tree, &path).unwrap();
     }
 
+    println!("tree.roots: {:?}", tree.roots());
+
     Ok(tree)
 }
 
-fn read_file(tree: &mut MarkerTree, path: &Path) -> Result<(), Error> {
-    let content = std::fs::read_to_string(path)
-        .map_err(Error::FsErr)?
-        .replace("&", "&amp;");
+#[derive(Debug)]
+enum Tag {
+    OverlayData,
+    MarkerCategory(marker::MarkerCategory),
+    POIs,
+    POI(marker::Poi),
+    Route,
+    UnknownField(String),
+    CorruptField(String),
+}
 
-    let data: marker::OverlayData = quick_xml::de::from_str(&content).map_err(Error::DeErr)?;
-
-    for root in data.categories {
-        tree.insert_category_recursive(&root, 0, None);
-
-        // Loop through markers to populate any associated Trails or POIs.
-        for (index, marker) in &mut tree.markers {
-            marker.trail_file = data
-                .pois
-                .iter()
-                .find_map(|poi| {
-                    poi.trail.iter().find(|trail| {
-                        let trail_id = MarkerID::from(&trail.id);
-                        tree.indexes
-                            .get(&trail_id)
-                            .map(|node_index| node_index == index)
-                            .unwrap_or_default()
-                    })
-                })
-                .map(|marker| marker.trail_data.clone());
-        }
-
-        for pois in &data.pois {
-            for poi in pois.poi.iter() {
-                tree.add_poi(
-                    &poi.id,
-                    Position {
-                        x: poi.x,
-                        y: poi.y,
-                        z: poi.z,
-                    },
-                );
+impl Tag {
+    fn from_element(element: BytesStart) -> Result<Tag, Error> {
+        let tag = match element.name() {
+            QName(b"OverlayData") => Tag::OverlayData,
+            QName(b"MarkerCategory") => {
+                Tag::MarkerCategory(marker::MarkerCategory::from_attrs(element.attributes()))
             }
+            QName(b"POIs") => Tag::POIs,
+            QName(b"POI") => Tag::POI(marker::Poi::from_attrs(element.attributes())?),
+            QName(field) => Tag::UnknownField(String::from_utf8_lossy(field).to_string()),
+        };
+
+        Ok(tag)
+    }
+}
+
+fn read_file(tree: &mut MarkerTree, path: &Path) -> Result<(), Error> {
+    let mut reader = Reader::from_file(path).map_err(Error::Xml)?;
+    let mut buf = Vec::new();
+    let mut marker_stack: VecDeque<NodeIndex> = Default::default();
+
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(element)) => {
+                let tag = match Tag::from_element(element) {
+                    Ok(tag) => tag,
+                    Err(err) => {
+                        warn!("Error parsing tag: {:?}", err);
+                        continue;
+                    }
+                };
+                match &tag {
+                    Tag::OverlayData => {}
+                    Tag::MarkerCategory(category) => {
+                        let marker = Marker::new(
+                            category.id(),
+                            category.display_name(),
+                            MarkerKind::Category,
+                            marker_stack.len(),
+                        );
+                        let id = tree.insert_marker(marker, marker_stack.front().copied());
+                        marker_stack.push_front(id);
+                    }
+                    Tag::POIs => {}
+                    Tag::POI(poi) => {}
+                    Tag::Route => {}
+                    Tag::UnknownField(_) => {}
+                    Tag::CorruptField(_) => todo!(),
+                }
+                println!("{}<{:?}>", " ".repeat(marker_stack.len()), tag);
+            }
+            Ok(Event::Comment(e)) => {
+                // info!("comment: {:?}", e);
+            }
+            Ok(Event::Text(e)) => {
+                // info!("text: {:?}", e);
+            }
+            Ok(Event::Empty(e)) => {
+                // info!("empty: {:?}", e);
+            }
+            Ok(Event::End(element)) => {
+                println!(
+                    "{}</{}>",
+                    " ".repeat(marker_stack.len()),
+                    String::from_utf8(element.name().0.to_vec()).unwrap()
+                );
+                marker_stack.pop_front();
+            }
+            Ok(Event::Eof) => break,
+            Ok(unknown_event) => warn!("unknown_event: {:?}", unknown_event),
+            Err(err) => panic!("Error at position {}: {:?}", reader.buffer_position(), err),
         }
     }
+
+    // let data: marker::OverlayData = quick_xml::de::from_str(&content).map_err(Error::DeErr)?;
+
+    // for root in data.categories {
+    //     tree.insert_category_recursive(&root, 0, None);
+
+    //     // Loop through markers to populate any associated Trails or POIs.
+    //     for (index, marker) in &mut tree.markers {
+    //         marker.trail_file = data
+    //             .pois
+    //             .iter()
+    //             .find_map(|poi| {
+    //                 poi.trail.iter().find(|trail| {
+    //                     let trail_id = MarkerID::from(&trail.id);
+    //                     tree.indexes
+    //                         .get(&trail_id)
+    //                         .map(|node_index| node_index == index)
+    //                         .unwrap_or_default()
+    //                 })
+    //             })
+    //             .map(|marker| marker.trail_data.clone());
+    //     }
+
+    //     for pois in &data.pois {
+    //         for poi in pois.poi.iter() {
+    //             tree.add_poi(
+    //                 &poi.id,
+    //                 Position {
+    //                     x: poi.x,
+    //                     y: poi.y,
+    //                     z: poi.z,
+    //                 },
+    //             );
+    //         }
+    //     }
+    // }
 
     Ok(())
 }
@@ -156,6 +247,9 @@ impl MarkerTree {
                 i
             })
         });
+        if parent.is_none() {
+            self.roots.insert(node_id);
+        }
 
         self.markers.insert(node_id, marker.clone());
         self.indexes.insert(marker.id.into(), node_id);
@@ -184,11 +278,10 @@ impl MarkerTree {
         };
 
         let parent = parent_id.and_then(|parent_id: NodeIndex| self.markers.get(&parent_id));
-        let mut marker = if let Some(parent) = parent {
-            Marker::new_from_parent(category.id(), category.display_name(), kind, parent)
-        } else {
-            Marker::new(category.id(), category.display_name(), kind, depth)
-        };
+        let mut marker = Marker::new(category.id(), category.display_name(), kind, depth);
+        if let Some(parent) = parent {
+            marker.copy_from_parent(parent);
+        }
 
         marker.poi_tip = category.tip_name.clone();
         marker.poi_description = category.tip_description.clone();
@@ -332,20 +425,8 @@ impl Marker {
         }
     }
 
-    fn new_from_parent(
-        id: impl Into<String>,
-        label: impl Into<String>,
-        kind: MarkerKind,
-        parent: &Marker,
-    ) -> Self {
-        let mut marker = Self::new(
-            format!("{}.{}", parent.id, id.into()),
-            label,
-            kind,
-            parent.depth,
-        );
-        marker.behavior = parent.behavior;
-        marker
+    fn copy_from_parent(&mut self, parent: &Marker) {
+        self.behavior = parent.behavior;
     }
 }
 
@@ -391,6 +472,8 @@ mod tests {
 
     #[test]
     fn test_real_data() {
+        env_logger::init();
+
         read(&dirs::config_dir().unwrap().join("orrient").join("markers")).unwrap();
     }
 

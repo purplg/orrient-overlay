@@ -1,6 +1,13 @@
 #![allow(unused)]
 
+use std::convert::identity;
+
+use byteorder::{LittleEndian, ReadBytesExt};
+use log::warn;
+use quick_xml::{events::attributes::Attributes, name::QName};
 use serde::{Deserialize, Deserializer};
+
+use super::Error;
 
 #[derive(Clone, Deserialize, Debug)]
 pub(super) struct OverlayData {
@@ -10,8 +17,8 @@ pub(super) struct OverlayData {
     pub pois: Vec<POIs>,
 }
 
-#[derive(Clone, Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Deserialize, Debug, Default)]
+// #[serde(deny_unknown_fields)]
 pub(super) struct MarkerCategory {
     #[serde(rename = "@name", alias = "@Name")]
     _name: Option<String>,
@@ -90,6 +97,43 @@ pub(super) struct MarkerCategory {
     pub bh_show_on_minimap: bool,
 }
 
+impl MarkerCategory {
+    pub(super) fn from_attrs(attrs: Attributes) -> Self {
+        let mut category = Self::default();
+
+        for attr in attrs.map(Result::ok).filter_map(identity) {
+            println!("attr: {:?}", attr);
+            let Ok(key) = String::from_utf8(attr.key.0.to_vec()) else {
+                warn!("Key is not UTF-8 encoded: {:?}", attr);
+                continue;
+            };
+
+            let Ok(value) = String::from_utf8(attr.value.to_vec()) else {
+                warn!("Value is not UTF-8 encoded: {:?}", attr);
+                continue;
+            };
+
+            match key.to_lowercase().as_str() {
+                "name" => {
+                    category._name = String::from_utf8(attr.value.to_vec()).ok();
+                }
+                "displayname" => {
+                    category._display_name = String::from_utf8(attr.value.to_vec()).ok();
+                }
+                "isseparator" => {
+                    category.is_separator = if value.to_lowercase() == "true" {
+                        true
+                    } else {
+                        false
+                    }
+                }
+                _ => println!("Unknown attribute: {:?}", attr),
+            }
+        }
+        category
+    }
+}
+
 /// There is a single instance where an achievementId is "XXX" so I
 /// just set to a default value if it fails.
 /// Located in the `tw_mc_masterypoints.xml` markers.
@@ -126,10 +170,10 @@ pub(super) struct POIs {
     pub trail: Vec<Trail>,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Default)]
 pub(super) struct Poi {
     #[serde(rename = "@MapID", default)]
-    pub map_id: Option<usize>,
+    pub map_id: Option<u32>,
     #[serde(rename = "@xpos")]
     pub x: f32,
     #[serde(rename = "@ypos")]
@@ -140,6 +184,69 @@ pub(super) struct Poi {
     pub id: String,
     #[serde(rename = "@GUID")]
     pub guid: String,
+}
+
+impl Poi {
+    pub(super) fn from_attrs(attrs: Attributes) -> Result<Self, Error> {
+        let mut poi = Self::default();
+
+        for attr in attrs.map(Result::ok).filter_map(identity) {
+            println!("attr: {:?}", attr);
+            let Ok(key) = String::from_utf8(attr.key.0.to_vec()) else {
+                warn!("Key is not UTF-8 encoded: {:?}", attr);
+                continue;
+            };
+
+            let Ok(value) = String::from_utf8(attr.value.to_vec()) else {
+                warn!("Value is not UTF-8 encoded: {:?}", attr);
+                continue;
+            };
+
+            match key.to_lowercase().as_str() {
+                "mapid" => {
+                    poi.map_id = attr
+                        .value
+                        .into_owned()
+                        .as_slice()
+                        .read_u32::<LittleEndian>()
+                        .ok();
+                }
+                "x" => {
+                    poi.x = attr
+                        .value
+                        .into_owned()
+                        .as_slice()
+                        .read_f32::<LittleEndian>()
+                        .map_err(Error::IoErr)?;
+                }
+                "y" => {
+                    poi.y = attr
+                        .value
+                        .into_owned()
+                        .as_slice()
+                        .read_f32::<LittleEndian>()
+                        .map_err(Error::IoErr)?;
+                }
+                "z" => {
+                    poi.z = attr
+                        .value
+                        .into_owned()
+                        .as_slice()
+                        .read_f32::<LittleEndian>()
+                        .map_err(Error::IoErr)?;
+                }
+                "id" => {
+                    poi.id = String::from_utf8(attr.value.to_vec()).map_err(Error::Utf8Error)?;
+                }
+                "guid" => {
+                    poi.guid = String::from_utf8(attr.value.to_vec()).map_err(Error::Utf8Error)?;
+                }
+
+                _ => println!("Unknown attribute: {:?}", attr),
+            }
+        }
+        Ok(poi)
+    }
 }
 
 #[derive(Deserialize, Clone, Debug)]
