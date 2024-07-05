@@ -101,11 +101,24 @@ impl<'a, VM: VisitMap<NodeIndex>> Iterator for MarkerTreeIter<'a, VM> {
 
 #[derive(Clone, Default, Debug)]
 pub struct MarkerTree {
+    /// Keeps track of the number of indices in the graph so we can
+    /// generate unique indices.
     count: usize,
+
+    /// Nodes without any parents. Useful for iterating through all
+    /// content in the graph.
     roots: HashSet<NodeIndex>,
+
+    /// Lookup an index by it's string ID
     indexes: HashMap<String, NodeIndex>,
+
+    /// Lookup a marker by its index
     markers: HashMap<NodeIndex, Marker>,
+
+    /// Map the relationship between markers
     graph: DiGraph<NodeIndex, ()>,
+
+    /// POIs associated with markers
     pois: HashMap<String, Vec<Position>>,
 }
 
