@@ -88,7 +88,7 @@ fn tree_item(item: &marker::Marker, parent: &mut UiBuilder<'_, Entity>, markers:
                 .width(Val::Px(42.));
 
             parent
-                .foldable(&item.label, true, false, |parent| {
+                .foldable(&item.label, false, false, |parent| {
                     for subitem in markers.iter(&item.id) {
                         match subitem.kind {
                             MarkerKind::Category => {
