@@ -106,7 +106,7 @@ impl Poi {
                         .read_u32::<LittleEndian>()
                         .ok();
                 }
-                "x" => {
+                "xpos" => {
                     poi.x = attr
                         .value
                         .into_owned()
@@ -114,7 +114,7 @@ impl Poi {
                         .read_f32::<LittleEndian>()
                         .map_err(Error::IoErr)?;
                 }
-                "y" => {
+                "ypos" => {
                     poi.y = attr
                         .value
                         .into_owned()
@@ -122,7 +122,7 @@ impl Poi {
                         .read_f32::<LittleEndian>()
                         .map_err(Error::IoErr)?;
                 }
-                "z" => {
+                "zpos" => {
                     poi.z = attr
                         .value
                         .into_owned()
