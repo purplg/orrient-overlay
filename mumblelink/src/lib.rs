@@ -91,7 +91,7 @@ struct Identity {
     pub profession: u8,
     pub spec: u8,
     pub race: u8,
-    pub map_id: usize,
+    pub map_id: u32,
     // obsolete
     #[serde(skip)]
     pub _world_id: usize,
@@ -121,7 +121,7 @@ pub struct IdentityDef {
     pub profession: Profession,
     pub spec: u8,
     pub race: u8,
-    pub map_id: usize,
+    pub map_id: u32,
     pub team_color_id: usize,
     pub commander: bool,
     pub fov: f32,

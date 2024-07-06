@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bincode::Options as _;
 use crossbeam_channel::Receiver;
-use std::net::UdpSocket;
+use std::{net::UdpSocket, ops::Deref};
 
 use mumblelink::MumbleLinkMessage;
 
@@ -41,14 +41,26 @@ impl bevy::prelude::Plugin for Plugin {
     }
 }
 
+#[derive(Resource, Clone, Copy)]
+pub struct MapId(u32);
+
+impl Deref for MapId {
+    type Target = u32;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 #[derive(Resource, Deref)]
 struct MumbleLinkMessageReceiver(pub Receiver<MumbleLinkMessage>);
 
 fn socket_system(
+    mut commands: Commands,
     rx: Res<MumbleLinkMessageReceiver>,
     mut world_events: EventWriter<WorldEvent>,
     mut ui_events: EventWriter<UiEvent>,
-    mut prev_mapid: Local<usize>,
+    mut prev_mapid: Local<u32>,
 ) {
     while let Ok(message) = rx.try_recv() {
         match message {
@@ -76,7 +88,7 @@ fn socket_system(
                 }));
 
                 if *prev_mapid != data.identity.map_id {
-                    world_events.send(WorldEvent::MapUpdate(data.identity.map_id));
+                    commands.insert_resource(MapId(data.identity.map_id));
                     *prev_mapid = data.identity.map_id;
                 }
             }

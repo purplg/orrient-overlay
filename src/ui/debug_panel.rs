@@ -1,13 +1,19 @@
 use bevy::prelude::*;
 use sickle_ui::{ui_builder::UiBuilder, ui_style::generated::*, widgets::prelude::*};
 
-use crate::WorldEvent;
+use crate::{link::MapId, WorldEvent};
 
 pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (update_player_position, update_map_id));
+        app.add_systems(
+            Update,
+            (
+                update_player_position,
+                update_map_id.run_if(resource_exists_and_changed::<MapId>),
+            ),
+        );
     }
 }
 
@@ -104,14 +110,7 @@ fn update_player_position(
     }
 }
 
-fn update_map_id(
-    mut query: Query<&mut Text, With<MapIdText>>,
-    mut events: EventReader<WorldEvent>,
-) {
-    for event in events.read() {
-        if let WorldEvent::MapUpdate(map_id) = event {
-            let mut text = query.single_mut();
-            text.sections[0].value = format!("{}", map_id);
-        }
-    }
+fn update_map_id(mut query: Query<&mut Text, With<MapIdText>>, map_id: Res<MapId>) {
+    let mut text = query.single_mut();
+    text.sections[0].value = format!("{}", **map_id);
 }
