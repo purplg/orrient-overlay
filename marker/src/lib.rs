@@ -282,41 +282,6 @@ impl MarkerTree {
         Self::default()
     }
 
-    // fn insert_category_recursive(
-    //     &mut self,
-    //     category: &marker::MarkerCategory,
-    //     depth: usize,
-    //     parent_id: Option<NodeIndex>,
-    // ) {
-    //     let kind = if category.is_separator {
-    //         MarkerKind::Separator
-    //     } else if category.categories.is_empty() {
-    //         MarkerKind::Leaf
-    //     } else {
-    //         MarkerKind::Category
-    //     };
-
-    //     let parent = parent_id.and_then(|parent_id: NodeIndex| self.markers.get(&parent_id));
-    //     let mut marker = Marker::new(category.id, category.display_name, kind, depth);
-    //     if let Some(parent) = parent {
-    //         marker.copy_from_parent(parent);
-    //     }
-
-    //     marker.poi_tip = category.tip_name.clone();
-    //     marker.poi_description = category.tip_description.clone();
-    //     marker.behavior = Behavior::from_category(category);
-
-    //     let node_id = self.insert_marker(marker.clone(), parent_id);
-
-    //     if parent_id.is_none() {
-    //         self.roots.insert(node_id);
-    //     }
-
-    //     for subcat in &category.categories {
-    //         self.insert_category_recursive(subcat, depth + 1, Some(node_id));
-    //     }
-    // }
-
     fn index_of(&self, id: impl Into<MarkerID>) -> Option<NodeIndex> {
         self.indexes.get(&id.into()).cloned()
     }
