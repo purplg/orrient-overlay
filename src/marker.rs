@@ -152,6 +152,8 @@ fn load_pois_system(
                 Poi(marker_id.to_string()),
             ));
 
+            debug!("Spawned POI at {}", poi);
+
             builder.with_children(|parent| {
                 parent.spawn(BillboardTextBundle {
                     text: Text::from_section(
@@ -195,7 +197,9 @@ fn unload_pois_system(
                 count += 1;
             }
         }
-        info!("Unloaded {} POIs.", count);
+        if count > 0 {
+            info!("Unloaded {} POIs.", count);
+        }
     }
 }
 
