@@ -2498,8 +2498,6 @@ dependencies = [
  "marker",
  "mumblelink",
  "mumblelink_reader",
- "quick-xml 0.32.0",
- "serde",
  "sickle_ui",
  "smesh",
 ]
