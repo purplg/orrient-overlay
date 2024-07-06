@@ -57,8 +57,25 @@ impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
                 position: Some((100., 100.).into()),
                 ..default()
             },
-            |panel| {
-                panel
+            |parent| {
+                parent.menu_bar(|parent| {
+                    parent.menu(
+                        MenuConfig {
+                            name: "File".into(),
+                            ..default()
+                        },
+                        |parent| {
+                            parent
+                                .menu_item(MenuItemConfig {
+                                    name: "Open markers...".into(),
+                                    ..default()
+                                })
+                                .insert(OrrientMenuItem(UiEvent::ShowMarkerBrowser));
+                        },
+                    );
+                });
+
+                parent
                     .spawn((
                         NodeBundle::default(),
                         MarkerList, //
@@ -135,23 +152,6 @@ fn show_markers(
     commands
         .ui_builder(query.single())
         .column(|parent| {
-            parent.menu_bar(|parent| {
-                parent.menu(
-                    MenuConfig {
-                        name: "File".into(),
-                        ..default()
-                    },
-                    |parent| {
-                        parent
-                            .menu_item(MenuItemConfig {
-                                name: "Open markers...".into(),
-                                ..default()
-                            })
-                            .insert(OrrientMenuItem(UiEvent::ShowMarkerBrowser));
-                    },
-                );
-            });
-
             parent.scroll_view(None, |scroll_view| {
                 for item in markers.roots() {
                     tree_item(item, scroll_view, &markers);
