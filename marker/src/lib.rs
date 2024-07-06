@@ -3,6 +3,8 @@ pub mod trail;
 
 use std::collections::{HashSet, VecDeque};
 use std::convert::identity;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::ops::Deref;
 use std::{collections::HashMap, path::Path};
 
@@ -21,7 +23,7 @@ pub enum Error {
     EmptyCategory,
     IoErr(std::io::Error),
     Xml(quick_xml::Error),
-    FieldErr(String),
+    FieldErr { field: String, message: String },
     UnknownField(String),
     AttrErr(quick_xml::events::attributes::AttrError),
     Utf8Error(std::string::FromUtf8Error),
@@ -56,7 +58,7 @@ enum Tag {
 }
 
 impl Tag {
-    fn from_element(element: BytesStart) -> Result<Tag, Error> {
+    fn from_element(element: &BytesStart) -> Result<Tag, Error> {
         let tag = match element.name() {
             QName(b"OverlayData") => Tag::OverlayData,
             QName(b"MarkerCategory") => Tag::Marker(Marker::from_attrs(element.attributes())?),
@@ -74,22 +76,26 @@ fn read_file(tree: &mut MarkerTreeBuilder, path: &Path) -> Result<(), Error> {
     let mut buf = Vec::new();
 
     loop {
+        buf.clear();
         match reader.read_event_into(&mut buf) {
             Ok(event) => match event {
                 Event::Start(element) => {
-                    tree.add_tag(match Tag::from_element(element) {
+                    tree.add_tag(match Tag::from_element(&element) {
                         Ok(tag) => tag,
                         Err(err) => {
-                            warn!("Error parsing tag: {:?}", err);
+                            warn!("Error parsing tag in file {:?}: {:?}", path, err);
                             continue;
                         }
                     });
                 }
                 Event::Empty(element) => {
-                    tree.add_tag(match Tag::from_element(element) {
+                    tree.add_tag(match Tag::from_element(&element) {
                         Ok(tag) => tag,
                         Err(err) => {
-                            warn!("Error parsing tag: {:?}", err);
+                            warn!(
+                                "Error parsing tag {:?} in file {:?}: {:?}",
+                                &element, path, err
+                            );
                             continue;
                         }
                     });

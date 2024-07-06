@@ -2,7 +2,6 @@
 
 use std::convert::identity;
 
-use byteorder::{LittleEndian, ReadBytesExt};
 use log::warn;
 use quick_xml::{events::attributes::Attributes, name::QName};
 
@@ -84,7 +83,12 @@ pub(super) struct Poi {
 
 impl Poi {
     pub(super) fn from_attrs(attrs: Attributes) -> Result<Self, Error> {
-        let mut poi = Self::default();
+        let mut map_id: Option<u32> = None;
+        let mut x: Option<f32> = None;
+        let mut y: Option<f32> = None;
+        let mut z: Option<f32> = None;
+        let mut id: Option<String> = None;
+        let mut guid: Option<String> = None;
 
         for attr in attrs.map(Result::ok).filter_map(identity) {
             let Ok(key) = String::from_utf8(attr.key.0.to_vec()) else {
@@ -92,55 +96,57 @@ impl Poi {
                 continue;
             };
 
-            let Ok(value) = String::from_utf8(attr.value.to_vec()) else {
+            let Ok(value) = String::from_utf8(attr.value.trim_ascii().to_vec()) else {
                 warn!("Value is not UTF-8 encoded: {:?}", attr);
                 continue;
             };
 
             match key.to_lowercase().as_str() {
                 "mapid" => {
-                    poi.map_id = attr
-                        .value
-                        .into_owned()
-                        .as_slice()
-                        .read_u32::<LittleEndian>()
-                        .ok();
+                    map_id = value.parse().ok();
                 }
                 "xpos" => {
-                    poi.x = attr
-                        .value
-                        .into_owned()
-                        .as_slice()
-                        .read_f32::<LittleEndian>()
-                        .map_err(Error::IoErr)?;
+                    x = value.parse().ok();
                 }
                 "ypos" => {
-                    poi.y = attr
-                        .value
-                        .into_owned()
-                        .as_slice()
-                        .read_f32::<LittleEndian>()
-                        .map_err(Error::IoErr)?;
+                    y = value.parse().ok();
                 }
                 "zpos" => {
-                    poi.z = attr
-                        .value
-                        .into_owned()
-                        .as_slice()
-                        .read_f32::<LittleEndian>()
-                        .map_err(Error::IoErr)?;
+                    z = value.parse().ok();
                 }
                 "type" => {
-                    poi.id = String::from_utf8(attr.value.to_vec()).map_err(Error::Utf8Error)?;
+                    id = Some(value);
                 }
                 "guid" => {
-                    poi.guid = String::from_utf8(attr.value.to_vec()).map_err(Error::Utf8Error)?;
+                    guid = Some(value);
                 }
 
                 _ => {}
             }
         }
-        Ok(poi)
+        Ok(Poi {
+            map_id,
+            x: x.ok_or(Error::FieldErr {
+                field: "poi.x".into(),
+                message: "POI Missing X position".into(),
+            })?,
+            y: y.ok_or(Error::FieldErr {
+                field: "poi.y".into(),
+                message: "POI Missing Y position".into(),
+            })?,
+            z: z.ok_or(Error::FieldErr {
+                field: "poi.z".into(),
+                message: "POI Missing Z position".into(),
+            })?,
+            id: id.ok_or(Error::FieldErr {
+                field: "poi.id".into(),
+                message: "POI Missing id".into(),
+            })?,
+            guid: guid.ok_or(Error::FieldErr {
+                field: "poi.guid".into(),
+                message: "POI Missing guid".into(),
+            })?,
+        })
     }
 }
 
