@@ -41,8 +41,6 @@ pub fn read(directory: &Path) -> Result<MarkerTree, Error> {
         read_file(&mut tree, &path).unwrap();
     }
 
-    println!("tree.roots: {:?}", tree.roots());
-
     Ok(tree.build())
 }
 
