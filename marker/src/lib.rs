@@ -6,7 +6,7 @@ use std::convert::identity;
 use std::ops::Deref;
 use std::{collections::HashMap, path::Path};
 
-use log::{info, warn};
+use log::{debug, info, warn};
 use petgraph::graph::DiGraph;
 use petgraph::graph::NodeIndex;
 use petgraph::visit::{Dfs, VisitMap};
@@ -75,71 +75,38 @@ fn read_file(tree: &mut MarkerTreeBuilder, path: &Path) -> Result<(), Error> {
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(element)) => {
-                let tag = match Tag::from_element(element) {
-                    Ok(tag) => tag,
-                    Err(err) => {
-                        warn!("Error parsing tag: {:?}", err);
-                        continue;
-                    }
-                };
-                match tag {
-                    Tag::OverlayData => {
-                        tree.new_root();
-                    }
-                    Tag::Marker(marker) => {
-                        tree.add_marker(marker);
-                    }
-                    Tag::POIs => {}
-                    Tag::POI(poi) => {
-                        tree.add_poi(poi.id, poi.x, poi.y, poi.z);
-                    }
-                    Tag::Route => {}
-                    Tag::UnknownField(_) => {}
-                    Tag::CorruptField(_) => todo!(),
+            Ok(event) => match event {
+                Event::Start(element) => {
+                    tree.add_tag(match Tag::from_element(element) {
+                        Ok(tag) => tag,
+                        Err(err) => {
+                            warn!("Error parsing tag: {:?}", err);
+                            continue;
+                        }
+                    });
                 }
-                // println!("{}<{:?}>", " ".repeat(marker_stack.len()), tag);
-            }
-            Ok(Event::Empty(element)) => {
-                let tag = match Tag::from_element(element) {
-                    Ok(tag) => tag,
-                    Err(err) => {
-                        warn!("Error parsing tag: {:?}", err);
-                        continue;
-                    }
-                };
-                match tag {
-                    Tag::OverlayData => {
-                        tree.new_root();
-                    }
-                    Tag::Marker(marker) => {
-                        tree.add_marker(marker);
-                    }
-                    Tag::POIs => {}
-                    Tag::POI(poi) => {
-                        tree.add_poi(poi.id, poi.x, poi.y, poi.z);
-                    }
-                    Tag::Route => {}
-                    Tag::UnknownField(_) => {}
-                    Tag::CorruptField(_) => todo!(),
+                Event::Empty(element) => {
+                    tree.add_tag(match Tag::from_element(element) {
+                        Ok(tag) => tag,
+                        Err(err) => {
+                            warn!("Error parsing tag: {:?}", err);
+                            continue;
+                        }
+                    });
+                    tree.up();
                 }
-                tree.up();
-            }
-            Ok(Event::Comment(e)) => {
-                // info!("comment: {:?}", e);
-            }
-            Ok(Event::Text(e)) => {}
-            Ok(Event::End(_)) => {
-                tree.up();
-            }
-            Ok(Event::Eof) => {
-                break;
-            }
-            Ok(unknown_event) => {
-                warn!("unknown_event: {:?}", unknown_event);
-                break;
-            }
-            Err(err) => panic!("Error at position {}: {:?}", reader.buffer_position(), err),
+                Event::End(_) => {
+                    tree.up();
+                }
+                Event::Eof => break,
+                unknown_event => debug!("unknown_event: {:?}", unknown_event),
+            },
+            Err(err) => panic!(
+                "Error reading {:?} at position {}: {:?}",
+                path,
+                reader.buffer_position(),
+                err
+            ),
         }
     }
 
@@ -256,6 +223,24 @@ impl MarkerTreeBuilder {
 
     fn up(&mut self) {
         self.parent_id.pop_front();
+    }
+
+    fn add_tag(&mut self, tag: Tag) {
+        match tag {
+            Tag::OverlayData => {
+                self.new_root();
+            }
+            Tag::Marker(marker) => {
+                self.add_marker(marker);
+            }
+            Tag::POIs => {}
+            Tag::POI(poi) => {
+                self.add_poi(poi.id, poi.x, poi.y, poi.z);
+            }
+            Tag::Route => {}
+            Tag::UnknownField(_) => {}
+            Tag::CorruptField(_) => todo!(),
+        }
     }
 
     fn new_root(&mut self) {
