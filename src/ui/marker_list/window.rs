@@ -14,7 +14,7 @@ pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<CheckboxEvent>();
-        app.add_event::<SetColumnEvent>();
+        app.add_event::<MarkerWindowEvent>();
         app.add_systems(Update, menu_interaction);
         app.add_systems(Update, set_column);
         app.add_systems(Update, toggle_show_ui);
@@ -30,9 +30,12 @@ impl bevy::prelude::Plugin for Plugin {
 }
 
 #[derive(Event)]
-pub(super) struct SetColumnEvent {
-    pub column_id: usize,
-    pub marker_id: Option<String>,
+pub(super) enum MarkerWindowEvent {
+    SetColumn {
+        column_id: usize,
+        marker_id: Option<String>,
+    },
+    ToggleMarkers,
 }
 
 #[derive(Component)]
@@ -106,12 +109,12 @@ struct MarkerView;
 
 fn setup_window(
     mut commands: Commands,
-    mut events: EventWriter<SetColumnEvent>,
+    mut events: EventWriter<MarkerWindowEvent>,
     query: Query<Entity, With<MarkerList>>,
 ) {
     commands.ui_builder(query.single()).insert(MarkerView);
 
-    events.send(SetColumnEvent {
+    events.send(MarkerWindowEvent::SetColumn {
         column_id: 0,
         marker_id: None,
     });
@@ -123,17 +126,24 @@ fn remove_window(mut commands: Commands, query: Query<Entity, With<MarkerList>>)
 
 fn set_column(
     mut commands: Commands,
-    mut events: EventReader<SetColumnEvent>,
+    mut events: EventReader<MarkerWindowEvent>,
     markers: Res<MarkerTree>,
     columns: Query<(Entity, &Column)>,
     marker_view: Query<Entity, With<MarkerView>>,
-    mut ui_events: EventWriter<UiEvent>,
 ) {
-    for SetColumnEvent {
-        column_id,
-        marker_id,
-    } in events.read()
-    {
+    for event in events.read() {
+        let MarkerWindowEvent::SetColumn {
+            column_id,
+            marker_id,
+        } = event
+        else {
+            continue;
+        };
+
+        let Ok(marker_view) = marker_view.get_single() else {
+            return;
+        };
+
         let next_column_id = column_id + 1;
 
         let count = columns.iter().len();
@@ -160,12 +170,17 @@ fn set_column(
             .unwrap_or(markers.roots());
 
         commands
-            .ui_builder(marker_view.single())
+            .ui_builder(marker_view)
             .scroll_view(None, |scroll_view| {
                 scroll_view.column(|parent| {
                     parent.label(LabelConfig::from(label));
                     for item in iter {
-                        parent.marker_button(&item.id, &item.label, next_column_id);
+                        parent.marker_button(
+                            &item.id,
+                            &item.label,
+                            markers.iter(&item.id).count() > 0,
+                            next_column_id,
+                        );
                     }
                 });
             })
