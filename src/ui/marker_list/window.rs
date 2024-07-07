@@ -1,5 +1,4 @@
 use bevy::{prelude::*, window::PrimaryWindow};
-use marker::MarkerKind;
 use sickle_ui::{
     ui_builder::{UiBuilder, UiBuilderExt as _},
     ui_style::generated::*,
@@ -8,24 +7,32 @@ use sickle_ui::{
 
 use crate::{marker::MarkerTree, ui::OrrientMenuItem, UiEvent};
 
-use super::tooltip::UiToolTipExt as _;
+use super::{marker_button::UiMarkerButtonExt, tooltip::UiToolTipExt as _};
 
 pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<CheckboxEvent>();
+        app.add_event::<SetColumnEvent>();
         app.add_systems(Update, menu_interaction);
+        app.add_systems(Update, set_column);
         app.add_systems(Update, toggle_show_ui);
         app.add_systems(Update, checkbox);
         app.add_systems(Update, checkbox_events);
         app.add_systems(
             Update,
-            (remove_markers, show_markers)
+            (remove_window, setup_window)
                 .chain()
                 .run_if(resource_exists_and_changed::<MarkerTree>),
         );
     }
+}
+
+#[derive(Event)]
+pub(super) struct SetColumnEvent {
+    pub column_id: usize,
+    pub marker_id: Option<String>,
 }
 
 #[derive(Component)]
@@ -53,7 +60,7 @@ impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
                 ..default()
             },
             FloatingPanelLayout {
-                size: (800., 1080.).into(),
+                size: (1920., 1080.).into(),
                 position: Some((100., 100.).into()),
                 ..default()
             },
@@ -91,79 +98,81 @@ impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
     }
 }
 
-fn tree_item(item: &marker::Marker, parent: &mut UiBuilder<'_, Entity>, markers: &MarkerTree) {
-    parent
-        .row(|parent| {
-            parent
-                .checkbox(None, false) //
-                .insert(MarkerItem {
-                    id: item.id.to_string(),
-                    tip: item.poi_tip.clone(),
-                    description: item.poi_description.clone(),
-                })
-                .style()
-                .width(Val::Px(42.));
+#[derive(Component)]
+struct Column(usize);
 
-            parent
-                .foldable(&item.label, false, false, |parent| {
-                    for subitem in markers.iter(&item.id) {
-                        match subitem.kind {
-                            MarkerKind::Category => {
-                                tree_item(subitem, parent, markers);
-                            }
-                            MarkerKind::Leaf => {
-                                let label = subitem.label.clone();
-                                parent
-                                    .checkbox(Some(label), false)
-                                    .insert(MarkerItem {
-                                        id: subitem.id.to_string(),
-                                        tip: subitem.poi_tip.clone(),
-                                        description: subitem.poi_description.clone(),
-                                    })
-                                    .style()
-                                    .width(Val::Percent(100.))
-                                    .left(Val::Px(10. * subitem.depth as f32));
-                            }
-                            MarkerKind::Separator => {
-                                parent
-                                    .label(LabelConfig::from(&subitem.label))
-                                    .style()
-                                    .width(Val::Percent(100.))
-                                    .background_color(Color::BLACK);
-                            }
-                        }
-                    }
-                })
-                .style()
-                .padding(UiRect::vertical(Val::Px(3.)));
-        })
-        .style()
-        .align_items(AlignItems::FlexStart)
-        .border(UiRect::left(Val::Px(1.)))
-        .border_color(Color::rgba(0., 0., 0., 0.5))
-        .width(Val::Percent(100.));
-}
+#[derive(Component)]
+struct MarkerView;
 
-fn show_markers(
+fn setup_window(
     mut commands: Commands,
-    markers: Res<MarkerTree>,
+    mut events: EventWriter<SetColumnEvent>,
     query: Query<Entity, With<MarkerList>>,
 ) {
-    commands
-        .ui_builder(query.single())
-        .column(|parent| {
-            parent.scroll_view(None, |scroll_view| {
-                for item in markers.roots() {
-                    tree_item(item, scroll_view, &markers);
-                }
-            });
-        })
-        .style()
-        .width(Val::Percent(100.));
+    commands.ui_builder(query.single()).insert(MarkerView);
+
+    events.send(SetColumnEvent {
+        column_id: 0,
+        marker_id: None,
+    });
 }
 
-fn remove_markers(mut commands: Commands, query: Query<Entity, With<MarkerList>>) {
+fn remove_window(mut commands: Commands, query: Query<Entity, With<MarkerList>>) {
     commands.entity(query.single()).despawn_descendants();
+}
+
+fn set_column(
+    mut commands: Commands,
+    mut events: EventReader<SetColumnEvent>,
+    markers: Res<MarkerTree>,
+    columns: Query<(Entity, &Column)>,
+    marker_view: Query<Entity, With<MarkerView>>,
+    mut ui_events: EventWriter<UiEvent>,
+) {
+    for SetColumnEvent {
+        column_id,
+        marker_id,
+    } in events.read()
+    {
+        let next_column_id = column_id + 1;
+
+        let count = columns.iter().len();
+        println!("count: {:?}", count);
+
+        // Remove an existing columns with this column ID or higher.
+        for (entity, _column) in columns
+            .iter()
+            .filter(|(_entity, column)| column.0 > *column_id)
+        {
+            commands.entity(entity).despawn_recursive();
+        }
+
+        let marker = marker_id
+            .as_ref()
+            .and_then(|marker_id| markers.get(marker_id));
+
+        let label = marker
+            .map(|marker| marker.label.clone())
+            .unwrap_or("Top".to_string());
+
+        let iter = marker
+            .map(|marker| markers.iter(&marker.id).collect())
+            .unwrap_or(markers.roots());
+
+        commands
+            .ui_builder(marker_view.single())
+            .scroll_view(None, |scroll_view| {
+                scroll_view.column(|parent| {
+                    parent.label(LabelConfig::from(label));
+                    for item in iter {
+                        parent.marker_button(&item.id, &item.label, next_column_id);
+                    }
+                });
+            })
+            .insert(Column(next_column_id))
+            .style()
+            .width(Val::Px(200.));
+    }
 }
 
 #[derive(Event, Debug)]

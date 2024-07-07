@@ -1,5 +1,6 @@
 pub(super) mod tooltip;
 pub(super) mod window;
+mod marker_button;
 
 use bevy::prelude::*;
 
@@ -9,5 +10,6 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(window::Plugin);
         app.add_plugins(tooltip::Plugin);
+        app.add_plugins(marker_button::Plugin);
     }
 }
