@@ -3,7 +3,7 @@ use bincode::Options as _;
 use crossbeam_channel::Receiver;
 use std::{net::UdpSocket, ops::Deref};
 
-use mumblelink::MumbleLinkMessage;
+use orrient_link::MumbleLinkMessage;
 
 use crate::{UiEvent, WorldEvent};
 

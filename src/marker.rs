@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_mod_billboard::BillboardTextBundle;
-use marker::trail;
+use orrient_parser::trail;
 
 use crate::{link::MapId, player::Player, trail::DebugMarkerAssets, UiEvent, WorldEvent};
 
@@ -48,13 +48,14 @@ fn load_marker(mut commands: Commands, mut events: EventReader<UiEvent>, data: R
 }
 
 fn setup(mut commands: Commands) {
-    let markers = match marker::read(&dirs::config_dir().unwrap().join("orrient").join("markers")) {
-        Ok(markers) => markers,
-        Err(err) => {
-            println!("Error when loading markers: {:?}", err);
-            return;
-        }
-    };
+    let markers =
+        match orrient_parser::read(&dirs::config_dir().unwrap().join("orrient").join("markers")) {
+            Ok(markers) => markers,
+            Err(err) => {
+                println!("Error when loading markers: {:?}", err);
+                return;
+            }
+        };
 
     commands.insert_resource(MarkerTree(markers));
 }
@@ -175,9 +176,9 @@ fn load_pois_system(
                 });
             });
 
-            if let Some(marker::Behavior::ReappearDaily) = marker.behavior {
+            if let Some(orrient_parser::Behavior::ReappearDaily) = marker.behavior {
                 builder.insert(DisappearNearby);
-            } else if let Some(marker::Behavior::DisappearOnUse) = marker.behavior {
+            } else if let Some(orrient_parser::Behavior::DisappearOnUse) = marker.behavior {
                 builder.insert(DisappearNearby);
             }
         }
@@ -210,7 +211,7 @@ fn unload_pois_system(
 }
 
 #[derive(Resource, Clone, Deref, Debug)]
-pub struct Marker(pub marker::Marker);
+pub struct Marker(pub orrient_parser::Marker);
 
 #[derive(Resource, Clone, Deref, Debug)]
-pub struct MarkerTree(pub marker::MarkerTree);
+pub struct MarkerTree(pub orrient_parser::MarkerTree);

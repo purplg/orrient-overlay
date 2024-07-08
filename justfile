@@ -1,3 +1,3 @@
 link:
-    just -f mumblelink/justfile build
+    just -f orrient_link/justfile build
     ./link.sh

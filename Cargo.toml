@@ -7,13 +7,13 @@ edition = "2021"
 env_logger = "0.11.3"
 
 # Mumblelink connectivity
-mumblelink = { path = "mumblelink" }
+orrient_link = { path = "orrient_link" }
 mumblelink_reader = "0.3.5"
 bincode = "1.3.3"
 crossbeam-channel = "0.5.13"
 
 # Marker parsing
-marker = { path = "marker" }
+orrient_parser = { path = "orrient_parser" }
 dirs = "5.0.1"
 
 # https://github.com/bevyengine/bevy/
@@ -38,6 +38,6 @@ smesh = "0.2.1"
 [workspace]
 resolver = "2"
 members = [
-  "mumblelink",
-  "marker",
+  "orrient_link",
+  "orrient_parser",
 ]

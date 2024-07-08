@@ -3,9 +3,9 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use bincode::Options as _;
-use mumblelink::{MumbleLinkDataDef, MumbleLinkMessage};
 use mumblelink_reader::mumble_link::MumbleLinkReader;
 use mumblelink_reader::mumble_link_handler::MumbleLinkHandler;
+use orrient_link::{MumbleLinkDataDef, MumbleLinkMessage};
 use rdev::{listen, Event, EventType::*, Key};
 
 fn main() {

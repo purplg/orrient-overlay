@@ -2495,9 +2495,9 @@ dependencies = [
  "crossbeam-channel",
  "dirs",
  "env_logger",
- "marker",
- "mumblelink",
  "mumblelink_reader",
+ "orrient_link",
+ "orrient_parser",
  "sickle_ui",
  "smesh",
 ]
@@ -2893,17 +2893,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "marker"
-version = "0.1.0"
-dependencies = [
- "dirs",
- "env_logger",
- "log",
- "petgraph",
- "quick-xml 0.32.0",
-]
-
-[[package]]
 name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2956,19 +2945,6 @@ checksum = "b8a240ddb74feaf34a79a7add65a741f3167852fba007066dcac1ca548d89c08"
 dependencies = [
  "adler",
  "simd-adler32",
-]
-
-[[package]]
-name = "mumblelink"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "byteorder",
- "crossbeam-channel",
- "mumblelink_reader",
- "rdev",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -3359,6 +3335,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52f0d54bde9774d3a51dcf281a5def240c71996bc6ca05d2c847ec8b2b216166"
 dependencies = [
  "libredox 0.0.2",
+]
+
+[[package]]
+name = "orrient_link"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "byteorder",
+ "crossbeam-channel",
+ "mumblelink_reader",
+ "rdev",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "orrient_parser"
+version = "0.1.0"
+dependencies = [
+ "dirs",
+ "env_logger",
+ "log",
+ "petgraph",
+ "quick-xml 0.32.0",
 ]
 
 [[package]]
