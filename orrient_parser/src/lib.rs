@@ -1,36 +1,36 @@
-mod model;
+pub mod model;
 pub mod trail;
 
 use std::collections::{HashSet, VecDeque};
 use std::convert::identity;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use std::ops::Deref;
 use std::{collections::HashMap, path::Path};
 
-use log::{debug, info, warn};
+use log::{debug, warn};
+use model::{Poi, Position};
 use petgraph::graph::DiGraph;
 use petgraph::graph::NodeIndex;
 use petgraph::visit::{Dfs, VisitMap};
 use petgraph::Direction;
 use quick_xml::events::attributes::Attributes;
 use quick_xml::events::{BytesStart, Event};
-use quick_xml::name::QName;
 use quick_xml::Reader;
 
 #[derive(Debug)]
 pub enum Error {
     EmptyCategory,
     IoErr(std::io::Error),
+    Eof,
     Xml(quick_xml::Error),
-    FieldErr { field: String, message: String },
+    MissingField(String),
+    TrailParseError(String),
     UnknownField(String),
     AttrErr(quick_xml::events::attributes::AttrError),
     Utf8Error(std::string::FromUtf8Error),
 }
 
 pub fn read(directory: &Path) -> Result<MarkerTree, Error> {
-    let mut tree = MarkerTreeBuilder::default();
+    let mut tree = MarkerTreeBuilder::new(directory);
 
     let iter = std::fs::read_dir(directory).unwrap();
     for path in iter
@@ -50,6 +50,7 @@ enum Tag {
     Marker(Marker),
     POIs,
     POI(model::Poi),
+    Trail(model::Trail),
     Route,
     UnknownField(String),
     CorruptField(String),
@@ -57,12 +58,13 @@ enum Tag {
 
 impl Tag {
     fn from_element(element: &BytesStart) -> Result<Tag, Error> {
-        let tag = match element.name() {
-            QName(b"OverlayData") => Tag::OverlayData,
-            QName(b"MarkerCategory") => Tag::Marker(Marker::from_attrs(element.attributes())?),
-            QName(b"POIs") => Tag::POIs,
-            QName(b"POI") => Tag::POI(model::Poi::from_attrs(element.attributes())?),
-            QName(field) => Tag::UnknownField(String::from_utf8_lossy(field).to_string()),
+        let tag = match element.name().0 {
+            b"OverlayData" => Tag::OverlayData,
+            b"MarkerCategory" => Tag::Marker(Marker::from_attrs(element.attributes())?),
+            b"POIs" => Tag::POIs,
+            b"POI" => Tag::POI(model::Poi::from_attrs(element.attributes())?),
+            b"Trail" => Tag::Trail(model::Trail::from_attrs(element.attributes())?),
+            field => Tag::UnknownField(String::from_utf8_lossy(field).to_string()),
         };
 
         Ok(tag)
@@ -162,8 +164,9 @@ impl From<String> for MarkerID {
     }
 }
 
-#[derive(Default, Debug)]
-struct MarkerTreeBuilder {
+struct MarkerTreeBuilder<'a> {
+    data_dir: &'a Path,
+
     tree: MarkerTree,
 
     /// The number of indices in the graph so to generate unique
@@ -174,7 +177,7 @@ struct MarkerTreeBuilder {
     parent_id: VecDeque<NodeIndex>,
 }
 
-impl Deref for MarkerTreeBuilder {
+impl Deref for MarkerTreeBuilder<'_> {
     type Target = MarkerTree;
 
     fn deref(&self) -> &Self::Target {
@@ -182,9 +185,14 @@ impl Deref for MarkerTreeBuilder {
     }
 }
 
-impl MarkerTreeBuilder {
-    fn new() -> Self {
-        Self::default()
+impl<'a> MarkerTreeBuilder<'a> {
+    fn new(data_dir: &'a Path) -> Self {
+        Self {
+            data_dir,
+            tree: Default::default(),
+            count: Default::default(),
+            parent_id: Default::default(),
+        }
     }
 
     fn add_marker(&mut self, mut marker: Marker) -> &mut Self {
@@ -205,14 +213,40 @@ impl MarkerTreeBuilder {
         self
     }
 
-    fn add_poi(&mut self, id: impl Into<MarkerID>, map_id: u32, x: f32, y: f32, z: f32) {
-        let position = Position { map_id, x, y, z };
-        let id = id.into();
+    fn add_poi(&mut self, poi: Poi) {
+        let id: MarkerID = poi.id.clone().into();
         if let Some(pois) = self.tree.pois.get_mut(&id) {
-            pois.push(position);
+            pois.push(poi);
         } else {
-            self.tree.pois.insert(id, vec![position]);
+            self.tree.pois.insert(id, vec![poi]);
         }
+    }
+
+    fn add_trail(&mut self, trail_tag: model::Trail) -> Option<Trail> {
+        let id: MarkerID = trail_tag.id.into();
+        let content = match trail::from_file(self.data_dir.join(&trail_tag.trail_file)) {
+            Ok(content) => content,
+            Err(err) => {
+                warn!(
+                    "Error while parsing trail at {}: {:?}",
+                    trail_tag.trail_file, err
+                );
+                return None;
+            }
+        };
+
+        let trail = Trail {
+            map_id: content.map_id,
+            path: content.path,
+            texture_file: trail_tag.texture_file,
+        };
+
+        if let Some(trails) = self.tree.trails.get_mut(&id) {
+            trails.push(trail.clone());
+        } else {
+            self.tree.trails.insert(id, vec![trail.clone()]);
+        }
+        Some(trail)
     }
 
     fn add_map_id(&mut self, id: impl Into<MarkerID>, map_id: u32) {
@@ -245,8 +279,14 @@ impl MarkerTreeBuilder {
             }
             Tag::POIs => {}
             Tag::POI(poi) => {
-                self.add_poi(&poi.id, poi.map_id, poi.x, poi.y, poi.z);
-                self.add_map_id(poi.id, poi.map_id);
+                self.add_map_id(poi.id.clone(), poi.map_id);
+                self.add_poi(poi);
+            }
+            Tag::Trail(trail) => {
+                let id: MarkerID = trail.id.clone().into();
+                if let Some(trail) = self.add_trail(trail) {
+                    self.add_map_id(id, trail.map_id);
+                }
             }
             Tag::Route => {}
             Tag::UnknownField(_) => {}
@@ -279,7 +319,10 @@ pub struct MarkerTree {
     graph: DiGraph<NodeIndex, ()>,
 
     /// POIs associated with markers
-    pois: HashMap<MarkerID, Vec<Position>>,
+    pois: HashMap<MarkerID, Vec<Poi>>,
+
+    /// Trails associated with markers
+    trails: HashMap<MarkerID, Vec<Trail>>,
 }
 
 impl MarkerTree {
@@ -300,7 +343,7 @@ impl MarkerTree {
         false
     }
 
-    pub fn get_pois(&self, id: impl Into<MarkerID>) -> Option<&Vec<Position>> {
+    pub fn get_pois(&self, id: impl Into<MarkerID>) -> Option<&Vec<Poi>> {
         self.pois.get(&id.into())
     }
 
@@ -384,6 +427,13 @@ impl Behavior {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct Trail {
+    pub map_id: u32,
+    pub path: Vec<Position>,
+    pub texture_file: String,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Marker {
     pub id: String,
@@ -393,7 +443,6 @@ pub struct Marker {
     pub behavior: Option<Behavior>,
     pub poi_tip: Option<String>,
     pub poi_description: Option<String>,
-    pub trail_file: Option<String>,
     pub map_ids: Vec<u32>,
 }
 
@@ -442,14 +491,6 @@ impl Marker {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct Position {
-    pub map_id: u32,
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -466,7 +507,7 @@ mod tests {
     //  / \   \         / | \
     // C   D   F       J  K  L
     fn fake_markers() -> MarkerTree {
-        let mut markers = MarkerTreeBuilder::new();
+        let mut markers = MarkerTreeBuilder::new(Path::new(""));
         markers.add_marker(Marker::category("A", "A Name"));
         markers.add_marker(Marker::category("B", "B Name"));
         markers.add_marker(Marker::category("C", "C Name"));
@@ -501,7 +542,7 @@ mod tests {
     fn test_iter() {
         let markers = fake_markers();
         println!(
-            "markers: {:?}",
+            "roots: {:?}",
             markers
                 .roots()
                 .iter()

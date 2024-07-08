@@ -65,20 +65,21 @@ pub(super) struct MarkerCategory {
     pub profession: Option<String>,
 }
 
-#[derive(Clone, Debug, Default)]
-pub(super) struct Poi {
-    // MapID
-    pub map_id: u32,
-    // xpos
+#[derive(Clone, Debug)]
+pub struct Position {
     pub x: f32,
-    // ypos
     pub y: f32,
-    // zpos
     pub z: f32,
+}
+
+#[derive(Clone, Debug)]
+pub struct Poi {
     // type
     pub id: String,
-    // GUID
-    pub guid: String,
+    // MapID
+    pub map_id: u32,
+    // xpos, ypos, zpos
+    pub position: Position,
 }
 
 impl Poi {
@@ -88,7 +89,6 @@ impl Poi {
         let mut y: Option<f32> = None;
         let mut z: Option<f32> = None;
         let mut id: Option<String> = None;
-        let mut guid: Option<String> = None;
 
         for attr in attrs.map(Result::ok).filter_map(identity) {
             let Ok(key) = String::from_utf8(attr.key.0.to_vec()) else {
@@ -117,38 +117,18 @@ impl Poi {
                 "type" => {
                     id = Some(value);
                 }
-                "guid" => {
-                    guid = Some(value);
-                }
 
                 _ => {}
             }
         }
         Ok(Poi {
-            map_id: map_id.ok_or(Error::FieldErr {
-                field: "poi.map_id".into(),
-                message: "POI Missing Map ID".into(),
-            })?,
-            x: x.ok_or(Error::FieldErr {
-                field: "poi.x".into(),
-                message: "POI Missing X position".into(),
-            })?,
-            y: y.ok_or(Error::FieldErr {
-                field: "poi.y".into(),
-                message: "POI Missing Y position".into(),
-            })?,
-            z: z.ok_or(Error::FieldErr {
-                field: "poi.z".into(),
-                message: "POI Missing Z position".into(),
-            })?,
-            id: id.ok_or(Error::FieldErr {
-                field: "poi.id".into(),
-                message: "POI Missing id".into(),
-            })?,
-            guid: guid.ok_or(Error::FieldErr {
-                field: "poi.guid".into(),
-                message: "POI Missing guid".into(),
-            })?,
+            id: id.ok_or(Error::MissingField("poi.type".into()))?,
+            map_id: map_id.ok_or(Error::MissingField("poi.MapID".into()))?,
+            position: Position {
+                x: x.ok_or(Error::MissingField("poi.xpos".into()))?,
+                y: y.ok_or(Error::MissingField("poi.ypos".into()))?,
+                z: z.ok_or(Error::MissingField("poi.zpos".into()))?,
+            },
         })
     }
 }
@@ -158,9 +138,46 @@ pub(super) struct Trail {
     // type
     pub id: String,
     // trailData
-    pub trail_data: String,
+    pub trail_file: String,
     // texture
-    pub texture: String,
-    // GUID
-    pub guid: Option<String>,
+    pub texture_file: String,
+}
+
+impl Trail {
+    pub(super) fn from_attrs(attrs: Attributes) -> Result<Self, Error> {
+        let mut id: Option<String> = None;
+        let mut trail_file: Option<String> = None;
+        let mut texture_file: Option<String> = None;
+
+        for attr in attrs.map(Result::ok).filter_map(identity) {
+            let Ok(key) = String::from_utf8(attr.key.0.to_vec()) else {
+                warn!("Key is not UTF-8 encoded: {:?}", attr);
+                continue;
+            };
+
+            let Ok(value) = String::from_utf8(attr.value.trim_ascii().to_vec()) else {
+                warn!("Value is not UTF-8 encoded: {:?}", attr);
+                continue;
+            };
+
+            match key.to_lowercase().as_str() {
+                "type" => {
+                    id = value.parse().ok();
+                }
+                "traildata" => {
+                    trail_file = value.parse().ok();
+                }
+                "texture" => {
+                    texture_file = value.parse().ok();
+                }
+                _ => {}
+            }
+        }
+
+        Ok(Trail {
+            id: id.ok_or(Error::MissingField("poi.type".into()))?,
+            trail_file: trail_file.ok_or(Error::MissingField("trail.trailData".into()))?,
+            texture_file: texture_file.ok_or(Error::MissingField("trail.texture".into()))?,
+        })
+    }
 }
