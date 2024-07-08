@@ -6,7 +6,6 @@ use bevy::{
     },
     utils::HashMap,
 };
-use bevy_mod_billboard::plugin::BillboardPlugin;
 use smesh::smesh::{SMesh, VertexId};
 
 use crate::{marker::MarkerTree, UiEvent};
@@ -15,7 +14,6 @@ pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(BillboardPlugin);
         app.init_resource::<TrailMeshes>();
         app.add_systems(Startup, load_marker_assets);
         app.add_systems(Update, trail_event.run_if(on_event::<UiEvent>()));

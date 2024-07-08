@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_mod_billboard::BillboardTextBundle;
+use bevy_mod_billboard::{plugin::BillboardPlugin, BillboardTextBundle};
 
 use crate::{link::MapId, player::Player, trail::DebugMarkerAssets, UiEvent, WorldEvent};
 
@@ -7,6 +7,7 @@ pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(BillboardPlugin);
         app.init_resource::<LoadedMarkers>();
 
         app.add_systems(Startup, setup);
