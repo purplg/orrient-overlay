@@ -4,6 +4,7 @@ use bevy::{
         render_asset::RenderAssetUsages,
         render_resource::{Extent3d, TextureDimension, TextureFormat},
     },
+    utils::HashMap,
 };
 use bevy_mod_billboard::plugin::BillboardPlugin;
 use smesh::smesh::{SMesh, VertexId};
@@ -15,10 +16,17 @@ pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(BillboardPlugin);
+        app.init_resource::<TrailMeshes>();
         app.add_systems(Startup, load_marker_assets);
-        app.add_systems(Update, load_trail.run_if(on_event::<UiEvent>()));
+        app.add_systems(
+            Update,
+            (load_trail, unload_trail).run_if(on_event::<UiEvent>()),
+        );
     }
 }
+
+#[derive(Resource, Deref, DerefMut, Default)]
+struct TrailMeshes(HashMap<String, Vec<Entity>>);
 
 #[derive(Component)]
 struct TrailMesh;
@@ -89,7 +97,7 @@ fn load_trail(
     mut assets: ResMut<DebugMarkerAssets>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut events: EventReader<UiEvent>,
-    trail_meshes: Query<Entity, With<TrailMesh>>,
+    mut trail_meshes: ResMut<TrailMeshes>,
     markers: Res<MarkerTree>,
 ) {
     for event in events.read() {
@@ -154,15 +162,41 @@ fn load_trail(
             let trail_mesh = meshes.add(Mesh::from(smesh));
             assets.trails_mesh = Some(trail_mesh.clone());
 
-            commands.spawn((
-                TrailMesh,
-                PbrBundle {
-                    mesh: trail_mesh,
-                    material: assets.trail_material.clone(),
-                    ..default()
-                },
-            ));
+            let entity = commands
+                .spawn((
+                    TrailMesh,
+                    PbrBundle {
+                        mesh: trail_mesh,
+                        material: assets.trail_material.clone(),
+                        ..default()
+                    },
+                ))
+                .id();
+            if let Some(entities) = trail_meshes.get_mut(&trail_id.to_string()) {
+                entities.push(entity);
+            } else {
+                trail_meshes.insert(trail_id.to_string(), vec![entity]);
+            }
             info!("Trail {} loaded with {} positions.", trail_id, count);
+        }
+    }
+}
+
+fn unload_trail(
+    mut commands: Commands,
+    mut events: EventReader<UiEvent>,
+    mut trail_meshes: ResMut<TrailMeshes>,
+) {
+    for event in events.read() {
+        let UiEvent::UnloadMarker(trail_id) = event else {
+            continue;
+        };
+
+        if let Some(entities) = trail_meshes.remove(trail_id) {
+            for entity in entities {
+                info!("Unloading trail: {:?}", trail_id);
+                commands.entity(entity).despawn_recursive();
+            }
         }
     }
 }
