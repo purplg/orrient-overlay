@@ -205,8 +205,8 @@ impl MarkerTreeBuilder {
         self
     }
 
-    fn add_poi(&mut self, id: impl Into<MarkerID>, x: f32, y: f32, z: f32) {
-        let position = Position { x, y, z };
+    fn add_poi(&mut self, id: impl Into<MarkerID>, map_id: u32, x: f32, y: f32, z: f32) {
+        let position = Position { map_id, x, y, z };
         let id = id.into();
         if let Some(pois) = self.tree.pois.get_mut(&id) {
             pois.push(position);
@@ -245,10 +245,8 @@ impl MarkerTreeBuilder {
             }
             Tag::POIs => {}
             Tag::POI(poi) => {
-                self.add_poi(&poi.id, poi.x, poi.y, poi.z);
-                if let Some(map_id) = poi.map_id {
-                    self.add_map_id(poi.id, map_id)
-                }
+                self.add_poi(&poi.id, poi.map_id, poi.x, poi.y, poi.z);
+                self.add_map_id(poi.id, poi.map_id);
             }
             Tag::Route => {}
             Tag::UnknownField(_) => {}
@@ -446,6 +444,7 @@ impl Marker {
 
 #[derive(Clone, Debug)]
 pub struct Position {
+    pub map_id: u32,
     pub x: f32,
     pub y: f32,
     pub z: f32,

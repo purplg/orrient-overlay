@@ -68,7 +68,7 @@ pub(super) struct MarkerCategory {
 #[derive(Clone, Debug, Default)]
 pub(super) struct Poi {
     // MapID
-    pub map_id: Option<u32>,
+    pub map_id: u32,
     // xpos
     pub x: f32,
     // ypos
@@ -125,7 +125,10 @@ impl Poi {
             }
         }
         Ok(Poi {
-            map_id,
+            map_id: map_id.ok_or(Error::FieldErr {
+                field: "poi.map_id".into(),
+                message: "POI Missing Map ID".into(),
+            })?,
             x: x.ok_or(Error::FieldErr {
                 field: "poi.x".into(),
                 message: "POI Missing X position".into(),

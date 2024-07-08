@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_mod_billboard::BillboardTextBundle;
 use marker::trail;
 
-use crate::{player::Player, trail::DebugMarkerAssets, UiEvent, WorldEvent};
+use crate::{link::MapId, player::Player, trail::DebugMarkerAssets, UiEvent, WorldEvent};
 
 pub(crate) struct Plugin;
 
@@ -115,6 +115,7 @@ fn load_pois_system(
     mut ui_events: EventReader<UiEvent>,
     data: Res<MarkerTree>,
     assets: Res<DebugMarkerAssets>,
+    map_id: Res<MapId>,
 ) {
     for event in ui_events.read() {
         let UiEvent::LoadMarker(marker_id) = event else {
@@ -134,6 +135,7 @@ fn load_pois_system(
 
         let pois = pois
             .iter()
+            .filter(|poi| poi.map_id == **map_id)
             .map(|poi| Vec3 {
                 x: poi.x,
                 y: poi.y,
