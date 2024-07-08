@@ -75,6 +75,8 @@ fn load_marker_assets(
         trail_material: materials.add(StandardMaterial {
             base_color_texture: Some(images.add(uv_debug_texture())),
             base_color: Color::BLUE,
+            double_sided: true,
+            cull_mode: None,
             ..default()
         }),
         poi_material: materials.add(StandardMaterial {
