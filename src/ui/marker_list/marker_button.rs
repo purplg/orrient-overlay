@@ -150,7 +150,7 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
 
 fn button_update(
     mut commands: Commands,
-    buttons: Query<(Entity, &MarkerButton), Changed<MarkerButton>>,
+    buttons: Query<(Entity, &MarkerButton)>,
     map_id: Option<Res<MapId>>,
     markers: Res<MarkerTree>,
 ) {
