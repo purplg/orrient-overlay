@@ -176,8 +176,9 @@ fn set_column(
                     parent.label(LabelConfig::from(label));
                     for item in iter {
                         parent.marker_button(
-                            &item.id,
                             &item.label,
+                            &item.id,
+                            item.map_ids.clone(),
                             markers.iter(&item.id).count() > 0,
                             next_column_id,
                         );

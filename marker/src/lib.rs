@@ -215,6 +215,12 @@ impl MarkerTreeBuilder {
         }
     }
 
+    fn add_map_id(&mut self, id: impl Into<MarkerID>, map_id: u32) {
+        if let Some(marker) = self.tree.get_mut(id) {
+            marker.map_ids.push(map_id);
+        }
+    }
+
     fn get_or_create_index(&mut self, marker_id: impl Into<MarkerID>) -> NodeIndex {
         self.tree.index_of(marker_id).unwrap_or_else(|| {
             NodeIndex::new({
@@ -239,7 +245,10 @@ impl MarkerTreeBuilder {
             }
             Tag::POIs => {}
             Tag::POI(poi) => {
-                self.add_poi(poi.id, poi.x, poi.y, poi.z);
+                self.add_poi(&poi.id, poi.x, poi.y, poi.z);
+                if let Some(map_id) = poi.map_id {
+                    self.add_map_id(poi.id, map_id)
+                }
             }
             Tag::Route => {}
             Tag::UnknownField(_) => {}
@@ -282,6 +291,15 @@ impl MarkerTree {
 
     fn index_of(&self, id: impl Into<MarkerID>) -> Option<NodeIndex> {
         self.indexes.get(&id.into()).cloned()
+    }
+
+    pub fn contains_map_id(&self, id: impl Into<MarkerID>, map_id: u32) -> bool {
+        for marker in self.iter_recursive(id) {
+            if marker.map_ids.contains(&map_id) {
+                return true;
+            }
+        }
+        false
     }
 
     pub fn get_pois(&self, id: impl Into<MarkerID>) -> Option<&Vec<Position>> {
@@ -378,6 +396,7 @@ pub struct Marker {
     pub poi_tip: Option<String>,
     pub poi_description: Option<String>,
     pub trail_file: Option<String>,
+    pub map_ids: Vec<u32>,
 }
 
 impl Marker {

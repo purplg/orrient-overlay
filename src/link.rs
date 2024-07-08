@@ -41,7 +41,7 @@ impl bevy::prelude::Plugin for Plugin {
     }
 }
 
-#[derive(Resource, Clone, Copy)]
+#[derive(Resource, Clone, Copy, Debug)]
 pub struct MapId(u32);
 
 impl Deref for MapId {

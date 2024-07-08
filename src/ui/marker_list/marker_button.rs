@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use sickle_ui::{prelude::*, ui_builder::UiBuilder};
 
-use crate::{marker::MarkerTree, UiEvent};
+use crate::{link::MapId, marker::MarkerTree, UiEvent};
 
 use super::window::MarkerWindowEvent;
 
@@ -13,14 +13,16 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Update, column_button);
         app.add_systems(Update, checkbox_action);
         app.add_systems(Update, button_state);
+        app.add_systems(Update, button_update);
     }
 }
 
 pub trait UiMarkerButtonExt {
     fn marker_button(
         &mut self,
-        marker_id: impl Into<String>,
         label: impl Into<String>,
+        marker_id: impl Into<String>,
+        map_ids: Vec<u32>,
         has_children: bool,
         column_id: usize,
     );
@@ -33,6 +35,7 @@ struct ColumnRef(usize);
 #[reflect(Component)]
 pub struct MarkerButton {
     marker_id: String,
+    map_ids: Vec<u32>,
     has_children: bool,
     open: bool,
 }
@@ -50,7 +53,9 @@ impl MarkerButton {
             PseudoTheme::deferred_world(vec![PseudoState::Open], MarkerButton::open_style);
         let inactive_theme =
             PseudoTheme::deferred_world(vec![PseudoState::Closed], MarkerButton::inactive_style);
-        Theme::new(vec![base_theme, open_theme, inactive_theme])
+        let disabled_theme =
+            PseudoTheme::deferred_world(vec![PseudoState::Disabled], MarkerButton::disabled_style);
+        Theme::new(vec![base_theme, open_theme, inactive_theme, disabled_theme])
     }
 
     fn primary_style(style_builder: &mut StyleBuilder, theme_data: &ThemeData) {
@@ -89,6 +94,17 @@ impl MarkerButton {
         });
     }
 
+    fn disabled_style(
+        style_builder: &mut StyleBuilder,
+        _: Entity,
+        _: &MarkerButton,
+        world: &World,
+    ) {
+        let theme_data = world.resource::<ThemeData>().clone();
+        let colors = theme_data.colors();
+        style_builder.background_color(colors.on(On::Error));
+    }
+
     fn frame() -> impl Bundle {
         ButtonBundle {
             button: Button,
@@ -100,8 +116,9 @@ impl MarkerButton {
 impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
     fn marker_button(
         &mut self,
-        marker_id: impl Into<String>,
         label: impl Into<String>,
+        marker_id: impl Into<String>,
+        map_ids: Vec<u32>,
         has_children: bool,
         column_id: usize,
     ) {
@@ -123,10 +140,49 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
                         marker_id: marker_id.clone(),
                         has_children,
                         open: false,
+                        map_ids,
                     }, //
                     ColumnRef(column_id), //
                 ));
         });
+    }
+}
+
+fn button_update(
+    mut commands: Commands,
+    buttons: Query<(Entity, &MarkerButton), Changed<MarkerButton>>,
+    map_id: Option<Res<MapId>>,
+    markers: Res<MarkerTree>,
+) {
+    for (entity, button) in &buttons {
+        if let Some(ref map_id) = map_id {
+            if !markers.contains_map_id(&button.marker_id, ***map_id) {
+                commands
+                    .entity(entity)
+                    .remove_pseudo_state(PseudoState::Open);
+                commands
+                    .entity(entity)
+                    .remove_pseudo_state(PseudoState::Closed);
+                commands
+                    .entity(entity)
+                    .add_pseudo_state(PseudoState::Disabled);
+                continue;
+            }
+        }
+
+        if button.open {
+            commands
+                .entity(entity)
+                .remove_pseudo_state(PseudoState::Closed);
+            commands.entity(entity).add_pseudo_state(PseudoState::Open);
+        } else {
+            commands
+                .entity(entity)
+                .remove_pseudo_state(PseudoState::Open);
+            commands
+                .entity(entity)
+                .add_pseudo_state(PseudoState::Closed);
+        }
     }
 }
 
@@ -158,9 +214,8 @@ fn column_button(
 }
 
 fn button_state(
-    mut commands: Commands,
     mut column_events: EventReader<MarkerWindowEvent>,
-    mut buttons: Query<(Entity, &mut MarkerButton, &ColumnRef)>,
+    mut buttons: Query<(&mut MarkerButton, &ColumnRef)>,
 ) {
     for event in column_events.read() {
         let MarkerWindowEvent::SetColumn {
@@ -171,7 +226,7 @@ fn button_state(
             continue;
         };
 
-        for (entity, mut button, column) in &mut buttons {
+        for (mut button, column) in &mut buttons {
             // Only for a single column
             if *column_id != column.0 {
                 continue;
@@ -182,19 +237,6 @@ fn button_state(
             }
 
             button.open = *marker_id == button.marker_id;
-            if button.open {
-                commands
-                    .entity(entity)
-                    .remove_pseudo_state(PseudoState::Closed);
-                commands.entity(entity).add_pseudo_state(PseudoState::Open);
-            } else {
-                commands
-                    .entity(entity)
-                    .remove_pseudo_state(PseudoState::Open);
-                commands
-                    .entity(entity)
-                    .add_pseudo_state(PseudoState::Closed);
-            }
         }
     }
 }
