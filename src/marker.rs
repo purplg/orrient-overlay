@@ -23,7 +23,11 @@ impl bevy::prelude::Plugin for Plugin {
         );
         app.add_systems(
             Update,
-            (load_pois_system, unload_pois_system).run_if(on_event::<UiEvent>()),
+            (
+                load_pois_system.run_if(resource_exists::<MapId>),
+                unload_pois_system,
+            )
+                .run_if(on_event::<UiEvent>()),
         );
     }
 }
