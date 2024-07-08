@@ -18,10 +18,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_plugins(BillboardPlugin);
         app.init_resource::<TrailMeshes>();
         app.add_systems(Startup, load_marker_assets);
-        app.add_systems(
-            Update,
-            (load_trail, unload_trail).run_if(on_event::<UiEvent>()),
-        );
+        app.add_systems(Update, trail_event.run_if(on_event::<UiEvent>()));
     }
 }
 
@@ -92,7 +89,50 @@ fn load_marker_assets(
     })
 }
 
-fn load_trail(
+const TRAIL_WIDTH: f32 = 0.2;
+
+fn create_trail_mesh(mut path: impl Iterator<Item = Vec3>) -> Option<Mesh> {
+    let mut smesh = SMesh::new();
+    let mut previous_pos: Vec3;
+    let mut previous_left: VertexId;
+    let mut previous_right: VertexId;
+
+    if let (Some(prev_pos), Some(next_pos)) = (path.next(), path.next()) {
+        let forward = *Direction3d::new_unchecked((next_pos - prev_pos).normalize());
+        let prev_left_vertex =
+            smesh.add_vertex(prev_pos + forward.cross(Vec3::NEG_Y) * TRAIL_WIDTH);
+        let prev_right_vertex = smesh.add_vertex(prev_pos + forward.cross(Vec3::Y) * TRAIL_WIDTH);
+        let next_left_vertex =
+            smesh.add_vertex(next_pos + forward.cross(Vec3::NEG_Y) * TRAIL_WIDTH);
+        let next_right_vertex = smesh.add_vertex(next_pos + forward.cross(Vec3::Y) * TRAIL_WIDTH);
+        let _ = smesh.add_face(vec![
+            prev_left_vertex,
+            prev_right_vertex,
+            next_right_vertex,
+            next_left_vertex,
+        ]);
+        previous_pos = next_pos;
+        previous_left = next_left_vertex;
+        previous_right = next_right_vertex;
+    } else {
+        return None;
+    }
+
+    for next_pos in path {
+        let forward = *Direction3d::new_unchecked((next_pos - previous_pos).normalize());
+
+        let next_left = smesh.add_vertex(next_pos + forward.cross(Vec3::NEG_Y) * TRAIL_WIDTH);
+        let next_right = smesh.add_vertex(next_pos + forward.cross(Vec3::Y) * TRAIL_WIDTH);
+        let _ = smesh.add_face(vec![previous_left, previous_right, next_right, next_left]);
+        previous_pos = next_pos;
+        previous_left = next_left;
+        previous_right = next_right;
+    }
+
+    Some(Mesh::from(smesh))
+}
+
+fn trail_event(
     mut commands: Commands,
     mut assets: ResMut<DebugMarkerAssets>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -101,102 +141,59 @@ fn load_trail(
     markers: Res<MarkerTree>,
 ) {
     for event in events.read() {
-        let UiEvent::LoadMarker(trail_id) = event else {
-            continue;
-        };
-
-        let Some(trails) = markers.0.get_trails(trail_id) else {
-            warn!("Trail not found for marker_id: {trail_id}");
-            return;
-        };
-
-        for trail in trails {
-            info!("Loading trail: {}...", trail_id);
-            let width = 0.2;
-            let mut smesh = SMesh::new();
-
-            let mut iter = trail.path.iter().map(|path| Vec3 {
-                x: path.x,
-                y: path.y,
-                z: path.z,
-            });
-
-            let mut previous_pos: Vec3;
-            let mut previous_left: VertexId;
-            let mut previous_right: VertexId;
-
-            if let (Some(prev_pos), Some(next_pos)) = (iter.next(), iter.next()) {
-                let forward = *Direction3d::new_unchecked((next_pos - prev_pos).normalize());
-                let prev_left_vertex =
-                    smesh.add_vertex(prev_pos + forward.cross(Vec3::NEG_Y) * width);
-                let prev_right_vertex = smesh.add_vertex(prev_pos + forward.cross(Vec3::Y) * width);
-                let next_left_vertex =
-                    smesh.add_vertex(next_pos + forward.cross(Vec3::NEG_Y) * width);
-                let next_right_vertex = smesh.add_vertex(next_pos + forward.cross(Vec3::Y) * width);
-                let _ = smesh.add_face(vec![
-                    prev_left_vertex,
-                    prev_right_vertex,
-                    next_right_vertex,
-                    next_left_vertex,
-                ]);
-                previous_pos = next_pos;
-                previous_left = next_left_vertex;
-                previous_right = next_right_vertex;
-            } else {
-                return;
+        match event {
+            UiEvent::UnloadMarker(trail_id) => {
+                if let Some(entities) = trail_meshes.remove(trail_id) {
+                    for entity in entities {
+                        info!("Unloading trail: {:?}", trail_id);
+                        commands.entity(entity).despawn_recursive();
+                    }
+                }
             }
+            UiEvent::LoadMarker(trail_id) => {
+                let Some(trails) = markers.0.get_trails(trail_id) else {
+                    warn!("Trail not found for marker_id: {trail_id}");
+                    return;
+                };
 
-            let mut count = 2;
-            for next_pos in iter {
-                let forward = *Direction3d::new_unchecked((next_pos - previous_pos).normalize());
+                for trail in trails {
+                    info!("Loading trail: {}...", trail_id);
 
-                let next_left = smesh.add_vertex(next_pos + forward.cross(Vec3::NEG_Y) * width);
-                let next_right = smesh.add_vertex(next_pos + forward.cross(Vec3::Y) * width);
-                let _ = smesh.add_face(vec![previous_left, previous_right, next_right, next_left]);
-                previous_pos = next_pos;
-                previous_left = next_left;
-                previous_right = next_right;
-                count += 1;
+                    let iter = trail.path.iter().map(|path| Vec3 {
+                        x: path.x,
+                        y: path.y,
+                        z: path.z,
+                    });
+
+                    let handle = if let Some(trail_mesh) = create_trail_mesh(iter) {
+                        let handle = meshes.add(trail_mesh);
+                        assets.trails_mesh = Some(handle.clone());
+                        handle
+                    } else {
+                        return;
+                    };
+
+                    let entity = commands
+                        .spawn((
+                            TrailMesh,
+                            PbrBundle {
+                                mesh: handle,
+                                material: assets.trail_material.clone(),
+                                ..default()
+                            },
+                        ))
+                        .id();
+
+                    if let Some(entities) = trail_meshes.get_mut(&trail_id.to_string()) {
+                        entities.push(entity);
+                    } else {
+                        trail_meshes.insert(trail_id.to_string(), vec![entity]);
+                    }
+                    info!("Trail {} loaded.", trail_id);
+                }
             }
-
-            let trail_mesh = meshes.add(Mesh::from(smesh));
-            assets.trails_mesh = Some(trail_mesh.clone());
-
-            let entity = commands
-                .spawn((
-                    TrailMesh,
-                    PbrBundle {
-                        mesh: trail_mesh,
-                        material: assets.trail_material.clone(),
-                        ..default()
-                    },
-                ))
-                .id();
-            if let Some(entities) = trail_meshes.get_mut(&trail_id.to_string()) {
-                entities.push(entity);
-            } else {
-                trail_meshes.insert(trail_id.to_string(), vec![entity]);
-            }
-            info!("Trail {} loaded with {} positions.", trail_id, count);
-        }
-    }
-}
-
-fn unload_trail(
-    mut commands: Commands,
-    mut events: EventReader<UiEvent>,
-    mut trail_meshes: ResMut<TrailMeshes>,
-) {
-    for event in events.read() {
-        let UiEvent::UnloadMarker(trail_id) = event else {
-            continue;
-        };
-
-        if let Some(entities) = trail_meshes.remove(trail_id) {
-            for entity in entities {
-                info!("Unloading trail: {:?}", trail_id);
-                commands.entity(entity).despawn_recursive();
-            }
+            UiEvent::ToggleUI => {}
+            UiEvent::ShowMarkerBrowser => {}
         }
     }
 }
