@@ -347,6 +347,10 @@ impl MarkerTree {
         self.pois.get(&id.into())
     }
 
+    pub fn get_trails(&self, id: impl Into<MarkerID>) -> Option<&Vec<Trail>> {
+        self.trails.get(&id.into())
+    }
+
     pub fn get(&self, id: impl Into<MarkerID>) -> Option<&Marker> {
         let node_id = self.indexes.get(&id.into()).unwrap();
         self.markers.get(node_id)

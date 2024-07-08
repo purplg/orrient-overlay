@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_mod_billboard::BillboardTextBundle;
-use orrient_parser::trail;
 
 use crate::{link::MapId, player::Player, trail::DebugMarkerAssets, UiEvent, WorldEvent};
 
@@ -8,6 +7,8 @@ pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<LoadedMarkers>();
+
         app.add_systems(Startup, setup);
         app.add_systems(
             PreUpdate,
@@ -16,10 +17,6 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(
             Update,
             disappear_nearby_system.run_if(on_event::<WorldEvent>()),
-        );
-        app.add_systems(
-            Update,
-            load_trail_system.run_if(resource_exists_and_changed::<Marker>),
         );
         app.add_systems(
             Update,
@@ -32,18 +29,13 @@ impl bevy::prelude::Plugin for Plugin {
     }
 }
 
-fn load_marker(mut commands: Commands, mut events: EventReader<UiEvent>, data: Res<MarkerTree>) {
+fn load_marker(mut events: EventReader<UiEvent>, mut markers: ResMut<LoadedMarkers>) {
     for event in events.read() {
         let UiEvent::LoadMarker(marker_id) = event else {
             return;
         };
 
-        let Some(marker) = &data.get(marker_id) else {
-            warn!("Marker ID not found: {}", marker_id);
-            return;
-        };
-
-        commands.insert_resource(Marker((*marker).clone()));
+        markers.push(marker_id.clone());
     }
 }
 
@@ -58,41 +50,6 @@ fn setup(mut commands: Commands) {
         };
 
     commands.insert_resource(MarkerTree(markers));
-}
-
-#[derive(Resource)]
-pub struct Trail(pub Vec<Vec3>);
-
-fn load_trail_system(mut commands: Commands, marker: Res<Marker>) {
-    let Some(trail) = &marker.trail_file else {
-        info!("No trail for this marker category.");
-        return;
-    };
-
-    let trail_path = dirs::config_dir()
-        .unwrap()
-        .join("orrient")
-        .join("markers")
-        .join(trail);
-
-    let Ok(trail) = trail::from_file(trail_path.as_path()) else {
-        error!("Error when loading trail file at: {:?}", trail_path);
-        return;
-    };
-
-    commands.insert_resource(Trail(
-        trail
-            .coordinates
-            .iter()
-            .map(|coord| Vec3 {
-                x: coord.x,
-                y: coord.y,
-                z: -coord.z,
-            })
-            .collect(),
-    ));
-
-    info!("Loaded trail with {} markers", trail.coordinates.len());
 }
 
 #[derive(Component)]
@@ -142,9 +99,9 @@ fn load_pois_system(
             .iter()
             .filter(|poi| poi.map_id == **map_id)
             .map(|poi| Vec3 {
-                x: poi.x,
-                y: poi.y,
-                z: -poi.z,
+                x: poi.position.x,
+                y: poi.position.y,
+                z: -poi.position.z,
             })
             .collect::<Vec<_>>();
 
@@ -210,8 +167,8 @@ fn unload_pois_system(
     }
 }
 
-#[derive(Resource, Clone, Deref, Debug)]
-pub struct Marker(pub orrient_parser::Marker);
+#[derive(Resource, Clone, Deref, DerefMut, Debug, Default)]
+pub struct LoadedMarkers(pub Vec<String>);
 
 #[derive(Resource, Clone, Deref, Debug)]
 pub struct MarkerTree(pub orrient_parser::MarkerTree);

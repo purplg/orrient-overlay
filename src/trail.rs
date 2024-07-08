@@ -8,7 +8,7 @@ use bevy::{
 use bevy_mod_billboard::plugin::BillboardPlugin;
 use smesh::smesh::{SMesh, VertexId};
 
-use crate::marker::Trail;
+use crate::{marker::MarkerTree, UiEvent};
 
 pub(crate) struct Plugin;
 
@@ -16,10 +16,7 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(BillboardPlugin);
         app.add_systems(Startup, load_marker_assets);
-        app.add_systems(
-            Update,
-            load_trail.run_if(resource_exists_and_changed::<Trail>),
-        );
+        app.add_systems(Update, load_trail.run_if(on_event::<UiEvent>()));
     }
 }
 
@@ -89,64 +86,83 @@ fn load_marker_assets(
 
 fn load_trail(
     mut commands: Commands,
-    trail: Res<Trail>,
     mut assets: ResMut<DebugMarkerAssets>,
     mut meshes: ResMut<Assets<Mesh>>,
-    trails: Query<Entity, With<TrailMesh>>,
+    mut events: EventReader<UiEvent>,
+    trail_meshes: Query<Entity, With<TrailMesh>>,
+    markers: Res<MarkerTree>,
 ) {
-    if let Some(trail_mesh) = &assets.trails_mesh {
-        commands.entity(trails.single()).despawn_recursive();
-        meshes.remove(trail_mesh);
+    for event in events.read() {
+        let UiEvent::LoadMarker(trail_id) = event else {
+            continue;
+        };
+
+        let Some(trails) = markers.0.get_trails(trail_id) else {
+            warn!("Trail not found for marker_id: {trail_id}");
+            return;
+        };
+
+        for trail in trails {
+            info!("Loading trail: {}...", trail_id);
+            let width = 0.2;
+            let mut smesh = SMesh::new();
+
+            let mut iter = trail.path.iter().map(|path| Vec3 {
+                x: path.x,
+                y: path.y,
+                z: path.z,
+            });
+
+            let mut previous_pos: Vec3;
+            let mut previous_left: VertexId;
+            let mut previous_right: VertexId;
+
+            if let (Some(prev_pos), Some(next_pos)) = (iter.next(), iter.next()) {
+                let forward = *Direction3d::new_unchecked((next_pos - prev_pos).normalize());
+                let prev_left_vertex =
+                    smesh.add_vertex(prev_pos + forward.cross(Vec3::NEG_Y) * width);
+                let prev_right_vertex = smesh.add_vertex(prev_pos + forward.cross(Vec3::Y) * width);
+                let next_left_vertex =
+                    smesh.add_vertex(next_pos + forward.cross(Vec3::NEG_Y) * width);
+                let next_right_vertex = smesh.add_vertex(next_pos + forward.cross(Vec3::Y) * width);
+                let _ = smesh.add_face(vec![
+                    prev_left_vertex,
+                    prev_right_vertex,
+                    next_right_vertex,
+                    next_left_vertex,
+                ]);
+                previous_pos = next_pos;
+                previous_left = next_left_vertex;
+                previous_right = next_right_vertex;
+            } else {
+                return;
+            }
+
+            let mut count = 2;
+            for next_pos in iter {
+                let forward = *Direction3d::new_unchecked((next_pos - previous_pos).normalize());
+
+                let next_left = smesh.add_vertex(next_pos + forward.cross(Vec3::NEG_Y) * width);
+                let next_right = smesh.add_vertex(next_pos + forward.cross(Vec3::Y) * width);
+                let _ = smesh.add_face(vec![previous_left, previous_right, next_right, next_left]);
+                previous_pos = next_pos;
+                previous_left = next_left;
+                previous_right = next_right;
+                count += 1;
+            }
+
+            let trail_mesh = meshes.add(Mesh::from(smesh));
+            assets.trails_mesh = Some(trail_mesh.clone());
+
+            commands.spawn((
+                TrailMesh,
+                PbrBundle {
+                    mesh: trail_mesh,
+                    material: assets.trail_material.clone(),
+                    ..default()
+                },
+            ));
+            info!("Trail {} loaded with {} positions.", trail_id, count);
+        }
     }
-
-    let width = 0.2;
-    let mut smesh = SMesh::new();
-
-    let mut iter = trail.0.iter().copied();
-
-    let mut previous_pos: Vec3;
-    let mut previous_left: VertexId;
-    let mut previous_right: VertexId;
-
-    if let (Some(prev_pos), Some(next_pos)) = (iter.next(), iter.next()) {
-        let forward = *Direction3d::new_unchecked((next_pos - prev_pos).normalize());
-        let prev_left_vertex = smesh.add_vertex(prev_pos + forward.cross(Vec3::NEG_Y) * width);
-        let prev_right_vertex = smesh.add_vertex(prev_pos + forward.cross(Vec3::Y) * width);
-        let next_left_vertex = smesh.add_vertex(next_pos + forward.cross(Vec3::NEG_Y) * width);
-        let next_right_vertex = smesh.add_vertex(next_pos + forward.cross(Vec3::Y) * width);
-        let _ = smesh.add_face(vec![
-            prev_left_vertex,
-            prev_right_vertex,
-            next_right_vertex,
-            next_left_vertex,
-        ]);
-        previous_pos = next_pos;
-        previous_left = next_left_vertex;
-        previous_right = next_right_vertex;
-    } else {
-        return;
-    }
-
-    for next_pos in trail.0.iter().copied() {
-        let forward = *Direction3d::new_unchecked((next_pos - previous_pos).normalize());
-
-        let next_left = smesh.add_vertex(next_pos + forward.cross(Vec3::NEG_Y) * width);
-        let next_right = smesh.add_vertex(next_pos + forward.cross(Vec3::Y) * width);
-        let _ = smesh.add_face(vec![previous_left, previous_right, next_right, next_left]);
-        previous_pos = next_pos;
-        previous_left = next_left;
-        previous_right = next_right;
-    }
-
-    let trail_mesh = meshes.add(Mesh::from(smesh));
-    assets.trails_mesh = Some(trail_mesh.clone());
-
-    commands.spawn((
-        TrailMesh,
-        PbrBundle {
-            mesh: trail_mesh,
-            material: assets.trail_material.clone(),
-            ..default()
-        },
-    ));
 }
