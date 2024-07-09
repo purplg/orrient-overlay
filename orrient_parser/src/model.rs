@@ -1,9 +1,10 @@
 #![allow(unused)]
 
-use std::convert::identity;
+use std::{convert::identity, path::PathBuf, str::FromStr};
 
 use log::warn;
 use quick_xml::{events::attributes::Attributes, name::QName};
+use typed_path::{Utf8PathBuf, Utf8TypedPathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
 
 use super::Error;
 
@@ -80,6 +81,8 @@ pub struct Poi {
     pub map_id: u32,
     // xpos, ypos, zpos
     pub position: Position,
+    // iconFile
+    pub icon_file: Option<Utf8PathBuf<Utf8UnixEncoding>>,
 }
 
 impl Poi {
@@ -89,6 +92,7 @@ impl Poi {
         let mut y: Option<f32> = None;
         let mut z: Option<f32> = None;
         let mut id: Option<String> = None;
+        let mut icon_file: Option<Utf8PathBuf<Utf8UnixEncoding>> = None;
 
         for attr in attrs.map(Result::ok).filter_map(identity) {
             let Ok(key) = String::from_utf8(attr.key.0.to_vec()) else {
@@ -117,6 +121,13 @@ impl Poi {
                 "type" => {
                     id = Some(value);
                 }
+                "iconfile" => {
+                    if let Ok(path) = Utf8WindowsPathBuf::from_str(&value) {
+                        icon_file = Some(path.with_unix_encoding().to_path_buf());
+                    } else {
+                        warn!("Icon path is corrupt: {:?}", attr)
+                    }
+                }
 
                 _ => {}
             }
@@ -129,6 +140,7 @@ impl Poi {
                 y: y.ok_or(Error::MissingField("poi.ypos".into()))?,
                 z: z.ok_or(Error::MissingField("poi.zpos".into()))?,
             },
+            icon_file,
         })
     }
 }

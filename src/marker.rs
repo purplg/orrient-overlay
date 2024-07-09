@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use bevy_mod_billboard::{plugin::BillboardPlugin, BillboardTextBundle};
+use bevy_mod_billboard::{
+    plugin::BillboardPlugin, BillboardMeshHandle, BillboardTextBundle, BillboardTextureBundle,
+    BillboardTextureHandle,
+};
 
 use crate::{link::MapId, player::Player, trail::DebugMarkerAssets, UiEvent, WorldEvent};
 
@@ -21,11 +24,7 @@ impl bevy::prelude::Plugin for Plugin {
         );
         app.add_systems(
             Update,
-            (
-                load_pois_system.run_if(resource_exists::<MapId>),
-                unload_pois_system,
-            )
-                .run_if(on_event::<UiEvent>()),
+            (load_pois_system, unload_pois_system).run_if(on_event::<UiEvent>()),
         );
     }
 }
@@ -78,7 +77,8 @@ fn load_pois_system(
     mut ui_events: EventReader<UiEvent>,
     data: Res<MarkerTree>,
     assets: Res<DebugMarkerAssets>,
-    map_id: Res<MapId>,
+    map_id: Option<Res<MapId>>,
+    asset_server: Res<AssetServer>,
 ) {
     for event in ui_events.read() {
         let UiEvent::LoadMarker(marker_id) = event else {
@@ -93,55 +93,66 @@ fn load_pois_system(
         };
 
         let Some(pois) = data.get_pois(&marker.id) else {
+            info!("No POIs found for {}", marker_id);
             return;
         };
 
-        let pois = pois
-            .iter()
-            .filter(|poi| poi.map_id == **map_id)
-            .map(|poi| Vec3 {
+        let pois = pois.iter().filter(|poi| {
+            if let Some(map_id) = &map_id {
+                poi.map_id == ***map_id
+            } else {
+                true
+            }
+        });
+
+        let mut count = 0;
+        for poi in pois {
+            let pos = Vec3 {
                 x: poi.position.x,
                 y: poi.position.y,
                 z: -poi.position.z,
-            })
-            .collect::<Vec<_>>();
+            };
 
-        for poi in &pois {
-            let mut builder = commands.spawn((
-                PbrBundle {
-                    mesh: assets.mesh.clone(),
-                    material: assets.poi_material.clone(),
-                    transform: Transform::from_translation(*poi),
-                    ..default()
-                },
-                Poi(marker_id.to_string()),
-            ));
+            let icon = poi
+                .icon_file
+                .clone()
+                .or(data
+                    .get(marker_id)
+                    .and_then(|marker| marker.icon_file.clone()))
+                .and_then(|icon_path| {
+                    dirs::config_dir()
+                        .unwrap()
+                        .join("orrient")
+                        .join("markers")
+                        .join(icon_path)
+                        .into_os_string()
+                        .into_string()
+                        .ok()
+                });
 
-            debug!("Spawned POI at {}", poi);
-
-            builder.with_children(|parent| {
-                parent.spawn(BillboardTextBundle {
-                    text: Text::from_section(
-                        marker.label.clone(),
-                        TextStyle {
-                            font_size: 100.,
-                            ..default()
-                        },
-                    ),
-                    transform: Transform::from_scale(Vec3::ONE * 0.01)
-                        .with_translation(Vec3::Y * 2.),
+            let mut builder = commands.spawn(Poi(marker_id.to_string()));
+            if let Some(icon) = icon {
+                builder.insert(BillboardTextureBundle {
+                    mesh: BillboardMeshHandle(assets.image_quad.clone()),
+                    texture: BillboardTextureHandle(asset_server.load(icon)),
+                    transform: Transform::from_translation(pos),
                     ..default()
                 });
-            });
+            } else {
+                warn!("No icon for {}", marker_id);
+            }
+
+            debug!("Spawned POI at {}", pos);
 
             if let Some(orrient_parser::Behavior::ReappearDaily) = marker.behavior {
                 builder.insert(DisappearNearby);
             } else if let Some(orrient_parser::Behavior::DisappearOnUse) = marker.behavior {
                 builder.insert(DisappearNearby);
             }
+            count += 1;
         }
 
-        info!("Loaded {} POIs.", pois.len());
+        info!("Loaded {} POIs.", count);
     }
 }
 

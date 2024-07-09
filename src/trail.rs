@@ -29,6 +29,7 @@ struct TrailMesh;
 #[derive(Resource)]
 pub struct DebugMarkerAssets {
     pub mesh: Handle<Mesh>,
+    pub image_quad: Handle<Mesh>,
     pub trails_mesh: Option<Handle<Mesh>>,
     pub trail_material: Handle<StandardMaterial>,
     pub poi_material: Handle<StandardMaterial>,
@@ -69,8 +70,10 @@ fn load_marker_assets(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let mesh = meshes.add(Sphere::default().mesh().ico(5).unwrap());
+    let image_quad = meshes.add(Rectangle::from_size(Vec2::splat(2.0)));
     commands.insert_resource(DebugMarkerAssets {
         mesh,
+        image_quad,
         trails_mesh: None,
         trail_material: materials.add(StandardMaterial {
             base_color_texture: Some(images.add(uv_debug_texture())),

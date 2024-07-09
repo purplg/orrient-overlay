@@ -4,6 +4,8 @@ pub mod trail;
 use std::collections::{HashSet, VecDeque};
 use std::convert::identity;
 use std::ops::Deref;
+use std::path::PathBuf;
+use std::str::FromStr;
 use std::{collections::HashMap, path::Path};
 
 use log::{debug, warn};
@@ -15,6 +17,7 @@ use petgraph::Direction;
 use quick_xml::events::attributes::Attributes;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
+use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
 
 #[derive(Debug)]
 pub enum Error {
@@ -448,6 +451,7 @@ pub struct Marker {
     pub poi_tip: Option<String>,
     pub poi_description: Option<String>,
     pub map_ids: Vec<u32>,
+    pub icon_file: Option<Utf8PathBuf<Utf8UnixEncoding>>,
 }
 
 impl Marker {
@@ -464,6 +468,9 @@ impl Marker {
         self.id = format!("{}.{}", parent.id, self.id);
         self.depth = parent.depth + 1;
         self.behavior = self.behavior.or(parent.behavior);
+        if self.icon_file.is_none() {
+            self.icon_file = parent.icon_file.clone();
+        }
     }
 
     fn from_attrs(attrs: Attributes) -> Result<Self, Error> {
@@ -487,6 +494,13 @@ impl Marker {
                     if "true" == value.to_lowercase() {
                         this.kind = MarkerKind::Separator
                     };
+                }
+                "iconfile" => {
+                    if let Ok(path) = Utf8WindowsPathBuf::from_str(&value) {
+                        this.icon_file = Some(path.with_unix_encoding().to_path_buf());
+                    } else {
+                        warn!("Icon path is corrupt: {:?}", attr)
+                    }
                 }
                 _ => {}
             }
