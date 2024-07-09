@@ -1,12 +1,18 @@
 use bevy::{
     prelude::*,
     render::{
+        mesh::{Indices, PrimitiveTopology},
         render_asset::RenderAssetUsages,
         render_resource::{Extent3d, TextureDimension, TextureFormat},
+        texture::{
+            ImageAddressMode, ImageLoader, ImageLoaderSettings, ImageSampler,
+            ImageSamplerDescriptor,
+        },
     },
     utils::HashMap,
 };
-use smesh::smesh::{SMesh, VertexId};
+use itertools::Itertools;
+use itertools::TupleWindows;
 
 use crate::{marker::MarkerTree, UiEvent};
 
@@ -92,45 +98,54 @@ fn load_marker_assets(
 
 const TRAIL_WIDTH: f32 = 0.2;
 
-fn create_trail_mesh(mut path: impl Iterator<Item = Vec3>) -> Option<Mesh> {
-    let mut smesh = SMesh::new();
-    let mut previous_pos: Vec3;
-    let mut previous_left: VertexId;
-    let mut previous_right: VertexId;
+fn create_trail_mesh(path: impl Iterator<Item = Vec3>) -> Mesh {
+    let mut indices: Vec<u32> = vec![];
+    let mut positions: Vec<Vec3> = vec![];
+    let mut uvs: Vec<Vec2> = vec![];
+    let mut normals: Vec<Vec3> = vec![];
 
-    if let (Some(prev_pos), Some(next_pos)) = (path.next(), path.next()) {
+    let mut distance: f32 = 0.0;
+    for (prev_pos, next_pos) in path.tuple_windows() {
+        let prev_distance = distance;
+        distance += prev_pos.distance(next_pos);
+
         let forward = *Direction3d::new_unchecked((next_pos - prev_pos).normalize());
-        let prev_left_vertex =
-            smesh.add_vertex(prev_pos + forward.cross(Vec3::NEG_Y) * TRAIL_WIDTH);
-        let prev_right_vertex = smesh.add_vertex(prev_pos + forward.cross(Vec3::Y) * TRAIL_WIDTH);
-        let next_left_vertex =
-            smesh.add_vertex(next_pos + forward.cross(Vec3::NEG_Y) * TRAIL_WIDTH);
-        let next_right_vertex = smesh.add_vertex(next_pos + forward.cross(Vec3::Y) * TRAIL_WIDTH);
-        let _ = smesh.add_face(vec![
-            prev_left_vertex,
-            prev_right_vertex,
-            next_right_vertex,
-            next_left_vertex,
-        ]);
-        previous_pos = next_pos;
-        previous_left = next_left_vertex;
-        previous_right = next_right_vertex;
-    } else {
-        return None;
+        let prev_left_vertex = positions.len() as u32;
+        positions.push(prev_pos + forward.cross(Vec3::NEG_Y) * TRAIL_WIDTH);
+        uvs.push(Vec2::new(0.0, prev_distance));
+        normals.push(Vec3::Z);
+
+        let prev_right_vertex = positions.len() as u32;
+        positions.push(prev_pos + forward.cross(Vec3::Y) * TRAIL_WIDTH);
+        uvs.push(Vec2::new(1.0, prev_distance));
+        normals.push(Vec3::Z);
+
+        let next_left_vertex = positions.len() as u32;
+        positions.push(next_pos + forward.cross(Vec3::NEG_Y) * TRAIL_WIDTH);
+        uvs.push(Vec2::new(0.0, distance));
+        normals.push(Vec3::Z);
+
+        let next_right_vertex = positions.len() as u32;
+        positions.push(next_pos + forward.cross(Vec3::Y) * TRAIL_WIDTH);
+        uvs.push(Vec2::new(1.0, distance));
+        normals.push(Vec3::Z);
+
+        indices.push(prev_left_vertex);
+        indices.push(prev_right_vertex);
+        indices.push(next_right_vertex);
+        indices.push(next_right_vertex);
+        indices.push(next_left_vertex);
+        indices.push(prev_left_vertex);
     }
 
-    for next_pos in path {
-        let forward = *Direction3d::new_unchecked((next_pos - previous_pos).normalize());
-
-        let next_left = smesh.add_vertex(next_pos + forward.cross(Vec3::NEG_Y) * TRAIL_WIDTH);
-        let next_right = smesh.add_vertex(next_pos + forward.cross(Vec3::Y) * TRAIL_WIDTH);
-        let _ = smesh.add_face(vec![previous_left, previous_right, next_right, next_left]);
-        previous_pos = next_pos;
-        previous_left = next_left;
-        previous_right = next_right;
-    }
-
-    Some(Mesh::from(smesh))
+    Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::default(),
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+    .with_inserted_indices(Indices::U32(indices))
 }
 
 fn trail_event(
@@ -139,7 +154,9 @@ fn trail_event(
     mut meshes: ResMut<Assets<Mesh>>,
     mut events: EventReader<UiEvent>,
     mut trail_meshes: ResMut<TrailMeshes>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     markers: Res<MarkerTree>,
+    asset_server: Res<AssetServer>,
 ) {
     for event in events.read() {
         match event {
@@ -163,23 +180,49 @@ fn trail_event(
                     let iter = trail.path.iter().map(|path| Vec3 {
                         x: path.x,
                         y: path.y,
-                        z: path.z,
+                        z: -path.z,
                     });
 
-                    let handle = if let Some(trail_mesh) = create_trail_mesh(iter) {
-                        let handle = meshes.add(trail_mesh);
-                        assets.trails_mesh = Some(handle.clone());
-                        handle
-                    } else {
-                        return;
-                    };
+                    let handle = meshes.add(create_trail_mesh(iter));
+                    assets.trails_mesh = Some(handle.clone());
+
+                    let texture_path = dirs::config_dir()
+                        .unwrap()
+                        .join("orrient")
+                        .join("markers")
+                        .join(&trail.texture_file)
+                        .into_os_string()
+                        .into_string()
+                        .unwrap();
+                    info!("Trail texture: {:?}", texture_path);
+
+                    let material = materials.add(StandardMaterial {
+                        base_color_texture: Some(asset_server.load_with_settings(
+                            texture_path,
+                            |s: &mut _| {
+                                *s = ImageLoaderSettings {
+                                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
+                                        address_mode_u: ImageAddressMode::Repeat,
+                                        address_mode_v: ImageAddressMode::Repeat,
+                                        ..default()
+                                    }),
+                                    ..default()
+                                }
+                            },
+                        )),
+                        alpha_mode: AlphaMode::Blend,
+                        double_sided: true,
+                        cull_mode: None,
+                        unlit: true,
+                        ..default()
+                    });
 
                     let entity = commands
                         .spawn((
                             TrailMesh,
                             PbrBundle {
                                 mesh: handle,
-                                material: assets.trail_material.clone(),
+                                material,
                                 ..default()
                             },
                         ))

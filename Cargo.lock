@@ -2495,11 +2495,11 @@ dependencies = [
  "crossbeam-channel",
  "dirs",
  "env_logger",
+ "itertools 0.13.0",
  "mumblelink_reader",
  "orrient_link",
  "orrient_parser",
  "sickle_ui",
- "smesh",
 ]
 
 [[package]]
@@ -3922,19 +3922,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "smesh"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6dd3421ac1748c7d63caea84ab4150ee2a2a79c11d97f63e5ff4e0c9763c9e71"
-dependencies = [
- "bevy",
- "glam",
- "itertools 0.13.0",
- "slotmap",
- "thiserror",
 ]
 
 [[package]]

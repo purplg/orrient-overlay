@@ -31,9 +31,7 @@ bevy_mod_billboard = "0.6.0"
 
 # https://github.com/UmbraLuminosa/sickle_ui
 sickle_ui = { rev = "d09e1c98d608fd5ca99b21fad1c15a6321d466b6", git = "https://github.com/UmbraLuminosa/sickle_ui" }
-
-# https://github.com/Bendzae/SMesh
-smesh = "0.2.1"
+itertools = "0.13.0"
 
 [workspace]
 resolver = "2"
