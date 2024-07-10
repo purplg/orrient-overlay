@@ -3,8 +3,9 @@ pub mod trail;
 
 use std::collections::{HashSet, VecDeque};
 use std::convert::identity;
+use std::fs::File;
+use std::io::{BufRead, BufReader, Read};
 use std::ops::Deref;
-use std::path::PathBuf;
 use std::str::FromStr;
 use std::{collections::HashMap, path::Path};
 
@@ -23,6 +24,7 @@ use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
 pub enum Error {
     EmptyCategory,
     IoErr(std::io::Error),
+    ZipErr(zip::result::ZipError),
     Eof,
     Xml(quick_xml::Error),
     MissingField(String),
@@ -39,9 +41,13 @@ pub fn read(directory: &Path) -> Result<MarkerTree, Error> {
     for path in iter
         .filter_map(|file| file.ok().map(|file| file.path()))
         .filter(|file| file.is_file())
-        .filter(|file| file.extension().map(|ext| ext == "xml").unwrap_or_default())
+        .filter(|file| {
+            file.extension()
+                .map(|ext| ext == "taco" || ext == "zip")
+                .unwrap_or_default()
+        })
     {
-        read_file(&mut tree, &path).unwrap();
+        read_pack(&mut tree, &path).unwrap();
     }
 
     Ok(tree.build())
@@ -74,8 +80,31 @@ impl Tag {
     }
 }
 
-fn read_file(tree: &mut MarkerTreeBuilder, path: &Path) -> Result<(), Error> {
-    let mut reader = Reader::from_file(path).map_err(Error::Xml)?;
+fn read_pack(tree: &mut MarkerTreeBuilder, path: &Path) -> Result<(), Error> {
+    let pack = File::open(path).map_err(Error::IoErr)?;
+    let mut zip = zip::ZipArchive::new(pack).map_err(Error::ZipErr)?;
+    for i in 0..zip.len() {
+        let file = zip.by_index(i).map_err(Error::ZipErr)?;
+        let filename = file.name().to_string();
+        let Some(ext) = filename.rsplit(".").next() else {
+            continue;
+        };
+        match ext {
+            "xml" => {
+                let _ = parse_xml(tree, &filename, BufReader::new(file));
+            }
+            _ => (),
+        }
+    }
+    Ok(())
+}
+
+fn parse_xml<R: Read + BufRead>(
+    tree: &mut MarkerTreeBuilder,
+    filename: &str,
+    reader: R,
+) -> Result<(), Error> {
+    let mut reader = Reader::from_reader(reader);
     let mut buf = Vec::new();
 
     loop {
@@ -86,7 +115,10 @@ fn read_file(tree: &mut MarkerTreeBuilder, path: &Path) -> Result<(), Error> {
                     tree.add_tag(match Tag::from_element(&element) {
                         Ok(tag) => tag,
                         Err(err) => {
-                            warn!("Error parsing tag in file {:?}: {:?}", path, err);
+                            warn!(
+                                "Error parsing tag {:?} in file {:?}: {:?}",
+                                &element, filename, err
+                            );
                             continue;
                         }
                     });
@@ -97,7 +129,7 @@ fn read_file(tree: &mut MarkerTreeBuilder, path: &Path) -> Result<(), Error> {
                         Err(err) => {
                             warn!(
                                 "Error parsing tag {:?} in file {:?}: {:?}",
-                                &element, path, err
+                                &element, filename, err
                             );
                             continue;
                         }
@@ -112,7 +144,7 @@ fn read_file(tree: &mut MarkerTreeBuilder, path: &Path) -> Result<(), Error> {
             },
             Err(err) => panic!(
                 "Error reading {:?} at position {}: {:?}",
-                path,
+                filename,
                 reader.buffer_position(),
                 err
             ),
