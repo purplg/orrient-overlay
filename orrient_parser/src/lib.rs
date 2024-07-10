@@ -559,14 +559,6 @@ mod tests {
     #[test]
     fn test_iter() {
         let markers = fake_markers();
-        println!(
-            "roots: {:?}",
-            markers
-                .roots()
-                .iter()
-                .map(|a| a.id.clone())
-                .collect::<Vec<_>>()
-        );
         let mut iter = markers.iter_recursive("A");
 
         //     A
