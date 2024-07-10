@@ -90,10 +90,21 @@ fn link(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
     }
 
     println!("Connected!");
-    let mut ui_tick: i64 = 0;
+    let mut last_ui_tick: i64 = 0;
+
+    // The amount of millis to sleep until the next time we try to
+    // read mumblelink.
     let mut tick_rate = 0;
+
+    // Keeps track of the number of times the `ui_tick` field has no
+    // been updated. If this exceeds 3, then we'll slow down the send
+    // rate a bit. This is to mitigate stuttering by only decreasing
+    // the send rate if we repeated read mumblelink too fast.
+    let mut fast_count = 0;
+
     loop {
         sleep(Duration::from_millis(tick_rate));
+
         let data = match handler.read() {
             Ok(data) => data,
             Err(error) => {
@@ -110,16 +121,25 @@ fn link(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
             }
         };
 
-        if def.ui_tick > ui_tick {
-            if tick_rate > 0 {
-                tick_rate -= 1;
-            }
-            ui_tick = def.ui_tick;
+        if def.ui_tick > last_ui_tick {
+            // We got a new frame, so store this ui_tick as the last
+            // one.
+            last_ui_tick = def.ui_tick;
             if let Err(e) = tx.send(MumbleLinkMessage::MumbleLinkData(Box::new(def))) {
                 println!("error: {:?}", e);
             };
+            // ... and decrease the tickrate.
+            if tick_rate > 0 {
+                tick_rate -= 1;
+            }
+            // ... reset the error count
+            fast_count = 0;
+
         } else {
-            tick_rate += 1;
+            fast_count += 1;
+            if fast_count > 3 {
+                tick_rate += 1;
+            }
         }
     }
 }
