@@ -113,10 +113,10 @@ fn link(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
             }
         };
 
-        let def = match MumbleLinkDataDef::from_data(data.clone()) {
+        let def = match MumbleLinkDataDef::from_data(data) {
             Ok(def) => def,
             Err(error) => {
-                println!("Error deserializing data: {:?}\n{:?}", error, data);
+                println!("Error deserializing data: {:?}", error);
                 continue;
             }
         };
