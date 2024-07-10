@@ -90,8 +90,10 @@ fn link(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
     }
 
     println!("Connected!");
-
+    let mut ui_tick: i64 = 0;
+    let mut tick_rate = 0;
     loop {
+        sleep(Duration::from_millis(tick_rate));
         let data = match handler.read() {
             Ok(data) => data,
             Err(error) => {
@@ -108,9 +110,16 @@ fn link(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
             }
         };
 
-        if let Err(e) = tx.send(MumbleLinkMessage::MumbleLinkData(Box::new(def))) {
-            println!("error: {:?}", e);
-        };
-        sleep(Duration::from_millis(8));
+        if def.ui_tick > ui_tick {
+            if tick_rate > 0 {
+                tick_rate -= 1;
+            }
+            ui_tick = def.ui_tick;
+            if let Err(e) = tx.send(MumbleLinkMessage::MumbleLinkData(Box::new(def))) {
+                println!("error: {:?}", e);
+            };
+        } else {
+            tick_rate += 1;
+        }
     }
 }
