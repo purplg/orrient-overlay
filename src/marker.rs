@@ -162,16 +162,23 @@ fn unload_pois_system(
     poi_query: Query<(Entity, &Poi)>,
 ) {
     for event in ui_events.read() {
-        let UiEvent::UnloadMarker(marker_id) = event else {
-            return;
-        };
-
         let mut count = 0;
-        for (entity, poi) in &poi_query {
-            if poi.0 == *marker_id {
-                commands.entity(entity).despawn_recursive();
-                count += 1;
+        match event {
+            UiEvent::UnloadMarker(marker_id) => {
+                for (entity, poi) in &poi_query {
+                    if poi.0 == *marker_id {
+                        commands.entity(entity).despawn_recursive();
+                        count += 1;
+                    }
+                }
             }
+            UiEvent::UnloadAllMarkers => {
+                for (entity, _) in &poi_query {
+                    commands.entity(entity).despawn_recursive();
+                    count += 1;
+                }
+            }
+            _ => {}
         }
         if count > 0 {
             info!("Unloaded {} POIs.", count);

@@ -168,6 +168,15 @@ fn trail_event(
                     }
                 }
             }
+            UiEvent::UnloadAllMarkers => {
+                for (trail_id, entities) in trail_meshes.drain() {
+                    for entity in entities {
+                        info!("Unloading trail: {:?}", trail_id);
+                        commands.entity(entity).despawn_recursive();
+                    }
+                }
+            }
+
             UiEvent::LoadMarker(trail_id) => {
                 let Some(trails) = markers.0.get_trails(trail_id) else {
                     warn!("Trail not found for marker_id: {trail_id}");

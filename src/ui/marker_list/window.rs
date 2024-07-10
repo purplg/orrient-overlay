@@ -81,6 +81,12 @@ impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
                                     ..default()
                                 })
                                 .insert(OrrientMenuItem(UiEvent::ShowMarkerBrowser));
+                            parent
+                                .menu_item(MenuItemConfig {
+                                    name: "Unload all markers".into(),
+                                    ..default()
+                                })
+                                .insert(OrrientMenuItem(UiEvent::UnloadAllMarkers));
                         },
                     );
                 });
