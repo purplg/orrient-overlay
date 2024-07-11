@@ -1,10 +1,8 @@
-#![allow(unused)]
+use std::{convert::identity, str::FromStr};
 
-use std::{convert::identity, path::PathBuf, str::FromStr};
-
-use log::warn;
-use quick_xml::{events::attributes::Attributes, name::QName};
-use typed_path::{Utf8PathBuf, Utf8TypedPathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
+use bevy::{log::warn, math::Vec3};
+use quick_xml::events::attributes::Attributes;
+use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
 
 use super::Error;
 
@@ -67,20 +65,13 @@ pub(super) struct MarkerCategory {
 }
 
 #[derive(Clone, Debug)]
-pub struct Position {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-}
-
-#[derive(Clone, Debug)]
 pub struct Poi {
     // type
     pub id: String,
     // MapID
     pub map_id: u32,
     // xpos, ypos, zpos
-    pub position: Position,
+    pub position: Vec3,
     // iconFile
     pub icon_file: Option<Utf8PathBuf<Utf8UnixEncoding>>,
 }
@@ -135,7 +126,7 @@ impl Poi {
         Ok(Poi {
             id: id.ok_or(Error::MissingField("poi.type".into()))?,
             map_id: map_id.ok_or(Error::MissingField("poi.MapID".into()))?,
-            position: Position {
+            position: Vec3 {
                 x: x.ok_or(Error::MissingField("poi.xpos".into()))?,
                 y: y.ok_or(Error::MissingField("poi.ypos".into()))?,
                 z: z.ok_or(Error::MissingField("poi.zpos".into()))?,

@@ -1,6 +1,6 @@
 use std::{fs::File, io::Read, path::Path};
 
-use crate::model::Position;
+use bevy::math::Vec3;
 
 use super::Error;
 
@@ -8,7 +8,7 @@ use super::Error;
 pub struct Trail {
     pub version: u32,
     pub map_id: u32,
-    pub path: Vec<Position>,
+    pub path: Vec<Vec3>,
 }
 
 /// Convenience function to try to read a Trail file.
@@ -31,7 +31,7 @@ pub fn read<R: Read>(mut input: R) -> Result<Trail, Error> {
 
     // The rest of the file are tuples of 3 f32 values. An x, y, and
     // z.
-    let mut path: Vec<Position> = vec![];
+    let mut path: Vec<Vec3> = vec![];
     loop {
         let mut buf = [0u8; 12];
         let read = input.read(&mut buf).map_err(Error::IoErr)?;
@@ -47,7 +47,7 @@ pub fn read<R: Read>(mut input: R) -> Result<Trail, Error> {
         let x = f32::from_le_bytes(buf[0..4].try_into().unwrap());
         let y = f32::from_le_bytes(buf[4..8].try_into().unwrap());
         let z = f32::from_le_bytes(buf[8..12].try_into().unwrap());
-        path.push(Position { x, y, z });
+        path.push(Vec3 { x, y, z });
     }
 
     Ok(Trail {

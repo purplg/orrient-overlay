@@ -1,7 +1,7 @@
 pub mod model;
 pub mod trail;
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::VecDeque;
 use std::convert::identity;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
@@ -9,8 +9,10 @@ use std::ops::Deref;
 use std::str::FromStr;
 use std::{collections::HashMap, path::Path};
 
-use log::{debug, warn};
-use model::{Poi, Position};
+use bevy::log::{debug, warn};
+use bevy::math::Vec3;
+use bevy::utils::HashSet;
+use model::Poi;
 use petgraph::graph::DiGraph;
 use petgraph::graph::NodeIndex;
 use petgraph::visit::{Dfs, VisitMap};
@@ -469,7 +471,7 @@ impl Behavior {
 #[derive(Clone, Debug)]
 pub struct Trail {
     pub map_id: u32,
-    pub path: Vec<Position>,
+    pub path: Vec<Vec3>,
     pub texture_file: String,
 }
 

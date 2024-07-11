@@ -6,6 +6,7 @@ mod marker;
 mod player;
 mod trail;
 mod ui;
+mod parser;
 
 use bevy::window::{CompositeAlphaMode, WindowResolution};
 use bevy::{prelude::*, window::WindowLevel};

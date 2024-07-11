@@ -13,8 +13,11 @@ bincode = "1.3.3"
 crossbeam-channel = "0.5.13"
 
 # Marker parsing
-orrient_parser = { path = "orrient_parser" }
 dirs = "5.0.1"
+quick-xml = { version = "0.32.0", features = ["overlapped-lists"] }
+petgraph = "0.6.5"
+typed-path = "0.9.0"
+zip = "2.1.3"
 
 # https://github.com/bevyengine/bevy/
 bevy = { version = "0.13.2", features = ["wayland"] }
@@ -37,5 +40,4 @@ itertools = "0.13.0"
 resolver = "2"
 members = [
   "orrient_link",
-  "orrient_parser",
 ]

@@ -2650,8 +2650,11 @@ dependencies = [
  "itertools 0.13.0",
  "mumblelink_reader",
  "orrient_link",
- "orrient_parser",
+ "petgraph",
+ "quick-xml 0.32.0",
  "sickle_ui",
+ "typed-path",
+ "zip",
 ]
 
 [[package]]
@@ -3540,19 +3543,6 @@ dependencies = [
  "rdev",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "orrient_parser"
-version = "0.1.0"
-dependencies = [
- "dirs",
- "env_logger",
- "log",
- "petgraph",
- "quick-xml 0.32.0",
- "typed-path",
- "zip",
 ]
 
 [[package]]

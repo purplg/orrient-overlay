@@ -41,7 +41,7 @@ fn load_marker(mut events: EventReader<UiEvent>, mut markers: ResMut<LoadedMarke
 
 fn setup(mut commands: Commands) {
     let markers =
-        match orrient_parser::read(&dirs::config_dir().unwrap().join("orrient").join("markers")) {
+        match crate::parser::read(&dirs::config_dir().unwrap().join("orrient").join("markers")) {
             Ok(markers) => markers,
             Err(err) => {
                 println!("Error when loading markers: {:?}", err);
@@ -144,9 +144,9 @@ fn load_pois_system(
 
             debug!("Spawned POI at {}", pos);
 
-            if let Some(orrient_parser::Behavior::ReappearDaily) = marker.behavior {
+            if let Some(crate::parser::Behavior::ReappearDaily) = marker.behavior {
                 builder.insert(DisappearNearby);
-            } else if let Some(orrient_parser::Behavior::DisappearOnUse) = marker.behavior {
+            } else if let Some(crate::parser::Behavior::DisappearOnUse) = marker.behavior {
                 builder.insert(DisappearNearby);
             }
             count += 1;
@@ -190,4 +190,4 @@ fn unload_pois_system(
 pub struct LoadedMarkers(pub Vec<String>);
 
 #[derive(Resource, Clone, Deref, Debug)]
-pub struct MarkerTree(pub orrient_parser::MarkerTree);
+pub struct MarkerTree(pub crate::parser::MarkerTree);
