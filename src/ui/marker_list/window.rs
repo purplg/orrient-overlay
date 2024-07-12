@@ -5,11 +5,7 @@ use sickle_ui::{
     widgets::prelude::*,
 };
 
-use crate::{
-    parser::{MarkerID, Markers},
-    ui::OrrientMenuItem,
-    UiEvent,
-};
+use crate::{parser::prelude::*, ui::OrrientMenuItem, UiEvent};
 
 use super::{marker_button::UiMarkerButtonExt, tooltip::UiToolTipExt as _};
 
@@ -28,7 +24,7 @@ impl bevy::prelude::Plugin for Plugin {
             Update,
             (remove_window, setup_window)
                 .chain()
-                .run_if(resource_exists_and_changed::<Markers>),
+                .run_if(resource_exists_and_changed::<MarkerPacks>),
         );
     }
 }
@@ -38,7 +34,7 @@ pub(super) enum MarkerWindowEvent {
     SetRootColumn,
     SetColumn {
         column_id: usize,
-        marker_id: MarkerID,
+        full_id: FullMarkerId,
     },
     ToggleMarkers,
 }
@@ -51,7 +47,7 @@ struct MarkerList;
 
 #[derive(Component)]
 pub(super) struct MarkerItem {
-    pub id: String,
+    pub id: FullMarkerId,
     pub tip: Option<String>,
     pub description: Option<String>,
 }
@@ -135,76 +131,105 @@ fn remove_window(mut commands: Commands, query: Query<Entity, With<MarkerList>>)
 fn set_column(
     mut commands: Commands,
     mut events: EventReader<MarkerWindowEvent>,
-    markers: Res<Markers>,
+    packs: Res<MarkerPacks>,
     columns: Query<(Entity, &Column)>,
     marker_view: Query<Entity, With<MarkerView>>,
 ) {
+    let Ok(marker_view) = marker_view.get_single() else {
+        return;
+    };
+
     for event in events.read() {
-        let (column_id, label, submarkers) = match event {
-            MarkerWindowEvent::SetRootColumn => (0, "Top".to_string(), markers.roots()),
-            MarkerWindowEvent::SetColumn {
-                column_id,
-                marker_id,
-            } => {
-                let Some(submarker) = markers.get(&**marker_id) else {
-                    warn!("Marker {marker_id} not found");
+        match event {
+            MarkerWindowEvent::SetRootColumn => {
+                commands
+                    .ui_builder(marker_view)
+                    .scroll_view(None, |scroll_view| {
+                        scroll_view.column(|parent| {
+                            parent.label(LabelConfig::from("Top"));
+                            for (pack_id, pack) in packs.iter() {
+                                for marker in pack
+                                    .roots()
+                                    .filter_map(|marker| pack.get(&MarkerId(marker.id.clone())))
+                                {
+                                    let full_id =
+                                        pack_id.with_marker_id(MarkerId(marker.id.clone()));
+                                    let has_children = pack.iter(&full_id.marker_id).count() > 0;
+                                    parent.marker_button(
+                                        marker.label.clone(),
+                                        full_id,
+                                        marker.map_ids.clone(),
+                                        has_children,
+                                        1,
+                                    );
+                                }
+                            }
+                        });
+                    })
+                    // .insert(Column(next_column_id))
+                    .style()
+                    .width(Val::Px(200.));
+            }
+            MarkerWindowEvent::SetColumn { column_id, full_id } => {
+                let Some(pack) = packs.get(&full_id.pack_id) else {
+                    warn!("Pack {} not found", full_id.pack_id);
                     continue;
                 };
-                let submarkers = markers.iter(&**marker_id).collect();
-                (*column_id, submarker.label.clone(), submarkers)
+
+                let Some(marker) = pack.get(&full_id.marker_id) else {
+                    warn!("Marker {} not found", full_id.marker_id);
+                    continue;
+                };
+
+                let submarkers = pack.iter(&full_id.marker_id).collect::<Vec<_>>();
+
+                let next_column_id = column_id + 1;
+
+                // Remove an existing columns with this column ID or higher.
+                for (entity, _column) in columns
+                    .iter()
+                    .filter(|(_entity, column)| column.0 > *column_id)
+                {
+                    commands.entity(entity).despawn_recursive();
+                }
+
+                commands
+                    .ui_builder(marker_view)
+                    .scroll_view(None, |scroll_view| {
+                        scroll_view.column(|parent| {
+                            parent.label(LabelConfig::from(marker.label.clone()));
+                            for child_marker in &submarkers {
+                                let marker_id = MarkerId(child_marker.id.clone());
+                                let has_children = pack.iter(&marker_id).count() > 0;
+                                parent.marker_button(
+                                    &child_marker.label,
+                                    full_id.with_marker_id(MarkerId(child_marker.id.clone())),
+                                    child_marker.map_ids.clone(),
+                                    has_children,
+                                    next_column_id,
+                                );
+                            }
+                        });
+                    })
+                    .insert(Column(next_column_id))
+                    .style()
+                    .width(Val::Px(200.));
             }
             MarkerWindowEvent::ToggleMarkers => {
                 continue;
             }
         };
-
-        let Ok(marker_view) = marker_view.get_single() else {
-            return;
-        };
-
-        let next_column_id = column_id + 1;
-
-        let count = columns.iter().len();
-        println!("count: {:?}", count);
-
-        // Remove an existing columns with this column ID or higher.
-        for (entity, _column) in columns
-            .iter()
-            .filter(|(_entity, column)| column.0 > column_id)
-        {
-            commands.entity(entity).despawn_recursive();
-        }
-
-        commands
-            .ui_builder(marker_view)
-            .scroll_view(None, |scroll_view| {
-                scroll_view.column(|parent| {
-                    parent.label(LabelConfig::from(label));
-                    for item in &submarkers {
-                        parent.marker_button(
-                            &item.label,
-                            &item.id,
-                            item.map_ids.clone(),
-                            markers.iter(&item.id).count() > 0,
-                            next_column_id,
-                        );
-                    }
-                });
-            })
-            .insert(Column(next_column_id))
-            .style()
-            .width(Val::Px(200.));
     }
 }
 
 #[derive(Event, Debug)]
 enum CheckboxEvent {
-    Enable(String),
-    Disable(String),
+    Enable(FullMarkerId),
+    Disable(FullMarkerId),
 }
 
 impl CheckboxEvent {
-    fn id(&self) -> &str {
+    fn id(&self) -> &FullMarkerId {
         match self {
             CheckboxEvent::Enable(id) => id,
             CheckboxEvent::Disable(id) => id,
@@ -223,23 +248,23 @@ fn checkbox(
     query: Query<(&Checkbox, &MarkerItem), Changed<Checkbox>>,
     mut checkbox_events: EventWriter<CheckboxEvent>,
     mut ui_events: EventWriter<UiEvent>,
-    markers: Res<Markers>,
+    packs: Res<MarkerPacks>,
 ) {
     for (checkbox, item) in query.iter() {
+        let Some(pack) = packs.get(&item.id.pack_id) else {
+            continue;
+        };
+
         if checkbox.checked {
-            ui_events.send(UiEvent::LoadMarker(item.id.clone().into()));
-            checkbox_events.send_batch(
-                markers
-                    .iter(&item.id)
-                    .map(|item| CheckboxEvent::Enable(item.id.to_string())),
-            );
+            ui_events.send(UiEvent::LoadMarker(item.id.clone()));
+            checkbox_events.send_batch(pack.iter(&item.id.marker_id).map(|marker| {
+                CheckboxEvent::Enable(item.id.with_marker_id(MarkerId(marker.id.clone())))
+            }));
         } else {
             ui_events.send(UiEvent::UnloadMarker(item.id.clone().into()));
-            checkbox_events.send_batch(
-                markers
-                    .iter(&item.id)
-                    .map(|item| CheckboxEvent::Disable(item.id.to_string())),
-            );
+            checkbox_events.send_batch(pack.iter(&item.id.marker_id).map(|marker| {
+                CheckboxEvent::Disable(item.id.with_marker_id(MarkerId(marker.id.clone())))
+            }));
         }
     }
 }
@@ -249,10 +274,8 @@ fn checkbox_events(
     mut checkbox_events: EventReader<CheckboxEvent>,
 ) {
     for event in checkbox_events.read() {
-        let event_id = event.id().to_string();
-
         if let Some(mut checkbox) = query.iter_mut().find_map(|(checkbox, item)| {
-            if item.id == event_id {
+            if &item.id == event.id() {
                 Some(checkbox)
             } else {
                 None

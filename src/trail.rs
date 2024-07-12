@@ -10,10 +10,7 @@ use bevy::{
 };
 use itertools::Itertools;
 
-use crate::{
-    parser::{MarkerID, Markers},
-    UiEvent,
-};
+use crate::{parser::prelude::*, UiEvent};
 
 pub(crate) struct Plugin;
 
@@ -26,7 +23,7 @@ impl bevy::prelude::Plugin for Plugin {
 }
 
 #[derive(Resource, Deref, DerefMut, Default)]
-struct TrailMeshes(HashMap<MarkerID, Vec<Entity>>);
+struct TrailMeshes(HashMap<FullMarkerId, Vec<Entity>>);
 
 #[derive(Component)]
 struct TrailMesh;
@@ -154,15 +151,15 @@ fn trail_event(
     mut events: EventReader<UiEvent>,
     mut trail_meshes: ResMut<TrailMeshes>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    markers: Res<Markers>,
+    packs: Res<MarkerPacks>,
     asset_server: Res<AssetServer>,
 ) {
     for event in events.read() {
         match event {
-            UiEvent::UnloadMarker(trail_id) => {
-                if let Some(entities) = trail_meshes.remove(trail_id.into()) {
+            UiEvent::UnloadMarker(full_id) => {
+                if let Some(entities) = trail_meshes.remove(full_id) {
                     for entity in entities {
-                        info!("Unloading trail: {:?}", trail_id);
+                        info!("Unloading trail: {:?}", full_id);
                         commands.entity(entity).despawn_recursive();
                     }
                 }
@@ -176,14 +173,19 @@ fn trail_event(
                 }
             }
 
-            UiEvent::LoadMarker(trail_id) => {
-                let Some(trails) = markers.get_trails(trail_id.clone()) else {
-                    warn!("Trail not found for marker_id: {trail_id}");
+            UiEvent::LoadMarker(full_id) => {
+                let Some(pack) = &packs.get(&full_id.pack_id) else {
+                    warn!("Pack ID not found: {}", full_id.pack_id);
+                    return;
+                };
+
+                let Some(trails) = pack.get_trails(&full_id.marker_id) else {
+                    warn!("Trail not found for marker_id: {full_id}");
                     return;
                 };
 
                 for trail in trails {
-                    info!("Loading trail: {}...", trail_id);
+                    info!("Loading trail: {}...", full_id);
 
                     let iter = trail.path.iter().map(|path| Vec3 {
                         x: path.x,
@@ -236,12 +238,12 @@ fn trail_event(
                         ))
                         .id();
 
-                    if let Some(entities) = trail_meshes.get_mut(trail_id) {
+                    if let Some(entities) = trail_meshes.get_mut(full_id) {
                         entities.push(entity);
                     } else {
-                        trail_meshes.insert(trail_id.clone(), vec![entity]);
+                        trail_meshes.insert(full_id.clone(), vec![entity]);
                     }
-                    info!("Trail {} loaded.", trail_id);
+                    info!("Trail {} loaded.", full_id);
                 }
             }
             UiEvent::ToggleUI => {}

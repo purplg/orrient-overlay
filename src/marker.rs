@@ -1,15 +1,11 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashSet};
 use bevy_mod_billboard::{
     plugin::BillboardPlugin, BillboardMeshHandle, BillboardTextBundle, BillboardTextureBundle,
     BillboardTextureHandle,
 };
 
 use crate::{
-    link::MapId,
-    parser::{Behavior, MarkerID, Markers},
-    player::Player,
-    trail::DebugMarkerAssets,
-    UiEvent, WorldEvent,
+    link::MapId, parser::prelude::*, player::Player, trail::DebugMarkerAssets, UiEvent, WorldEvent,
 };
 
 pub(crate) struct Plugin;
@@ -21,7 +17,7 @@ impl bevy::prelude::Plugin for Plugin {
 
         app.add_systems(
             PreUpdate,
-            load_marker.run_if(resource_exists::<Markers>.and_then(on_event::<UiEvent>())),
+            load_marker.run_if(resource_exists::<MarkerPacks>.and_then(on_event::<UiEvent>())),
         );
         app.add_systems(
             Update,
@@ -34,18 +30,18 @@ impl bevy::prelude::Plugin for Plugin {
     }
 }
 
-fn load_marker(mut events: EventReader<UiEvent>, mut markers: ResMut<LoadedMarkers>) {
+fn load_marker(mut events: EventReader<UiEvent>, mut loaded_markers: ResMut<LoadedMarkers>) {
     for event in events.read() {
-        let UiEvent::LoadMarker(marker_id) = event else {
+        let UiEvent::LoadMarker(full_id) = event else {
             return;
         };
 
-        markers.push(marker_id.clone());
+        loaded_markers.insert(full_id.clone());
     }
 }
 
 #[derive(Component)]
-struct Poi(MarkerID);
+struct Poi(FullMarkerId);
 
 #[derive(Component)]
 struct DisappearNearby;
@@ -67,24 +63,29 @@ fn disappear_nearby_system(
 fn load_pois_system(
     mut commands: Commands,
     mut ui_events: EventReader<UiEvent>,
-    data: Res<Markers>,
+    packs: Res<MarkerPacks>,
     assets: Res<DebugMarkerAssets>,
     map_id: Option<Res<MapId>>,
 ) {
     for event in ui_events.read() {
-        let UiEvent::LoadMarker(marker_id) = event else {
+        let UiEvent::LoadMarker(full_id) = event else {
             return;
         };
 
-        info!("Loading POIs for {}", marker_id);
+        info!("Loading POIs from {full_id}");
 
-        let Some(marker) = &data.get(marker_id.clone()) else {
-            warn!("Marker ID not found: {}", marker_id);
+        let Some(pack) = &packs.get(&full_id.pack_id) else {
+            warn!("Pack ID not found: {}", &full_id.pack_id);
             return;
         };
 
-        let Some(pois) = data.get_pois(&marker.id) else {
-            info!("No POIs found for {}", marker_id);
+        let Some(marker) = &pack.get(&full_id.marker_id) else {
+            warn!("Marker {full_id} not found in {}", full_id.pack_id);
+            return;
+        };
+
+        let Some(pois) = pack.get_pois(&full_id.marker_id) else {
+            info!("No POIs found for {}", full_id);
             return;
         };
 
@@ -107,13 +108,13 @@ fn load_pois_system(
             let icon = poi
                 .icon_file
                 .clone()
-                .or(data
-                    .get(marker_id.clone())
+                .or(pack
+                    .get(&full_id.marker_id)
                     .and_then(|marker| marker.icon_file.clone()))
                 .map(|icon_path| icon_path.into_string())
-                .and_then(|path| data.get_icon(&path));
+                .and_then(|path| pack.get_icon(&path));
 
-            let mut builder = commands.spawn(Poi(marker_id.clone()));
+            let mut builder = commands.spawn(Poi(full_id.clone()));
             if let Some(icon) = icon {
                 builder.insert(BillboardTextureBundle {
                     mesh: BillboardMeshHandle(assets.image_quad.clone()),
@@ -122,7 +123,7 @@ fn load_pois_system(
                     ..default()
                 });
             } else {
-                warn!("No icon for {}", marker_id);
+                warn!("No icon for {}", full_id);
                 builder.insert(BillboardTextBundle {
                     text: Text::from_section(
                         "Unknown icon",
@@ -181,4 +182,4 @@ fn unload_pois_system(
 }
 
 #[derive(Resource, Clone, Deref, DerefMut, Debug, Default)]
-pub struct LoadedMarkers(pub Vec<MarkerID>);
+pub struct LoadedMarkers(pub HashSet<FullMarkerId>);

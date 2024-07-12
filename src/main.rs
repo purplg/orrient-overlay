@@ -10,7 +10,7 @@ mod ui;
 
 use bevy::window::{CompositeAlphaMode, WindowResolution};
 use bevy::{prelude::*, window::WindowLevel};
-use parser::MarkerID;
+use parser::prelude::*;
 
 #[derive(Event, Clone, Debug)]
 pub enum WorldEvent {
@@ -27,8 +27,8 @@ pub enum WorldEvent {
 pub enum UiEvent {
     ToggleUI,
     ShowMarkerBrowser,
-    LoadMarker(MarkerID),
-    UnloadMarker(MarkerID),
+    LoadMarker(FullMarkerId),
+    UnloadMarker(FullMarkerId),
     UnloadAllMarkers,
 }
 

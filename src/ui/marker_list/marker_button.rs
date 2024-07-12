@@ -1,11 +1,7 @@
 use bevy::prelude::*;
 use sickle_ui::{prelude::*, ui_builder::UiBuilder};
 
-use crate::{
-    link::MapId,
-    parser::{MarkerID, Markers},
-    UiEvent,
-};
+use crate::{link::MapId, parser::prelude::*, UiEvent};
 
 use super::window::MarkerWindowEvent;
 
@@ -25,7 +21,7 @@ pub trait UiMarkerButtonExt {
     fn marker_button(
         &mut self,
         label: impl Into<String>,
-        marker_id: impl Into<String>,
+        full_id: FullMarkerId,
         map_ids: Vec<u32>,
         has_children: bool,
         column_id: usize,
@@ -37,7 +33,7 @@ struct ColumnRef(usize);
 
 #[derive(Component, Clone, Default, Debug, UiContext)]
 pub struct MarkerButton {
-    marker_id: MarkerID,
+    marker_id: FullMarkerId,
     map_ids: Vec<u32>,
     has_children: bool,
     open: bool,
@@ -120,12 +116,11 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
     fn marker_button(
         &mut self,
         label: impl Into<String>,
-        marker_id: impl Into<String>,
+        full_id: FullMarkerId,
         map_ids: Vec<u32>,
         has_children: bool,
         column_id: usize,
     ) {
-        let marker_id = marker_id.into();
         self.container(MarkerButton::frame(), |parent| {
             parent
                 .row(|parent| {
@@ -140,7 +135,7 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
                 })
                 .insert((
                     MarkerButton {
-                        marker_id: marker_id.into(),
+                        marker_id: full_id,
                         has_children,
                         open: false,
                         map_ids,
@@ -155,11 +150,15 @@ fn button_update(
     mut commands: Commands,
     buttons: Query<(Entity, &MarkerButton)>,
     map_id: Option<Res<MapId>>,
-    markers: Res<Markers>,
+    packs: Res<MarkerPacks>,
 ) {
     for (entity, button) in &buttons {
         if let Some(ref map_id) = map_id {
-            if !markers.contains_map_id(&*button.marker_id, ***map_id) {
+            let Some(pack) = packs.get(&button.marker_id.pack_id) else {
+                panic!();
+            };
+
+            if !pack.contains_map_id(&button.marker_id.marker_id, ***map_id) {
                 commands
                     .entity(entity)
                     .remove_pseudo_state(PseudoState::Open);
@@ -192,7 +191,7 @@ fn button_update(
 fn column_button(
     mut query: Query<(&mut MarkerButton, &ColumnRef, &Interaction), Changed<Interaction>>,
     mut column_events: EventWriter<MarkerWindowEvent>,
-    markers: Res<Markers>,
+    packs: Res<MarkerPacks>,
 ) {
     for (button, column_ref, interaction) in &mut query {
         match interaction {
@@ -201,13 +200,17 @@ fn column_button(
                     continue;
                 }
 
-                if markers.iter(&*button.marker_id).count() == 0 {
+                let Some(pack) = packs.get(&button.marker_id.pack_id) else {
+                    continue;
+                };
+
+                if pack.iter(&button.marker_id.marker_id).count() == 0 {
                     continue;
                 }
 
                 column_events.send(MarkerWindowEvent::SetColumn {
                     column_id: column_ref.0 + 1,
-                    marker_id: button.marker_id.clone().into(),
+                    full_id: button.marker_id.clone(),
                 });
             }
             Interaction::Hovered => {}
@@ -221,11 +224,7 @@ fn button_state(
     mut buttons: Query<(&mut MarkerButton, &ColumnRef)>,
 ) {
     for event in column_events.read() {
-        let MarkerWindowEvent::SetColumn {
-            column_id,
-            marker_id,
-        } = event
-        else {
+        let MarkerWindowEvent::SetColumn { column_id, full_id } = event else {
             continue;
         };
 
@@ -239,7 +238,7 @@ fn button_state(
                 continue;
             }
 
-            button.open = *marker_id == button.marker_id;
+            button.open = *full_id == button.marker_id;
         }
     }
 }

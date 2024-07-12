@@ -12,41 +12,38 @@ use petgraph::{
 
 use super::{
     model::{self, Poi},
-    Error,
+    Error, PackId,
 };
 
 #[derive(Hash, Clone, Default, Debug, PartialEq, Eq)]
-pub struct MarkerID(String);
+pub struct MarkerId(pub String);
 
-impl std::fmt::Display for MarkerID {
+impl std::fmt::Display for MarkerId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
     }
 }
 
-impl Deref for MarkerID {
-    type Target = String;
+#[derive(Hash, Clone, Default, Debug, PartialEq, Eq)]
+pub struct FullMarkerId {
+    pub pack_id: super::PackId,
+    pub marker_id: MarkerId,
+}
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl FullMarkerId {
+    pub fn with_marker_id(&self, marker_id: MarkerId) -> FullMarkerId {
+        FullMarkerId {
+            pack_id: self.pack_id.clone(),
+            marker_id,
+        }
     }
 }
 
-impl<'a> From<&'a str> for MarkerID {
-    fn from(value: &'a str) -> Self {
-        MarkerID(value.to_owned())
-    }
-}
-
-impl<'a> From<&'a String> for MarkerID {
-    fn from(value: &'a String) -> Self {
-        MarkerID(value.to_owned())
-    }
-}
-
-impl From<String> for MarkerID {
-    fn from(value: String) -> Self {
-        MarkerID(value)
+impl std::fmt::Display for FullMarkerId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.pack_id.fmt(f);
+        ":".fmt(f);
+        self.marker_id.fmt(f)
     }
 }
 
@@ -176,7 +173,7 @@ pub struct MarkerPack {
     roots: HashSet<NodeIndex>,
 
     /// Lookup an index by it's string ID
-    indexes: HashMap<MarkerID, NodeIndex>,
+    indexes: HashMap<MarkerId, NodeIndex>,
 
     /// Lookup a marker by its index
     markers: HashMap<NodeIndex, Marker>,
@@ -185,10 +182,10 @@ pub struct MarkerPack {
     graph: DiGraph<NodeIndex, ()>,
 
     /// POIs associated with markers
-    pois: HashMap<MarkerID, Vec<Poi>>,
+    pois: HashMap<MarkerId, Vec<Poi>>,
 
     /// Trails associated with markers
-    trails: HashMap<MarkerID, Vec<Trail>>,
+    trails: HashMap<MarkerId, Vec<Trail>>,
 
     icons: HashMap<String, Handle<Image>>,
 }
@@ -198,11 +195,11 @@ impl MarkerPack {
         Self::default()
     }
 
-    fn index_of(&self, id: impl Into<MarkerID>) -> Option<NodeIndex> {
-        self.indexes.get(&id.into()).cloned()
+    fn index_of(&self, id: &MarkerId) -> Option<NodeIndex> {
+        self.indexes.get(id).cloned()
     }
 
-    pub fn contains_map_id(&self, id: impl Into<MarkerID>, map_id: u32) -> bool {
+    pub fn contains_map_id(&self, id: &MarkerId, map_id: u32) -> bool {
         for marker in self.iter_recursive(id) {
             if marker.map_ids.contains(&map_id) {
                 return true;
@@ -211,46 +208,42 @@ impl MarkerPack {
         false
     }
 
-    pub fn get_pois(&self, id: impl Into<MarkerID>) -> Option<&Vec<Poi>> {
-        self.pois.get(&id.into())
+    pub fn get_pois(&self, id: &MarkerId) -> Option<&Vec<Poi>> {
+        self.pois.get(id)
     }
 
     pub fn get_icon(&self, path: &str) -> Option<Handle<Image>> {
         self.icons.get(path).cloned()
     }
 
-    pub fn get_trails(&self, id: impl Into<MarkerID>) -> Option<&Vec<Trail>> {
-        self.trails.get(&id.into())
+    pub fn get_trails(&self, id: &MarkerId) -> Option<&Vec<Trail>> {
+        self.trails.get(id)
     }
 
-    pub fn get(&self, id: impl Into<MarkerID>) -> Option<&Marker> {
-        let node_id = self.indexes.get(&id.into())?;
+    pub fn get(&self, id: &MarkerId) -> Option<&Marker> {
+        let node_id = self.indexes.get(id)?;
         self.markers.get(node_id)
     }
 
-    pub fn get_mut(&mut self, id: impl Into<MarkerID>) -> Option<&mut Marker> {
-        let node_id = self.indexes.get(&id.into()).unwrap();
+    pub fn get_mut(&mut self, id: &MarkerId) -> Option<&mut Marker> {
+        let node_id = self.indexes.get(id).unwrap();
         self.markers.get_mut(node_id)
     }
 
-    pub fn roots(&self) -> Vec<&Marker> {
+    pub fn roots(&self) -> impl Iterator<Item = &Marker> {
         self.roots
             .iter()
             .filter_map(|index| self.markers.get(index))
-            .collect()
     }
 
-    pub fn iter<'a>(&'a self, start: impl Into<MarkerID>) -> impl Iterator<Item = &'a Marker> {
+    pub fn iter<'a>(&'a self, start: &MarkerId) -> impl Iterator<Item = &'a Marker> {
         let start_id = self.index_of(start).unwrap();
         self.graph
             .neighbors_directed(start_id, Direction::Outgoing)
             .filter_map(|id| self.markers.get(&id))
     }
 
-    pub fn iter_recursive<'a>(
-        &'a self,
-        start: impl Into<MarkerID>,
-    ) -> impl Iterator<Item = &'a Marker> {
+    pub fn iter_recursive<'a>(&'a self, start: &MarkerId) -> impl Iterator<Item = &'a Marker> {
         let start_id = self.index_of(start).unwrap();
         MarkerPackIter {
             tree: self,
@@ -275,6 +268,8 @@ impl<'a, VM: VisitMap<NodeIndex>> Iterator for MarkerPackIter<'a, VM> {
 }
 
 pub struct MarkerPackBuilder {
+    id: PackId,
+
     tree: MarkerPack,
 
     /// The number of indices in the graph so to generate unique
@@ -294,8 +289,9 @@ impl Deref for MarkerPackBuilder {
 }
 
 impl MarkerPackBuilder {
-    pub fn new() -> Self {
+    pub fn new(pack_id: PackId) -> Self {
         Self {
+            id: pack_id,
             tree: Default::default(),
             count: Default::default(),
             parent_id: Default::default(),
@@ -303,7 +299,7 @@ impl MarkerPackBuilder {
     }
 
     pub fn add_marker(&mut self, mut marker: Marker) -> &mut Self {
-        let node_id = self.get_or_create_index(&marker.id);
+        let node_id = self.get_or_create_index(&MarkerId(marker.id.clone()));
         self.tree.graph.add_node(node_id);
 
         if let Some(parent_id) = self.parent_id.front() {
@@ -316,12 +312,13 @@ impl MarkerPackBuilder {
 
         self.parent_id.push_front(node_id);
         self.tree.markers.insert(node_id, marker.clone());
-        self.tree.indexes.insert(marker.id.into(), node_id);
+        self.tree.indexes.insert(MarkerId(marker.id), node_id);
         self
     }
 
     pub fn add_poi(&mut self, poi: Poi) {
-        let id: MarkerID = poi.id.clone().into();
+        let id: MarkerId = MarkerId(poi.id.clone());
+
         if let Some(pois) = self.tree.pois.get_mut(&id) {
             pois.push(poi);
         } else {
@@ -329,8 +326,8 @@ impl MarkerPackBuilder {
         }
     }
 
-    pub fn add_trail(&mut self, id: impl Into<MarkerID>, trail: Trail) {
-        let id: MarkerID = id.into();
+    pub fn add_trail(&mut self, id: impl Into<MarkerId>, trail: Trail) {
+        let id: MarkerId = id.into();
         // let content = match trail::from_file(self.data_dir.join(&trail_tag.trail_file)) {
         //     Ok(content) => content,
         //     Err(err) => {
@@ -360,14 +357,14 @@ impl MarkerPackBuilder {
         self.tree.icons.insert(filename, handle);
     }
 
-    pub fn add_map_id(&mut self, id: impl Into<MarkerID>, map_id: u32) {
-        if let Some(marker) = self.tree.get_mut(id) {
+    pub fn add_map_id(&mut self, id: impl Into<String>, map_id: u32) {
+        if let Some(marker) = self.tree.get_mut(&MarkerId(id.into())) {
             marker.map_ids.push(map_id);
         }
     }
 
-    fn get_or_create_index(&mut self, marker_id: impl Into<MarkerID>) -> NodeIndex {
-        self.tree.index_of(marker_id).unwrap_or_else(|| {
+    fn get_or_create_index(&mut self, marker_id: &MarkerId) -> NodeIndex {
+        self.tree.index_of(&marker_id).unwrap_or_else(|| {
             NodeIndex::new({
                 let i = self.count;
                 self.count += 1;

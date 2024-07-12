@@ -1,13 +1,21 @@
 mod model;
 mod pack;
-pub mod trail;
+mod trail;
 
-pub use pack::{Behavior, MarkerID};
+pub mod prelude {
+    pub use super::pack::Behavior;
+    pub use super::pack::FullMarkerId;
+    pub use super::pack::MarkerId;
+    pub use super::MarkerPacks;
+}
+
+use bevy::utils::HashMap;
+use bevy_inspector_egui::egui::TextBuffer;
 
 use bevy::prelude::*;
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::texture::{CompressedImageFormats, ImageSampler, ImageType};
-use pack::{Marker, MarkerPack, MarkerPackBuilder};
+use pack::{FullMarkerId, Marker, MarkerId, MarkerPack, MarkerPackBuilder};
 
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
@@ -15,7 +23,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use bevy::log::{debug, warn};
-use bevy::math::Vec3;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
@@ -59,7 +66,7 @@ fn load_system(
 ) {
     match load(config_dir.as_path(), &mut images) {
         Ok(pack) => {
-            commands.insert_resource(Markers(pack));
+            commands.insert_resource(MarkerPacks(pack));
         }
         Err(err) => {
             warn!("Error loading marker packs {err:?}");
@@ -67,32 +74,68 @@ fn load_system(
     }
 }
 
-fn load(path: &Path, mut images: &mut Assets<Image>) -> Result<MarkerPack, Error> {
-    let mut builder = MarkerPackBuilder::new();
+fn load(path: &Path, mut images: &mut Assets<Image>) -> Result<HashMap<PackId, MarkerPack>, Error> {
+    let mut packs: HashMap<PackId, MarkerPack> = Default::default();
 
     let iter = std::fs::read_dir(path).unwrap();
     for path in iter
         .filter_map(|file| file.ok().map(|file| file.path()))
         .filter(|file| file.is_file())
     {
-        if let Some(extension) = path.extension().and_then(|osstr| osstr.to_str()) {
-            match extension {
-                "taco" | "zip" => {
-                    if let Err(err) = read_marker_pack(&path, &mut builder, &mut images) {
-                        warn!("Error when reading marker pack {err:?}");
-                    }
+        let Some(filename) = path
+            .file_name()
+            .map(|filename| filename.to_string_lossy().to_string())
+        else {
+            continue;
+        };
+
+        let Some(extension) = path.extension().map(|ext| ext.to_string_lossy()) else {
+            continue;
+        };
+
+        match extension.as_str() {
+            "taco" | "zip" => match read_marker_pack(&path, &mut images) {
+                Ok(pack) => {
+                    packs.insert(PackId(filename), pack);
                 }
-                _ => {
-                    warn!("Unknown file extension: {:?}", path);
+                Err(err) => {
+                    warn!("Error when reading marker pack {err:?}");
                 }
+            },
+            _ => {
+                warn!("Unknown file extension: {:?}", path);
             }
         }
     }
-    Ok(builder.build())
+    Ok(packs)
+}
+
+#[derive(Hash, Clone, Default, Debug, PartialEq, Eq)]
+pub struct PackId(pub String);
+
+impl PackId {
+    pub fn with_marker_id(&self, marker_id: MarkerId) -> FullMarkerId {
+        FullMarkerId {
+            pack_id: self.clone(),
+            marker_id,
+        }
+    }
+}
+
+impl From<PackId> for String {
+    fn from(value: PackId) -> Self {
+        value.0
+    }
+}
+
+impl std::fmt::Display for PackId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
 }
 
 #[derive(Resource, Clone, Deref, Debug)]
-pub struct Markers(MarkerPack);
+pub struct MarkerPacks(HashMap<PackId, MarkerPack>);
 
 #[derive(Debug)]
 enum Tag {
@@ -130,11 +173,11 @@ impl Tag {
             }
             Tag::POIs => {}
             Tag::POI(poi) => {
-                builder.add_map_id(poi.id.clone(), poi.map_id);
+                builder.add_map_id(&poi.id, poi.map_id);
                 builder.add_poi(poi);
             }
             Tag::Trail(trail) => {
-                let id: MarkerID = trail.id.into();
+                // let id: MarkerId = trail.id.into();
                 // if let Some(trail) = self.add_trail(trail) {
                 //     self.add_map_id(id, trail.map_id);
                 // }
@@ -146,11 +189,11 @@ impl Tag {
     }
 }
 
-fn read_marker_pack(
-    path: &Path,
-    builder: &mut MarkerPackBuilder,
-    mut images: &mut Assets<Image>,
-) -> Result<(), Error> {
+fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<MarkerPack, Error> {
+    let name = path.to_string_lossy().to_string();
+
+    let mut builder = MarkerPackBuilder::new(PackId(name));
+
     let pack = File::open(path).map_err(Error::IoErr)?;
     let mut zip = zip::ZipArchive::new(pack).map_err(Error::ZipErr)?;
     for i in 0..zip.len() {
@@ -161,7 +204,7 @@ fn read_marker_pack(
         };
         match ext {
             "xml" => {
-                let _ = parse_xml(builder, &filename, BufReader::new(file));
+                let _ = parse_xml(&mut builder, &filename, BufReader::new(file));
             }
             "png" => {
                 let mut bytes = Vec::new();
@@ -180,7 +223,7 @@ fn read_marker_pack(
             _ => (),
         }
     }
-    Ok(())
+    Ok(builder.build())
 }
 
 fn parse_xml<R: Read + BufRead>(
