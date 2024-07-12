@@ -1,7 +1,11 @@
 use bevy::prelude::*;
 use sickle_ui::{prelude::*, ui_builder::UiBuilder};
 
-use crate::{link::MapId, marker::MarkerTree, UiEvent};
+use crate::{
+    link::MapId,
+    parser::{MarkerID, Markers},
+    UiEvent,
+};
 
 use super::window::MarkerWindowEvent;
 
@@ -31,10 +35,9 @@ pub trait UiMarkerButtonExt {
 #[derive(Component)]
 struct ColumnRef(usize);
 
-#[derive(Component, Clone, Debug, Default, Reflect, UiContext)]
-#[reflect(Component)]
+#[derive(Component, Clone, Default, Debug, UiContext)]
 pub struct MarkerButton {
-    marker_id: String,
+    marker_id: MarkerID,
     map_ids: Vec<u32>,
     has_children: bool,
     open: bool,
@@ -137,7 +140,7 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
                 })
                 .insert((
                     MarkerButton {
-                        marker_id: marker_id.clone(),
+                        marker_id: marker_id.into(),
                         has_children,
                         open: false,
                         map_ids,
@@ -152,11 +155,11 @@ fn button_update(
     mut commands: Commands,
     buttons: Query<(Entity, &MarkerButton)>,
     map_id: Option<Res<MapId>>,
-    markers: Res<MarkerTree>,
+    markers: Res<Markers>,
 ) {
     for (entity, button) in &buttons {
         if let Some(ref map_id) = map_id {
-            if !markers.contains_map_id(&button.marker_id, ***map_id) {
+            if !markers.contains_map_id(&*button.marker_id, ***map_id) {
                 commands
                     .entity(entity)
                     .remove_pseudo_state(PseudoState::Open);
@@ -189,7 +192,7 @@ fn button_update(
 fn column_button(
     mut query: Query<(&mut MarkerButton, &ColumnRef, &Interaction), Changed<Interaction>>,
     mut column_events: EventWriter<MarkerWindowEvent>,
-    markers: Res<MarkerTree>,
+    markers: Res<Markers>,
 ) {
     for (button, column_ref, interaction) in &mut query {
         match interaction {
@@ -198,13 +201,13 @@ fn column_button(
                     continue;
                 }
 
-                if markers.iter(&button.marker_id).count() == 0 {
+                if markers.iter(&*button.marker_id).count() == 0 {
                     continue;
                 }
 
                 column_events.send(MarkerWindowEvent::SetColumn {
-                    column_id: column_ref.0,
-                    marker_id: Some(button.marker_id.clone()),
+                    column_id: column_ref.0 + 1,
+                    marker_id: button.marker_id.clone().into(),
                 });
             }
             Interaction::Hovered => {}
@@ -220,7 +223,7 @@ fn button_state(
     for event in column_events.read() {
         let MarkerWindowEvent::SetColumn {
             column_id,
-            marker_id: Some(marker_id),
+            marker_id,
         } = event
         else {
             continue;

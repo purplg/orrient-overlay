@@ -1,10 +1,15 @@
 use bevy::prelude::*;
 use bevy_mod_billboard::{
-    plugin::BillboardPlugin, BillboardMeshHandle, BillboardTextBundle, BillboardTextureBundle,
-    BillboardTextureHandle,
+    plugin::BillboardPlugin, BillboardMeshHandle, BillboardTextureBundle, BillboardTextureHandle,
 };
 
-use crate::{link::MapId, player::Player, trail::DebugMarkerAssets, UiEvent, WorldEvent};
+use crate::{
+    link::MapId,
+    parser::{Behavior, MarkerID, Markers},
+    player::Player,
+    trail::DebugMarkerAssets,
+    UiEvent, WorldEvent,
+};
 
 pub(crate) struct Plugin;
 
@@ -13,10 +18,9 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_plugins(BillboardPlugin);
         app.init_resource::<LoadedMarkers>();
 
-        app.add_systems(Startup, setup);
         app.add_systems(
             PreUpdate,
-            load_marker.run_if(resource_exists::<MarkerTree>.and_then(on_event::<UiEvent>())),
+            load_marker.run_if(resource_exists::<Markers>.and_then(on_event::<UiEvent>())),
         );
         app.add_systems(
             Update,
@@ -39,21 +43,8 @@ fn load_marker(mut events: EventReader<UiEvent>, mut markers: ResMut<LoadedMarke
     }
 }
 
-fn setup(mut commands: Commands) {
-    let markers =
-        match crate::parser::read(&dirs::config_dir().unwrap().join("orrient").join("markers")) {
-            Ok(markers) => markers,
-            Err(err) => {
-                println!("Error when loading markers: {:?}", err);
-                return;
-            }
-        };
-
-    commands.insert_resource(MarkerTree(markers));
-}
-
 #[derive(Component)]
-struct Poi(String);
+struct Poi(MarkerID);
 
 #[derive(Component)]
 struct DisappearNearby;
@@ -75,7 +66,7 @@ fn disappear_nearby_system(
 fn load_pois_system(
     mut commands: Commands,
     mut ui_events: EventReader<UiEvent>,
-    data: Res<MarkerTree>,
+    data: Res<Markers>,
     assets: Res<DebugMarkerAssets>,
     map_id: Option<Res<MapId>>,
     asset_server: Res<AssetServer>,
@@ -87,7 +78,7 @@ fn load_pois_system(
 
         info!("Loading POIs for {}", marker_id);
 
-        let Some(marker) = &data.get(marker_id) else {
+        let Some(marker) = &data.get(marker_id.clone()) else {
             warn!("Marker ID not found: {}", marker_id);
             return;
         };
@@ -117,20 +108,11 @@ fn load_pois_system(
                 .icon_file
                 .clone()
                 .or(data
-                    .get(marker_id)
+                    .get(marker_id.clone())
                     .and_then(|marker| marker.icon_file.clone()))
-                .and_then(|icon_path| {
-                    dirs::config_dir()
-                        .unwrap()
-                        .join("orrient")
-                        .join("markers")
-                        .join(icon_path)
-                        .into_os_string()
-                        .into_string()
-                        .ok()
-                });
+                .map(|icon_path| icon_path.into_string());
 
-            let mut builder = commands.spawn(Poi(marker_id.to_string()));
+            let mut builder = commands.spawn(Poi(marker_id.clone()));
             if let Some(icon) = icon {
                 builder.insert(BillboardTextureBundle {
                     mesh: BillboardMeshHandle(assets.image_quad.clone()),
@@ -144,9 +126,9 @@ fn load_pois_system(
 
             debug!("Spawned POI at {}", pos);
 
-            if let Some(crate::parser::Behavior::ReappearDaily) = marker.behavior {
+            if let Some(Behavior::ReappearDaily) = marker.behavior {
                 builder.insert(DisappearNearby);
-            } else if let Some(crate::parser::Behavior::DisappearOnUse) = marker.behavior {
+            } else if let Some(Behavior::DisappearOnUse) = marker.behavior {
                 builder.insert(DisappearNearby);
             }
             count += 1;
@@ -187,7 +169,4 @@ fn unload_pois_system(
 }
 
 #[derive(Resource, Clone, Deref, DerefMut, Debug, Default)]
-pub struct LoadedMarkers(pub Vec<String>);
-
-#[derive(Resource, Clone, Deref, Debug)]
-pub struct MarkerTree(pub crate::parser::MarkerTree);
+pub struct LoadedMarkers(pub Vec<MarkerID>);

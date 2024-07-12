@@ -4,17 +4,16 @@ use bevy::{
         mesh::{Indices, PrimitiveTopology},
         render_asset::RenderAssetUsages,
         render_resource::{Extent3d, TextureDimension, TextureFormat},
-        texture::{
-            ImageAddressMode, ImageLoader, ImageLoaderSettings, ImageSampler,
-            ImageSamplerDescriptor,
-        },
+        texture::{ImageAddressMode, ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor},
     },
     utils::HashMap,
 };
 use itertools::Itertools;
-use itertools::TupleWindows;
 
-use crate::{marker::MarkerTree, UiEvent};
+use crate::{
+    parser::{MarkerID, Markers},
+    UiEvent,
+};
 
 pub(crate) struct Plugin;
 
@@ -27,7 +26,7 @@ impl bevy::prelude::Plugin for Plugin {
 }
 
 #[derive(Resource, Deref, DerefMut, Default)]
-struct TrailMeshes(HashMap<String, Vec<Entity>>);
+struct TrailMeshes(HashMap<MarkerID, Vec<Entity>>);
 
 #[derive(Component)]
 struct TrailMesh;
@@ -155,13 +154,13 @@ fn trail_event(
     mut events: EventReader<UiEvent>,
     mut trail_meshes: ResMut<TrailMeshes>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    markers: Res<MarkerTree>,
+    markers: Res<Markers>,
     asset_server: Res<AssetServer>,
 ) {
     for event in events.read() {
         match event {
             UiEvent::UnloadMarker(trail_id) => {
-                if let Some(entities) = trail_meshes.remove(trail_id) {
+                if let Some(entities) = trail_meshes.remove(trail_id.into()) {
                     for entity in entities {
                         info!("Unloading trail: {:?}", trail_id);
                         commands.entity(entity).despawn_recursive();
@@ -178,7 +177,7 @@ fn trail_event(
             }
 
             UiEvent::LoadMarker(trail_id) => {
-                let Some(trails) = markers.0.get_trails(trail_id) else {
+                let Some(trails) = markers.get_trails(trail_id.clone()) else {
                     warn!("Trail not found for marker_id: {trail_id}");
                     return;
                 };
@@ -237,10 +236,10 @@ fn trail_event(
                         ))
                         .id();
 
-                    if let Some(entities) = trail_meshes.get_mut(&trail_id.to_string()) {
+                    if let Some(entities) = trail_meshes.get_mut(trail_id) {
                         entities.push(entity);
                     } else {
-                        trail_meshes.insert(trail_id.to_string(), vec![entity]);
+                        trail_meshes.insert(trail_id.clone(), vec![entity]);
                     }
                     info!("Trail {} loaded.", trail_id);
                 }

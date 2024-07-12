@@ -1,11 +1,16 @@
-pub mod model;
+mod model;
 pub mod trail;
+
+use bevy::prelude::*;
+use bevy::render::render_asset::RenderAssetUsages;
+use bevy::render::texture::{CompressedImageFormats, ImageSampler, ImageType};
 
 use std::collections::VecDeque;
 use std::convert::identity;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 use std::ops::Deref;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::{collections::HashMap, path::Path};
 
@@ -36,24 +41,51 @@ pub enum Error {
     Utf8Error(std::string::FromUtf8Error),
 }
 
-pub fn read(directory: &Path) -> Result<MarkerTree, Error> {
-    let mut tree = MarkerTreeBuilder::new(directory);
+pub(crate) struct Plugin;
 
-    let iter = std::fs::read_dir(directory).unwrap();
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(ConfigDir(
+            dirs::config_dir()
+                .unwrap()
+                .join("orrient")
+                .join("markers")
+                .to_path_buf(),
+        ));
+
+        app.add_systems(Startup, load);
+    }
+}
+
+#[derive(Resource, Deref)]
+struct ConfigDir(PathBuf);
+
+fn load(mut commands: Commands, config_dir: Res<ConfigDir>, mut images: ResMut<Assets<Image>>) {
+    let mut builder = MarkerTreeBuilder::new();
+
+    let iter = std::fs::read_dir(config_dir.0.as_path()).unwrap();
     for path in iter
         .filter_map(|file| file.ok().map(|file| file.path()))
         .filter(|file| file.is_file())
-        .filter(|file| {
-            file.extension()
-                .map(|ext| ext == "taco" || ext == "zip")
-                .unwrap_or_default()
-        })
     {
-        read_pack(&mut tree, &path).unwrap();
+        if let Some(extension) = path.extension().and_then(|osstr| osstr.to_str()) {
+            match extension {
+                "taco" | "zip" => {
+                    if let Err(err) = read_marker_pack(&path, &mut builder, &mut images) {
+                        warn!("Error when reading marker pack {err:?}");
+                    }
+                }
+                _ => {
+                    warn!("Unknown file extension: {:?}", path);
+                }
+            }
+        }
     }
-
-    Ok(tree.build())
+    commands.insert_resource(Markers(builder.build()));
 }
+
+#[derive(Resource, Clone, Deref, Debug)]
+pub struct Markers(MarkerTree);
 
 #[derive(Debug)]
 enum Tag {
@@ -82,18 +114,36 @@ impl Tag {
     }
 }
 
-fn read_pack(tree: &mut MarkerTreeBuilder, path: &Path) -> Result<(), Error> {
+fn read_marker_pack(
+    path: &Path,
+    builder: &mut MarkerTreeBuilder,
+    mut image_assets: &mut Assets<Image>,
+) -> Result<(), Error> {
     let pack = File::open(path).map_err(Error::IoErr)?;
     let mut zip = zip::ZipArchive::new(pack).map_err(Error::ZipErr)?;
     for i in 0..zip.len() {
-        let file = zip.by_index(i).map_err(Error::ZipErr)?;
+        let mut file = zip.by_index(i).map_err(Error::ZipErr)?;
         let filename = file.name().to_string();
         let Some(ext) = filename.rsplit(".").next() else {
             continue;
         };
         match ext {
             "xml" => {
-                let _ = parse_xml(tree, &filename, BufReader::new(file));
+                let _ = parse_xml(builder, &filename, BufReader::new(file));
+            }
+            "png" => {
+                let mut bytes = Vec::new();
+                file.read_to_end(&mut bytes).map_err(Error::IoErr)?;
+                let image: Image = Image::from_buffer(
+                    &bytes,
+                    ImageType::Extension(ext),
+                    CompressedImageFormats::NONE,
+                    false,
+                    ImageSampler::Default,
+                    RenderAssetUsages::all(),
+                )
+                .unwrap();
+                builder.add_image(filename, image, &mut image_assets);
             }
             _ => (),
         }
@@ -172,8 +222,14 @@ impl<'a, VM: VisitMap<NodeIndex>> Iterator for MarkerTreeIter<'a, VM> {
     }
 }
 
-#[derive(Hash, Clone, Debug, PartialEq, Eq)]
+#[derive(Hash, Clone, Default, Debug, PartialEq, Eq)]
 pub struct MarkerID(String);
+
+impl std::fmt::Display for MarkerID {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 impl Deref for MarkerID {
     type Target = String;
@@ -201,10 +257,10 @@ impl From<String> for MarkerID {
     }
 }
 
-struct MarkerTreeBuilder<'a> {
-    data_dir: &'a Path,
-
+struct MarkerTreeBuilder {
     tree: MarkerTree,
+
+    images: HashMap<String, Handle<Image>>,
 
     /// The number of indices in the graph so to generate unique
     /// indices.
@@ -214,7 +270,7 @@ struct MarkerTreeBuilder<'a> {
     parent_id: VecDeque<NodeIndex>,
 }
 
-impl Deref for MarkerTreeBuilder<'_> {
+impl Deref for MarkerTreeBuilder {
     type Target = MarkerTree;
 
     fn deref(&self) -> &Self::Target {
@@ -222,13 +278,13 @@ impl Deref for MarkerTreeBuilder<'_> {
     }
 }
 
-impl<'a> MarkerTreeBuilder<'a> {
-    fn new(data_dir: &'a Path) -> Self {
+impl MarkerTreeBuilder {
+    fn new() -> Self {
         Self {
-            data_dir,
             tree: Default::default(),
             count: Default::default(),
             parent_id: Default::default(),
+            images: Default::default(),
         }
     }
 
@@ -259,31 +315,35 @@ impl<'a> MarkerTreeBuilder<'a> {
         }
     }
 
-    fn add_trail(&mut self, trail_tag: model::Trail) -> Option<Trail> {
-        let id: MarkerID = trail_tag.id.into();
-        let content = match trail::from_file(self.data_dir.join(&trail_tag.trail_file)) {
-            Ok(content) => content,
-            Err(err) => {
-                warn!(
-                    "Error while parsing trail at {}: {:?}",
-                    trail_tag.trail_file, err
-                );
-                return None;
-            }
-        };
+    fn add_trail(&mut self, id: impl Into<MarkerID>, trail: Trail) {
+        let id: MarkerID = id.into();
+        // let content = match trail::from_file(self.data_dir.join(&trail_tag.trail_file)) {
+        //     Ok(content) => content,
+        //     Err(err) => {
+        //         warn!(
+        //             "Error while parsing trail at {}: {:?}",
+        //             trail_tag.trail_file, err
+        //         );
+        //         return None;
+        //     }
+        // };
 
-        let trail = Trail {
-            map_id: content.map_id,
-            path: content.path,
-            texture_file: trail_tag.texture_file,
-        };
+        // let trail = Trail {
+        //     map_id: content.map_id,
+        //     path: content.path,
+        //     texture_file: trail_tag.texture_file,
+        // };
 
         if let Some(trails) = self.tree.trails.get_mut(&id) {
             trails.push(trail.clone());
         } else {
             self.tree.trails.insert(id, vec![trail.clone()]);
         }
-        Some(trail)
+    }
+
+    fn add_image(&mut self, filename: String, image: Image, image_assets: &mut Assets<Image>) {
+        let handle = image_assets.add(image);
+        self.images.insert(filename, handle);
     }
 
     fn add_map_id(&mut self, id: impl Into<MarkerID>, map_id: u32) {
@@ -320,10 +380,10 @@ impl<'a> MarkerTreeBuilder<'a> {
                 self.add_poi(poi);
             }
             Tag::Trail(trail) => {
-                let id: MarkerID = trail.id.clone().into();
-                if let Some(trail) = self.add_trail(trail) {
-                    self.add_map_id(id, trail.map_id);
-                }
+                let id: MarkerID = trail.id.into();
+                // if let Some(trail) = self.add_trail(trail) {
+                //     self.add_map_id(id, trail.map_id);
+                // }
             }
             Tag::Route => {}
             Tag::UnknownField(_) => {}
@@ -389,7 +449,7 @@ impl MarkerTree {
     }
 
     pub fn get(&self, id: impl Into<MarkerID>) -> Option<&Marker> {
-        let node_id = self.indexes.get(&id.into()).unwrap();
+        let node_id = self.indexes.get(&id.into())?;
         self.markers.get(node_id)
     }
 
@@ -559,7 +619,7 @@ mod tests {
     //  / \   \         / | \
     // C   D   F       J  K  L
     fn fake_markers() -> MarkerTree {
-        let mut markers = MarkerTreeBuilder::new(Path::new(""));
+        let mut markers = MarkerTreeBuilder::new();
         markers.add_marker(Marker::category("A", "A Name"));
         markers.add_marker(Marker::category("B", "B Name"));
         markers.add_marker(Marker::category("C", "C Name"));
@@ -587,7 +647,11 @@ mod tests {
     fn test_real_data() {
         env_logger::init();
 
-        read(&dirs::config_dir().unwrap().join("orrient").join("markers")).unwrap();
+        load(
+            &dirs::config_dir().unwrap().join("orrient").join("markers"),
+            None,
+        )
+        .unwrap();
     }
 
     #[test]

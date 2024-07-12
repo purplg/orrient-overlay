@@ -5,7 +5,11 @@ use sickle_ui::{
     widgets::prelude::*,
 };
 
-use crate::{marker::MarkerTree, ui::OrrientMenuItem, UiEvent};
+use crate::{
+    parser::{MarkerID, Markers},
+    ui::OrrientMenuItem,
+    UiEvent,
+};
 
 use super::{marker_button::UiMarkerButtonExt, tooltip::UiToolTipExt as _};
 
@@ -24,16 +28,17 @@ impl bevy::prelude::Plugin for Plugin {
             Update,
             (remove_window, setup_window)
                 .chain()
-                .run_if(resource_exists_and_changed::<MarkerTree>),
+                .run_if(resource_exists_and_changed::<Markers>),
         );
     }
 }
 
 #[derive(Event)]
 pub(super) enum MarkerWindowEvent {
+    SetRootColumn,
     SetColumn {
         column_id: usize,
-        marker_id: Option<String>,
+        marker_id: MarkerID,
     },
     ToggleMarkers,
 }
@@ -120,10 +125,7 @@ fn setup_window(
 ) {
     commands.ui_builder(query.single()).insert(MarkerView);
 
-    events.send(MarkerWindowEvent::SetColumn {
-        column_id: 0,
-        marker_id: None,
-    });
+    events.send(MarkerWindowEvent::SetRootColumn);
 }
 
 fn remove_window(mut commands: Commands, query: Query<Entity, With<MarkerList>>) {
@@ -133,17 +135,27 @@ fn remove_window(mut commands: Commands, query: Query<Entity, With<MarkerList>>)
 fn set_column(
     mut commands: Commands,
     mut events: EventReader<MarkerWindowEvent>,
-    markers: Res<MarkerTree>,
+    markers: Res<Markers>,
     columns: Query<(Entity, &Column)>,
     marker_view: Query<Entity, With<MarkerView>>,
 ) {
     for event in events.read() {
-        let MarkerWindowEvent::SetColumn {
-            column_id,
-            marker_id,
-        } = event
-        else {
-            continue;
+        let (column_id, label, submarkers) = match event {
+            MarkerWindowEvent::SetRootColumn => (0, "Top".to_string(), markers.roots()),
+            MarkerWindowEvent::SetColumn {
+                column_id,
+                marker_id,
+            } => {
+                let Some(submarker) = markers.get(&**marker_id) else {
+                    warn!("Marker {marker_id} not found");
+                    continue;
+                };
+                let submarkers = markers.iter(&**marker_id).collect();
+                (*column_id, submarker.label.clone(), submarkers)
+            }
+            MarkerWindowEvent::ToggleMarkers => {
+                continue;
+            }
         };
 
         let Ok(marker_view) = marker_view.get_single() else {
@@ -158,29 +170,17 @@ fn set_column(
         // Remove an existing columns with this column ID or higher.
         for (entity, _column) in columns
             .iter()
-            .filter(|(_entity, column)| column.0 > *column_id)
+            .filter(|(_entity, column)| column.0 > column_id)
         {
             commands.entity(entity).despawn_recursive();
         }
-
-        let marker = marker_id
-            .as_ref()
-            .and_then(|marker_id| markers.get(marker_id));
-
-        let label = marker
-            .map(|marker| marker.label.clone())
-            .unwrap_or("Top".to_string());
-
-        let iter = marker
-            .map(|marker| markers.iter(&marker.id).collect())
-            .unwrap_or(markers.roots());
 
         commands
             .ui_builder(marker_view)
             .scroll_view(None, |scroll_view| {
                 scroll_view.column(|parent| {
                     parent.label(LabelConfig::from(label));
-                    for item in iter {
+                    for item in &submarkers {
                         parent.marker_button(
                             &item.label,
                             &item.id,
@@ -223,18 +223,18 @@ fn checkbox(
     query: Query<(&Checkbox, &MarkerItem), Changed<Checkbox>>,
     mut checkbox_events: EventWriter<CheckboxEvent>,
     mut ui_events: EventWriter<UiEvent>,
-    markers: Res<MarkerTree>,
+    markers: Res<Markers>,
 ) {
     for (checkbox, item) in query.iter() {
         if checkbox.checked {
-            ui_events.send(UiEvent::LoadMarker(item.id.clone()));
+            ui_events.send(UiEvent::LoadMarker(item.id.clone().into()));
             checkbox_events.send_batch(
                 markers
                     .iter(&item.id)
                     .map(|item| CheckboxEvent::Enable(item.id.to_string())),
             );
         } else {
-            ui_events.send(UiEvent::UnloadMarker(item.id.clone()));
+            ui_events.send(UiEvent::UnloadMarker(item.id.clone().into()));
             checkbox_events.send_batch(
                 markers
                     .iter(&item.id)

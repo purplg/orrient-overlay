@@ -3,13 +3,14 @@ mod console;
 mod input;
 mod link;
 mod marker;
+mod parser;
 mod player;
 mod trail;
 mod ui;
-mod parser;
 
 use bevy::window::{CompositeAlphaMode, WindowResolution};
 use bevy::{prelude::*, window::WindowLevel};
+use parser::MarkerID;
 
 #[derive(Event, Clone, Debug)]
 pub enum WorldEvent {
@@ -26,8 +27,8 @@ pub enum WorldEvent {
 pub enum UiEvent {
     ToggleUI,
     ShowMarkerBrowser,
-    LoadMarker(String),
-    UnloadMarker(String),
+    LoadMarker(MarkerID),
+    UnloadMarker(MarkerID),
     UnloadAllMarkers,
 }
 
@@ -63,6 +64,7 @@ fn main() {
     app.add_plugins(console::Plugin);
     app.add_plugins(marker::Plugin);
     app.add_plugins(trail::Plugin);
+    app.add_plugins(parser::Plugin);
 
     app.run();
 }
