@@ -61,7 +61,7 @@ impl bevy::prelude::Plugin for Plugin {
 struct ConfigDir(PathBuf);
 
 fn load(mut commands: Commands, config_dir: Res<ConfigDir>, mut images: ResMut<Assets<Image>>) {
-    let mut builder = MarkerTreeBuilder::new();
+    let mut builder = MarkerPackBuilder::new();
 
     let iter = std::fs::read_dir(config_dir.0.as_path()).unwrap();
     for path in iter
@@ -85,7 +85,7 @@ fn load(mut commands: Commands, config_dir: Res<ConfigDir>, mut images: ResMut<A
 }
 
 #[derive(Resource, Clone, Deref, Debug)]
-pub struct Markers(MarkerTree);
+pub struct Markers(MarkerPack);
 
 #[derive(Debug)]
 enum Tag {
@@ -116,7 +116,7 @@ impl Tag {
 
 fn read_marker_pack(
     path: &Path,
-    builder: &mut MarkerTreeBuilder,
+    builder: &mut MarkerPackBuilder,
     mut images: &mut Assets<Image>,
 ) -> Result<(), Error> {
     let pack = File::open(path).map_err(Error::IoErr)?;
@@ -152,7 +152,7 @@ fn read_marker_pack(
 }
 
 fn parse_xml<R: Read + BufRead>(
-    tree: &mut MarkerTreeBuilder,
+    tree: &mut MarkerPackBuilder,
     filename: &str,
     reader: R,
 ) -> Result<(), Error> {
@@ -207,12 +207,12 @@ fn parse_xml<R: Read + BufRead>(
     Ok(())
 }
 
-pub struct MarkerTreeIter<'a, VM: VisitMap<NodeIndex>> {
-    tree: &'a MarkerTree,
+pub struct MarkerPackIter<'a, VM: VisitMap<NodeIndex>> {
+    tree: &'a MarkerPack,
     iter: Dfs<NodeIndex, VM>,
 }
 
-impl<'a, VM: VisitMap<NodeIndex>> Iterator for MarkerTreeIter<'a, VM> {
+impl<'a, VM: VisitMap<NodeIndex>> Iterator for MarkerPackIter<'a, VM> {
     type Item = &'a Marker;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -257,8 +257,8 @@ impl From<String> for MarkerID {
     }
 }
 
-struct MarkerTreeBuilder {
-    tree: MarkerTree,
+struct MarkerPackBuilder {
+    tree: MarkerPack,
 
     /// The number of indices in the graph so to generate unique
     /// indices.
@@ -268,15 +268,15 @@ struct MarkerTreeBuilder {
     parent_id: VecDeque<NodeIndex>,
 }
 
-impl Deref for MarkerTreeBuilder {
-    type Target = MarkerTree;
+impl Deref for MarkerPackBuilder {
+    type Target = MarkerPack;
 
     fn deref(&self) -> &Self::Target {
         &self.tree
     }
 }
 
-impl MarkerTreeBuilder {
+impl MarkerPackBuilder {
     fn new() -> Self {
         Self {
             tree: Default::default(),
@@ -392,13 +392,13 @@ impl MarkerTreeBuilder {
         self.parent_id.clear();
     }
 
-    fn build(self) -> MarkerTree {
+    fn build(self) -> MarkerPack {
         self.tree
     }
 }
 
 #[derive(Clone, Default, Debug)]
-pub struct MarkerTree {
+pub struct MarkerPack {
     /// Nodes without any parents. Useful for iterating through all
     /// content in the graph.
     roots: HashSet<NodeIndex>,
@@ -421,7 +421,7 @@ pub struct MarkerTree {
     icons: HashMap<String, Handle<Image>>,
 }
 
-impl MarkerTree {
+impl MarkerPack {
     fn new() -> Self {
         Self::default()
     }
@@ -480,7 +480,7 @@ impl MarkerTree {
         start: impl Into<MarkerID>,
     ) -> impl Iterator<Item = &'a Marker> {
         let start_id = self.index_of(start).unwrap();
-        MarkerTreeIter {
+        MarkerPackIter {
             tree: self,
             iter: Dfs::new(&self.graph, start_id),
         }
@@ -621,8 +621,8 @@ mod tests {
     //   B   E        H   I
     //  / \   \         / | \
     // C   D   F       J  K  L
-    fn fake_markers() -> MarkerTree {
-        let mut markers = MarkerTreeBuilder::new();
+    fn fake_markers() -> MarkerPack {
+        let mut markers = MarkerPackBuilder::new();
         markers.add_marker(Marker::category("A", "A Name"));
         markers.add_marker(Marker::category("B", "B Name"));
         markers.add_marker(Marker::category("C", "C Name"));
