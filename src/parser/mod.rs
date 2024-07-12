@@ -117,7 +117,7 @@ impl Tag {
 fn read_marker_pack(
     path: &Path,
     builder: &mut MarkerTreeBuilder,
-    mut image_assets: &mut Assets<Image>,
+    mut images: &mut Assets<Image>,
 ) -> Result<(), Error> {
     let pack = File::open(path).map_err(Error::IoErr)?;
     let mut zip = zip::ZipArchive::new(pack).map_err(Error::ZipErr)?;
@@ -143,7 +143,7 @@ fn read_marker_pack(
                     RenderAssetUsages::all(),
                 )
                 .unwrap();
-                builder.add_image(filename, image, &mut image_assets);
+                builder.add_image(filename, image, &mut images);
             }
             _ => (),
         }
@@ -260,8 +260,6 @@ impl From<String> for MarkerID {
 struct MarkerTreeBuilder {
     tree: MarkerTree,
 
-    images: HashMap<String, Handle<Image>>,
-
     /// The number of indices in the graph so to generate unique
     /// indices.
     count: usize,
@@ -284,7 +282,6 @@ impl MarkerTreeBuilder {
             tree: Default::default(),
             count: Default::default(),
             parent_id: Default::default(),
-            images: Default::default(),
         }
     }
 
@@ -343,7 +340,7 @@ impl MarkerTreeBuilder {
 
     fn add_image(&mut self, filename: String, image: Image, image_assets: &mut Assets<Image>) {
         let handle = image_assets.add(image);
-        self.images.insert(filename, handle);
+        self.tree.icons.insert(filename, handle);
     }
 
     fn add_map_id(&mut self, id: impl Into<MarkerID>, map_id: u32) {
@@ -420,6 +417,8 @@ pub struct MarkerTree {
 
     /// Trails associated with markers
     trails: HashMap<MarkerID, Vec<Trail>>,
+
+    icons: HashMap<String, Handle<Image>>,
 }
 
 impl MarkerTree {
@@ -442,6 +441,10 @@ impl MarkerTree {
 
     pub fn get_pois(&self, id: impl Into<MarkerID>) -> Option<&Vec<Poi>> {
         self.pois.get(&id.into())
+    }
+
+    pub fn get_icon(&self, path: &str) -> Option<Handle<Image>> {
+        self.icons.get(path).cloned()
     }
 
     pub fn get_trails(&self, id: impl Into<MarkerID>) -> Option<&Vec<Trail>> {

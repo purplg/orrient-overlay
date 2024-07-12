@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_mod_billboard::{
-    plugin::BillboardPlugin, BillboardMeshHandle, BillboardTextureBundle, BillboardTextureHandle,
+    plugin::BillboardPlugin, BillboardMeshHandle, BillboardTextBundle, BillboardTextureBundle,
+    BillboardTextureHandle,
 };
 
 use crate::{
@@ -69,7 +70,6 @@ fn load_pois_system(
     data: Res<Markers>,
     assets: Res<DebugMarkerAssets>,
     map_id: Option<Res<MapId>>,
-    asset_server: Res<AssetServer>,
 ) {
     for event in ui_events.read() {
         let UiEvent::LoadMarker(marker_id) = event else {
@@ -110,18 +110,30 @@ fn load_pois_system(
                 .or(data
                     .get(marker_id.clone())
                     .and_then(|marker| marker.icon_file.clone()))
-                .map(|icon_path| icon_path.into_string());
+                .map(|icon_path| icon_path.into_string())
+                .and_then(|path| data.get_icon(&path));
 
             let mut builder = commands.spawn(Poi(marker_id.clone()));
             if let Some(icon) = icon {
                 builder.insert(BillboardTextureBundle {
                     mesh: BillboardMeshHandle(assets.image_quad.clone()),
-                    texture: BillboardTextureHandle(asset_server.load(icon)),
+                    texture: BillboardTextureHandle(icon),
                     transform: Transform::from_translation(pos),
                     ..default()
                 });
             } else {
                 warn!("No icon for {}", marker_id);
+                builder.insert(BillboardTextBundle {
+                    text: Text::from_section(
+                        "Unknown icon",
+                        TextStyle {
+                            font_size: 64.,
+                            ..default()
+                        },
+                    ),
+                    transform: Transform::from_translation(pos).with_scale(Vec3::splat(0.01)),
+                    ..default()
+                });
             }
 
             debug!("Spawned POI at {}", pos);
