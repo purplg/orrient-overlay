@@ -1,31 +1,23 @@
 mod model;
+mod pack;
 pub mod trail;
+
+pub use pack::{Behavior, MarkerID};
 
 use bevy::prelude::*;
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::texture::{CompressedImageFormats, ImageSampler, ImageType};
+use pack::{Marker, MarkerPack, MarkerPackBuilder};
 
-use std::collections::VecDeque;
-use std::convert::identity;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
-use std::ops::Deref;
+use std::path::Path;
 use std::path::PathBuf;
-use std::str::FromStr;
-use std::{collections::HashMap, path::Path};
 
 use bevy::log::{debug, warn};
 use bevy::math::Vec3;
-use bevy::utils::HashSet;
-use model::Poi;
-use petgraph::graph::DiGraph;
-use petgraph::graph::NodeIndex;
-use petgraph::visit::{Dfs, VisitMap};
-use petgraph::Direction;
-use quick_xml::events::attributes::Attributes;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
-use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
 
 #[derive(Debug)]
 pub enum Error {
@@ -53,17 +45,32 @@ impl bevy::prelude::Plugin for Plugin {
                 .to_path_buf(),
         ));
 
-        app.add_systems(Startup, load);
+        app.add_systems(Startup, load_system);
     }
 }
 
 #[derive(Resource, Deref)]
 struct ConfigDir(PathBuf);
 
-fn load(mut commands: Commands, config_dir: Res<ConfigDir>, mut images: ResMut<Assets<Image>>) {
+fn load_system(
+    mut commands: Commands,
+    config_dir: Res<ConfigDir>,
+    mut images: ResMut<Assets<Image>>,
+) {
+    match load(config_dir.as_path(), &mut images) {
+        Ok(pack) => {
+            commands.insert_resource(Markers(pack));
+        }
+        Err(err) => {
+            warn!("Error loading marker packs {err:?}");
+        }
+    }
+}
+
+fn load(path: &Path, mut images: &mut Assets<Image>) -> Result<MarkerPack, Error> {
     let mut builder = MarkerPackBuilder::new();
 
-    let iter = std::fs::read_dir(config_dir.0.as_path()).unwrap();
+    let iter = std::fs::read_dir(path).unwrap();
     for path in iter
         .filter_map(|file| file.ok().map(|file| file.path()))
         .filter(|file| file.is_file())
@@ -81,7 +88,7 @@ fn load(mut commands: Commands, config_dir: Res<ConfigDir>, mut images: ResMut<A
             }
         }
     }
-    commands.insert_resource(Markers(builder.build()));
+    Ok(builder.build())
 }
 
 #[derive(Resource, Clone, Deref, Debug)]
@@ -111,6 +118,31 @@ impl Tag {
         };
 
         Ok(tag)
+    }
+
+    fn apply(self, builder: &mut MarkerPackBuilder) {
+        match self {
+            Tag::OverlayData => {
+                builder.new_root();
+            }
+            Tag::Marker(marker) => {
+                builder.add_marker(marker);
+            }
+            Tag::POIs => {}
+            Tag::POI(poi) => {
+                builder.add_map_id(poi.id.clone(), poi.map_id);
+                builder.add_poi(poi);
+            }
+            Tag::Trail(trail) => {
+                let id: MarkerID = trail.id.into();
+                // if let Some(trail) = self.add_trail(trail) {
+                //     self.add_map_id(id, trail.map_id);
+                // }
+            }
+            Tag::Route => {}
+            Tag::UnknownField(_) => {}
+            Tag::CorruptField(_) => todo!(),
+        }
     }
 }
 
@@ -164,8 +196,8 @@ fn parse_xml<R: Read + BufRead>(
         match reader.read_event_into(&mut buf) {
             Ok(event) => match event {
                 Event::Start(element) => {
-                    tree.add_tag(match Tag::from_element(&element) {
-                        Ok(tag) => tag,
+                    match Tag::from_element(&element) {
+                        Ok(tag) => tag.apply(tree),
                         Err(err) => {
                             warn!(
                                 "Error parsing tag {:?} in file {:?}: {:?}",
@@ -173,11 +205,11 @@ fn parse_xml<R: Read + BufRead>(
                             );
                             continue;
                         }
-                    });
+                    };
                 }
                 Event::Empty(element) => {
-                    tree.add_tag(match Tag::from_element(&element) {
-                        Ok(tag) => tag,
+                    match Tag::from_element(&element) {
+                        Ok(tag) => tag.apply(tree),
                         Err(err) => {
                             warn!(
                                 "Error parsing tag {:?} in file {:?}: {:?}",
@@ -185,7 +217,7 @@ fn parse_xml<R: Read + BufRead>(
                             );
                             continue;
                         }
-                    });
+                    };
                     tree.up();
                 }
                 Event::End(_) => {
@@ -207,414 +239,11 @@ fn parse_xml<R: Read + BufRead>(
     Ok(())
 }
 
-pub struct MarkerPackIter<'a, VM: VisitMap<NodeIndex>> {
-    tree: &'a MarkerPack,
-    iter: Dfs<NodeIndex, VM>,
-}
-
-impl<'a, VM: VisitMap<NodeIndex>> Iterator for MarkerPackIter<'a, VM> {
-    type Item = &'a Marker;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter
-            .next(&self.tree.graph)
-            .and_then(|id| self.tree.markers.get(&id))
-    }
-}
-
-#[derive(Hash, Clone, Default, Debug, PartialEq, Eq)]
-pub struct MarkerID(String);
-
-impl std::fmt::Display for MarkerID {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl Deref for MarkerID {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<'a> From<&'a str> for MarkerID {
-    fn from(value: &'a str) -> Self {
-        MarkerID(value.to_owned())
-    }
-}
-
-impl<'a> From<&'a String> for MarkerID {
-    fn from(value: &'a String) -> Self {
-        MarkerID(value.to_owned())
-    }
-}
-
-impl From<String> for MarkerID {
-    fn from(value: String) -> Self {
-        MarkerID(value)
-    }
-}
-
-struct MarkerPackBuilder {
-    tree: MarkerPack,
-
-    /// The number of indices in the graph so to generate unique
-    /// indices.
-    count: usize,
-
-    /// The path in the tree we currently are located.
-    parent_id: VecDeque<NodeIndex>,
-}
-
-impl Deref for MarkerPackBuilder {
-    type Target = MarkerPack;
-
-    fn deref(&self) -> &Self::Target {
-        &self.tree
-    }
-}
-
-impl MarkerPackBuilder {
-    fn new() -> Self {
-        Self {
-            tree: Default::default(),
-            count: Default::default(),
-            parent_id: Default::default(),
-        }
-    }
-
-    fn add_marker(&mut self, mut marker: Marker) -> &mut Self {
-        let node_id = self.get_or_create_index(&marker.id);
-        self.tree.graph.add_node(node_id);
-
-        if let Some(parent_id) = self.parent_id.front() {
-            self.tree.graph.add_edge(*parent_id, node_id, ());
-            let parent_marker = self.tree.markers.get(parent_id).unwrap();
-            marker.copy_from_parent(parent_marker);
-        } else {
-            self.tree.roots.insert(node_id);
-        }
-
-        self.parent_id.push_front(node_id);
-        self.tree.markers.insert(node_id, marker.clone());
-        self.tree.indexes.insert(marker.id.into(), node_id);
-        self
-    }
-
-    fn add_poi(&mut self, poi: Poi) {
-        let id: MarkerID = poi.id.clone().into();
-        if let Some(pois) = self.tree.pois.get_mut(&id) {
-            pois.push(poi);
-        } else {
-            self.tree.pois.insert(id, vec![poi]);
-        }
-    }
-
-    fn add_trail(&mut self, id: impl Into<MarkerID>, trail: Trail) {
-        let id: MarkerID = id.into();
-        // let content = match trail::from_file(self.data_dir.join(&trail_tag.trail_file)) {
-        //     Ok(content) => content,
-        //     Err(err) => {
-        //         warn!(
-        //             "Error while parsing trail at {}: {:?}",
-        //             trail_tag.trail_file, err
-        //         );
-        //         return None;
-        //     }
-        // };
-
-        // let trail = Trail {
-        //     map_id: content.map_id,
-        //     path: content.path,
-        //     texture_file: trail_tag.texture_file,
-        // };
-
-        if let Some(trails) = self.tree.trails.get_mut(&id) {
-            trails.push(trail.clone());
-        } else {
-            self.tree.trails.insert(id, vec![trail.clone()]);
-        }
-    }
-
-    fn add_image(&mut self, filename: String, image: Image, image_assets: &mut Assets<Image>) {
-        let handle = image_assets.add(image);
-        self.tree.icons.insert(filename, handle);
-    }
-
-    fn add_map_id(&mut self, id: impl Into<MarkerID>, map_id: u32) {
-        if let Some(marker) = self.tree.get_mut(id) {
-            marker.map_ids.push(map_id);
-        }
-    }
-
-    fn get_or_create_index(&mut self, marker_id: impl Into<MarkerID>) -> NodeIndex {
-        self.tree.index_of(marker_id).unwrap_or_else(|| {
-            NodeIndex::new({
-                let i = self.count;
-                self.count += 1;
-                i
-            })
-        })
-    }
-
-    fn up(&mut self) {
-        self.parent_id.pop_front();
-    }
-
-    fn add_tag(&mut self, tag: Tag) {
-        match tag {
-            Tag::OverlayData => {
-                self.new_root();
-            }
-            Tag::Marker(marker) => {
-                self.add_marker(marker);
-            }
-            Tag::POIs => {}
-            Tag::POI(poi) => {
-                self.add_map_id(poi.id.clone(), poi.map_id);
-                self.add_poi(poi);
-            }
-            Tag::Trail(trail) => {
-                let id: MarkerID = trail.id.into();
-                // if let Some(trail) = self.add_trail(trail) {
-                //     self.add_map_id(id, trail.map_id);
-                // }
-            }
-            Tag::Route => {}
-            Tag::UnknownField(_) => {}
-            Tag::CorruptField(_) => todo!(),
-        }
-    }
-
-    fn new_root(&mut self) {
-        self.parent_id.clear();
-    }
-
-    fn build(self) -> MarkerPack {
-        self.tree
-    }
-}
-
-#[derive(Clone, Default, Debug)]
-pub struct MarkerPack {
-    /// Nodes without any parents. Useful for iterating through all
-    /// content in the graph.
-    roots: HashSet<NodeIndex>,
-
-    /// Lookup an index by it's string ID
-    indexes: HashMap<MarkerID, NodeIndex>,
-
-    /// Lookup a marker by its index
-    markers: HashMap<NodeIndex, Marker>,
-
-    /// Map the relationship between markers
-    graph: DiGraph<NodeIndex, ()>,
-
-    /// POIs associated with markers
-    pois: HashMap<MarkerID, Vec<Poi>>,
-
-    /// Trails associated with markers
-    trails: HashMap<MarkerID, Vec<Trail>>,
-
-    icons: HashMap<String, Handle<Image>>,
-}
-
-impl MarkerPack {
-    fn new() -> Self {
-        Self::default()
-    }
-
-    fn index_of(&self, id: impl Into<MarkerID>) -> Option<NodeIndex> {
-        self.indexes.get(&id.into()).cloned()
-    }
-
-    pub fn contains_map_id(&self, id: impl Into<MarkerID>, map_id: u32) -> bool {
-        for marker in self.iter_recursive(id) {
-            if marker.map_ids.contains(&map_id) {
-                return true;
-            }
-        }
-        false
-    }
-
-    pub fn get_pois(&self, id: impl Into<MarkerID>) -> Option<&Vec<Poi>> {
-        self.pois.get(&id.into())
-    }
-
-    pub fn get_icon(&self, path: &str) -> Option<Handle<Image>> {
-        self.icons.get(path).cloned()
-    }
-
-    pub fn get_trails(&self, id: impl Into<MarkerID>) -> Option<&Vec<Trail>> {
-        self.trails.get(&id.into())
-    }
-
-    pub fn get(&self, id: impl Into<MarkerID>) -> Option<&Marker> {
-        let node_id = self.indexes.get(&id.into())?;
-        self.markers.get(node_id)
-    }
-
-    pub fn get_mut(&mut self, id: impl Into<MarkerID>) -> Option<&mut Marker> {
-        let node_id = self.indexes.get(&id.into()).unwrap();
-        self.markers.get_mut(node_id)
-    }
-
-    pub fn roots(&self) -> Vec<&Marker> {
-        self.roots
-            .iter()
-            .filter_map(|index| self.markers.get(index))
-            .collect()
-    }
-
-    pub fn iter<'a>(&'a self, start: impl Into<MarkerID>) -> impl Iterator<Item = &'a Marker> {
-        let start_id = self.index_of(start).unwrap();
-        self.graph
-            .neighbors_directed(start_id, Direction::Outgoing)
-            .filter_map(|id| self.markers.get(&id))
-    }
-
-    pub fn iter_recursive<'a>(
-        &'a self,
-        start: impl Into<MarkerID>,
-    ) -> impl Iterator<Item = &'a Marker> {
-        let start_id = self.index_of(start).unwrap();
-        MarkerPackIter {
-            tree: self,
-            iter: Dfs::new(&self.graph, start_id),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub enum MarkerKind {
-    #[default]
-    Category,
-    Leaf,
-    Separator,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum Behavior {
-    AlwaysVisible,             // 0
-    ReappearOnMapChange,       // 1
-    ReappearDaily,             // 2
-    DisappearOnUse,            // 3
-    ReappearAfterTime(f32),    // 4
-    ReappearMapReset,          // 5
-    ReappearInstanceChange,    // 6
-    ReappearDailyPerCharacter, // 7
-}
-
-impl Behavior {
-    fn from_category(category: model::MarkerCategory) -> Option<Behavior> {
-        if let Some(behavior) = category.behavior {
-            match behavior {
-                0 => Some(Self::AlwaysVisible),
-                1 => Some(Self::ReappearOnMapChange),
-                2 => Some(Self::ReappearDaily),
-                3 => Some(Self::DisappearOnUse),
-                4 => Some(Self::ReappearAfterTime(
-                    category
-                        .reset_length
-                        .expect("resetLength must be defined to use Behavior 4"),
-                )),
-                5 => Some(Self::ReappearMapReset),
-                6 => Some(Self::ReappearInstanceChange),
-                7 => Some(Self::ReappearDailyPerCharacter),
-                _ => None,
-            }
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct Trail {
-    pub map_id: u32,
-    pub path: Vec<Vec3>,
-    pub texture_file: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct Marker {
-    pub id: String,
-    pub label: String,
-    pub kind: MarkerKind,
-    pub depth: usize,
-    pub behavior: Option<Behavior>,
-    pub poi_tip: Option<String>,
-    pub poi_description: Option<String>,
-    pub map_ids: Vec<u32>,
-    pub icon_file: Option<Utf8PathBuf<Utf8UnixEncoding>>,
-}
-
-impl Marker {
-    fn new(id: impl Into<String>, label: impl Into<String>, kind: MarkerKind) -> Self {
-        Self {
-            id: id.into(),
-            label: label.into(),
-            kind,
-            ..Default::default()
-        }
-    }
-
-    fn copy_from_parent(&mut self, parent: &Marker) {
-        self.id = format!("{}.{}", parent.id, self.id);
-        self.depth = parent.depth + 1;
-        self.behavior = self.behavior.or(parent.behavior);
-        if self.icon_file.is_none() {
-            self.icon_file = parent.icon_file.clone();
-        }
-    }
-
-    fn from_attrs(attrs: Attributes) -> Result<Self, Error> {
-        let mut this = Self::default();
-
-        for attr in attrs.map(Result::ok).filter_map(identity) {
-            let Ok(key) = String::from_utf8(attr.key.0.to_vec()) else {
-                warn!("Key is not UTF-8 encoded: {:?}", attr);
-                continue;
-            };
-
-            let Ok(value) = String::from_utf8(attr.value.to_vec()) else {
-                warn!("Value is not UTF-8 encoded: {:?}", attr);
-                continue;
-            };
-
-            match key.to_lowercase().as_str() {
-                "name" => this.id = value,
-                "displayname" => this.label = value,
-                "isseparator" => {
-                    if "true" == value.to_lowercase() {
-                        this.kind = MarkerKind::Separator
-                    };
-                }
-                "iconfile" => {
-                    if let Ok(path) = Utf8WindowsPathBuf::from_str(&value) {
-                        this.icon_file = Some(path.with_unix_encoding().to_path_buf());
-                    } else {
-                        warn!("Icon path is corrupt: {:?}", attr)
-                    }
-                }
-                _ => {}
-            }
-        }
-        Ok(this)
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use pack::MarkerKind;
 
-    impl Marker {
-        fn category(id: impl Into<String>, label: impl Into<String>) -> Self {
-            Self::new(id, label, MarkerKind::Category)
-        }
-    }
+    use super::*;
 
     //     A            G
     //    / \          / \
@@ -623,26 +252,26 @@ mod tests {
     // C   D   F       J  K  L
     fn fake_markers() -> MarkerPack {
         let mut markers = MarkerPackBuilder::new();
-        markers.add_marker(Marker::category("A", "A Name"));
-        markers.add_marker(Marker::category("B", "B Name"));
-        markers.add_marker(Marker::category("C", "C Name"));
+        markers.add_marker(Marker::new("A", "A Name", MarkerKind::Category));
+        markers.add_marker(Marker::new("B", "B Name", MarkerKind::Category));
+        markers.add_marker(Marker::new("C", "C Name", MarkerKind::Category));
         markers.up();
-        markers.add_marker(Marker::category("D", "D Name"));
+        markers.add_marker(Marker::new("D", "D Name", MarkerKind::Category));
         markers.up();
         markers.up();
-        markers.add_marker(Marker::category("E", "E Name"));
-        markers.add_marker(Marker::category("F", "F Name"));
+        markers.add_marker(Marker::new("E", "E Name", MarkerKind::Category));
+        markers.add_marker(Marker::new("F", "F Name", MarkerKind::Category));
 
         markers.new_root();
-        markers.add_marker(Marker::category("G", "G Name"));
-        markers.add_marker(Marker::category("H", "H Name"));
+        markers.add_marker(Marker::new("G", "G Name", MarkerKind::Category));
+        markers.add_marker(Marker::new("H", "H Name", MarkerKind::Category));
         markers.up();
-        markers.add_marker(Marker::category("I", "I Name"));
-        markers.add_marker(Marker::category("J", "J Name"));
+        markers.add_marker(Marker::new("I", "I Name", MarkerKind::Category));
+        markers.add_marker(Marker::new("J", "J Name", MarkerKind::Category));
         markers.up();
-        markers.add_marker(Marker::category("K", "K Name"));
+        markers.add_marker(Marker::new("K", "K Name", MarkerKind::Category));
         markers.up();
-        markers.add_marker(Marker::category("L", "L Name"));
+        markers.add_marker(Marker::new("L", "L Name", MarkerKind::Category));
         markers.build()
     }
 
@@ -652,7 +281,7 @@ mod tests {
 
         load(
             &dirs::config_dir().unwrap().join("orrient").join("markers"),
-            None,
+            &mut Assets::default(),
         )
         .unwrap();
     }
