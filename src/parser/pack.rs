@@ -11,7 +11,8 @@ use petgraph::{
 };
 
 use super::{
-    model::{self, Poi},
+    model::{self, Poi, TrailXml},
+    trail::TrailData,
     Error, PackId,
 };
 
@@ -159,8 +160,8 @@ impl Marker {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct Trail {
+#[derive(Asset, Reflect, Clone, Debug)]
+pub struct Route {
     pub map_id: u32,
     pub path: Vec<Vec3>,
     pub texture_file: String,
@@ -185,7 +186,7 @@ pub struct MarkerPack {
     pois: HashMap<MarkerId, Vec<Poi>>,
 
     /// Trails associated with markers
-    trails: HashMap<MarkerId, Vec<Trail>>,
+    trails: HashMap<MarkerId, Route>,
 
     icons: HashMap<String, Handle<Image>>,
 }
@@ -212,11 +213,11 @@ impl MarkerPack {
         self.pois.get(id)
     }
 
-    pub fn get_icon(&self, path: &str) -> Option<Handle<Image>> {
+    pub fn get_image(&self, path: &str) -> Option<Handle<Image>> {
         self.icons.get(path).cloned()
     }
 
-    pub fn get_trails(&self, id: &MarkerId) -> Option<&Vec<Trail>> {
+    pub fn get_trails(&self, id: &MarkerId) -> Option<&Route> {
         self.trails.get(id)
     }
 
@@ -272,6 +273,9 @@ pub struct MarkerPackBuilder {
 
     tree: MarkerPack,
 
+    trail_tags: HashMap<MarkerId, TrailXml>,
+    trail_data: HashMap<String, TrailData>,
+
     /// The number of indices in the graph so to generate unique
     /// indices.
     count: usize,
@@ -295,6 +299,8 @@ impl MarkerPackBuilder {
             tree: Default::default(),
             count: Default::default(),
             parent_id: Default::default(),
+            trail_tags: Default::default(),
+            trail_data: Default::default(),
         }
     }
 
@@ -326,35 +332,18 @@ impl MarkerPackBuilder {
         }
     }
 
-    pub fn add_trail(&mut self, id: impl Into<MarkerId>, trail: Trail) {
-        let id: MarkerId = id.into();
-        // let content = match trail::from_file(self.data_dir.join(&trail_tag.trail_file)) {
-        //     Ok(content) => content,
-        //     Err(err) => {
-        //         warn!(
-        //             "Error while parsing trail at {}: {:?}",
-        //             trail_tag.trail_file, err
-        //         );
-        //         return None;
-        //     }
-        // };
-
-        // let trail = Trail {
-        //     map_id: content.map_id,
-        //     path: content.path,
-        //     texture_file: trail_tag.texture_file,
-        // };
-
-        if let Some(trails) = self.tree.trails.get_mut(&id) {
-            trails.push(trail.clone());
-        } else {
-            self.tree.trails.insert(id, vec![trail.clone()]);
-        }
+    pub fn add_trail_tag(&mut self, id: MarkerId, trail: TrailXml) {
+        self.trail_tags.insert(id, trail);
     }
 
-    pub fn add_image(&mut self, filename: String, image: Image, image_assets: &mut Assets<Image>) {
+    pub fn add_trail_data(&mut self, file_path: String, data: TrailData) {
+        self.trail_data.insert(file_path, data);
+    }
+
+    pub fn add_image(&mut self, file_path: String, image: Image, image_assets: &mut Assets<Image>) {
+        info!("Found image: {file_path}");
         let handle = image_assets.add(image);
-        self.tree.icons.insert(filename, handle);
+        self.tree.icons.insert(file_path, handle);
     }
 
     pub fn add_map_id(&mut self, id: impl Into<String>, map_id: u32) {
@@ -381,7 +370,22 @@ impl MarkerPackBuilder {
         self.parent_id.clear();
     }
 
-    pub fn build(self) -> MarkerPack {
+    pub fn build(mut self) -> MarkerPack {
+        for (id, xml) in self.trail_tags.drain() {
+            let Some(data) = self.trail_data.remove(&xml.trail_file) else {
+                warn!("TrailData not found for XML tag {id}");
+                continue;
+            };
+            self.tree.trails.insert(
+                id,
+                Route {
+                    map_id: data.map_id,
+                    path: data.path,
+                    texture_file: xml.texture_file,
+                },
+            );
+        }
+
         self.tree
     }
 }

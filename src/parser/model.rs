@@ -137,7 +137,7 @@ impl Poi {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct Trail {
+pub(super) struct TrailXml {
     // type
     pub id: String,
     // trailData
@@ -146,7 +146,7 @@ pub(super) struct Trail {
     pub texture_file: String,
 }
 
-impl Trail {
+impl TrailXml {
     pub(super) fn from_attrs(attrs: Attributes) -> Result<Self, Error> {
         let mut id: Option<String> = None;
         let mut trail_file: Option<String> = None;
@@ -177,7 +177,7 @@ impl Trail {
             }
         }
 
-        Ok(Trail {
+        Ok(Self {
             id: id.ok_or(Error::MissingField("poi.type".into()))?,
             trail_file: trail_file.ok_or(Error::MissingField("trail.trailData".into()))?,
             texture_file: texture_file.ok_or(Error::MissingField("trail.texture".into()))?,

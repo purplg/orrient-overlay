@@ -4,7 +4,6 @@ use bevy::{
         mesh::{Indices, PrimitiveTopology},
         render_asset::RenderAssetUsages,
         render_resource::{Extent3d, TextureDimension, TextureFormat},
-        texture::{ImageAddressMode, ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor},
     },
     utils::HashMap,
 };
@@ -152,7 +151,6 @@ fn trail_event(
     mut trail_meshes: ResMut<TrailMeshes>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     packs: Res<MarkerPacks>,
-    asset_server: Res<AssetServer>,
 ) {
     for event in events.read() {
         match event {
@@ -179,72 +177,55 @@ fn trail_event(
                     return;
                 };
 
-                let Some(trails) = pack.get_trails(&full_id.marker_id) else {
+                let Some(trail) = pack.get_trails(&full_id.marker_id) else {
                     warn!("Trail not found for marker_id: {full_id}");
                     return;
                 };
 
-                for trail in trails {
-                    info!("Loading trail: {}...", full_id);
+                info!("Loading trail: {}...", full_id);
 
-                    let iter = trail.path.iter().map(|path| Vec3 {
-                        x: path.x,
-                        y: path.y,
-                        z: -path.z,
-                    });
+                let iter = trail.path.iter().map(|path| Vec3 {
+                    x: path.x,
+                    y: path.y,
+                    z: -path.z,
+                });
 
-                    let handle = meshes.add(create_trail_mesh(iter));
-                    assets.trails_mesh = Some(handle.clone());
+                let handle = meshes.add(create_trail_mesh(iter));
+                assets.trails_mesh = Some(handle.clone());
 
-                    let texture_path = dirs::config_dir()
-                        .unwrap()
-                        .join("orrient")
-                        .join("markers")
-                        .join(&trail.texture_file)
-                        .into_os_string()
-                        .into_string()
-                        .unwrap();
-                    info!("Trail texture: {:?}", texture_path);
+                let Some(texture) = pack.get_image(&trail.texture_file) else {
+                    warn!("Could not find texture {}", trail.texture_file);
+                    continue;
+                };
 
-                    let material = materials.add(StandardMaterial {
-                        base_color_texture: Some(asset_server.load_with_settings(
-                            texture_path,
-                            |s: &mut _| {
-                                *s = ImageLoaderSettings {
-                                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                                        address_mode_u: ImageAddressMode::Repeat,
-                                        address_mode_v: ImageAddressMode::Repeat,
-                                        ..default()
-                                    }),
-                                    ..default()
-                                }
-                            },
-                        )),
-                        alpha_mode: AlphaMode::Blend,
-                        double_sided: true,
-                        cull_mode: None,
-                        unlit: true,
-                        ..default()
-                    });
+                info!("Trail texture: {:?}", texture);
 
-                    let entity = commands
-                        .spawn((
-                            TrailMesh,
-                            PbrBundle {
-                                mesh: handle,
-                                material,
-                                ..default()
-                            },
-                        ))
-                        .id();
+                let material = materials.add(StandardMaterial {
+                    base_color_texture: Some(texture),
+                    alpha_mode: AlphaMode::Blend,
+                    double_sided: true,
+                    cull_mode: None,
+                    unlit: true,
+                    ..default()
+                });
 
-                    if let Some(entities) = trail_meshes.get_mut(full_id) {
-                        entities.push(entity);
-                    } else {
-                        trail_meshes.insert(full_id.clone(), vec![entity]);
-                    }
-                    info!("Trail {} loaded.", full_id);
+                let entity = commands
+                    .spawn((
+                        TrailMesh,
+                        PbrBundle {
+                            mesh: handle,
+                            material,
+                            ..default()
+                        },
+                    ))
+                    .id();
+
+                if let Some(entities) = trail_meshes.get_mut(full_id) {
+                    entities.push(entity);
+                } else {
+                    trail_meshes.insert(full_id.clone(), vec![entity]);
                 }
+                info!("Trail {} loaded.", full_id);
             }
             UiEvent::ToggleUI => {}
             UiEvent::ShowMarkerBrowser => {}

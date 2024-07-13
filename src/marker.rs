@@ -112,7 +112,7 @@ fn load_pois_system(
                     .get(&full_id.marker_id)
                     .and_then(|marker| marker.icon_file.clone()))
                 .map(|icon_path| icon_path.into_string())
-                .and_then(|path| pack.get_icon(&path));
+                .and_then(|path| pack.get_image(&path));
 
             let mut builder = commands.spawn(Poi(full_id.clone()));
             if let Some(icon) = icon {

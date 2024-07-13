@@ -6,6 +6,7 @@ pub mod prelude {
     pub use super::pack::Behavior;
     pub use super::pack::FullMarkerId;
     pub use super::pack::MarkerId;
+    pub use super::pack::Route;
     pub use super::MarkerPacks;
 }
 
@@ -143,7 +144,7 @@ enum Tag {
     Marker(Marker),
     POIs,
     POI(model::Poi),
-    Trail(model::Trail),
+    Trail(model::TrailXml),
     Route,
     UnknownField(String),
     CorruptField(String),
@@ -156,7 +157,7 @@ impl Tag {
             b"MarkerCategory" => Tag::Marker(Marker::from_attrs(element.attributes())?),
             b"POIs" => Tag::POIs,
             b"POI" => Tag::POI(model::Poi::from_attrs(element.attributes())?),
-            b"Trail" => Tag::Trail(model::Trail::from_attrs(element.attributes())?),
+            b"Trail" => Tag::Trail(model::TrailXml::from_attrs(element.attributes())?),
             field => Tag::UnknownField(String::from_utf8_lossy(field).to_string()),
         };
 
@@ -177,10 +178,7 @@ impl Tag {
                 builder.add_poi(poi);
             }
             Tag::Trail(trail) => {
-                // let id: MarkerId = trail.id.into();
-                // if let Some(trail) = self.add_trail(trail) {
-                //     self.add_map_id(id, trail.map_id);
-                // }
+                builder.add_trail_tag(MarkerId(trail.id.clone()), trail);
             }
             Tag::Route => {}
             Tag::UnknownField(_) => {}
@@ -198,13 +196,13 @@ fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<Marke
     let mut zip = zip::ZipArchive::new(pack).map_err(Error::ZipErr)?;
     for i in 0..zip.len() {
         let mut file = zip.by_index(i).map_err(Error::ZipErr)?;
-        let filename = file.name().to_string();
-        let Some(ext) = filename.rsplit(".").next() else {
+        let file_path = file.name().to_string();
+        let Some(ext) = file_path.rsplit(".").next() else {
             continue;
         };
         match ext {
             "xml" => {
-                let _ = parse_xml(&mut builder, &filename, BufReader::new(file));
+                let _ = parse_xml(&mut builder, &file_path, BufReader::new(file));
             }
             "png" => {
                 let mut bytes = Vec::new();
@@ -218,8 +216,14 @@ fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<Marke
                     RenderAssetUsages::all(),
                 )
                 .unwrap();
-                builder.add_image(filename, image, &mut images);
+                builder.add_image(file_path, image, &mut images);
             }
+            "trl" => match trail::read(file) {
+                Ok(trail_data) => builder.add_trail_data(file_path, trail_data),
+                Err(err) => {
+                    warn!("Erroring parsing trail file {file_path}: {err:?}")
+                }
+            },
             _ => (),
         }
     }
