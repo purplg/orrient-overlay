@@ -341,7 +341,7 @@ impl MarkerPackBuilder {
     }
 
     pub fn add_image(&mut self, file_path: String, image: Image, image_assets: &mut Assets<Image>) {
-        info!("Found image: {file_path}");
+        debug!("Found image: {file_path}");
         let handle = image_assets.add(image);
         self.tree.icons.insert(file_path, handle);
     }

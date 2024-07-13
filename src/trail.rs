@@ -198,7 +198,7 @@ fn trail_event(
                     continue;
                 };
 
-                info!("Trail texture: {:?}", texture);
+                debug!("Trail texture: {:?}", trail.texture_file);
 
                 let material = materials.add(StandardMaterial {
                     base_color_texture: Some(texture),
