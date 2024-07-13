@@ -27,6 +27,7 @@ impl bevy::prelude::Plugin for Plugin {
             Update,
             (load_pois_system, unload_pois_system).run_if(on_event::<UiEvent>()),
         );
+        app.add_systems(Update, track_loaded_system.run_if(on_event::<UiEvent>()));
     }
 }
 
@@ -181,3 +182,23 @@ fn unload_pois_system(
 
 #[derive(Resource, Clone, Deref, DerefMut, Debug, Default)]
 pub struct LoadedMarkers(pub HashSet<FullMarkerId>);
+
+fn track_loaded_system(
+    mut loaded_markers: ResMut<LoadedMarkers>,
+    mut ui_events: EventReader<UiEvent>,
+) {
+    for event in ui_events.read() {
+        match event {
+            UiEvent::LoadMarker(full_id) => {
+                loaded_markers.insert(full_id.clone());
+            }
+            UiEvent::UnloadMarker(full_id) => {
+                loaded_markers.remove(full_id);
+            }
+            UiEvent::UnloadAllMarkers => {
+                loaded_markers.clear();
+            }
+            _ => {}
+        }
+    }
+}

@@ -5,7 +5,7 @@ use sickle_ui::{
     widgets::prelude::*,
 };
 
-use crate::{parser::prelude::*, ui::OrrientMenuItem, UiEvent};
+use crate::{marker::LoadedMarkers, parser::prelude::*, ui::OrrientMenuItem, UiEvent};
 
 use super::{marker_button::UiMarkerButtonExt, tooltip::UiToolTipExt as _};
 
@@ -134,6 +134,7 @@ fn set_column(
     packs: Res<MarkerPacks>,
     columns: Query<(Entity, &Column)>,
     marker_view: Query<Entity, With<MarkerView>>,
+    loaded: Res<LoadedMarkers>,
 ) {
     let Ok(marker_view) = marker_view.get_single() else {
         return;
@@ -161,6 +162,7 @@ fn set_column(
                                         marker.map_ids.clone(),
                                         has_children,
                                         1,
+                                        false,
                                     );
                                 }
                             }
@@ -199,14 +201,17 @@ fn set_column(
                         scroll_view.column(|parent| {
                             parent.label(LabelConfig::from(marker.label.clone()));
                             for child_marker in &submarkers {
-                                let marker_id = MarkerId(child_marker.id.clone());
-                                let has_children = pack.iter(&marker_id).count() > 0;
+                                let full_id =
+                                    full_id.with_marker_id(MarkerId(child_marker.id.clone()));
+                                let has_children = pack.iter(&full_id.marker_id).count() > 0;
+                                let checked = loaded.contains(&full_id);
                                 parent.marker_button(
                                     &child_marker.label,
-                                    full_id.with_marker_id(MarkerId(child_marker.id.clone())),
+                                    full_id,
                                     child_marker.map_ids.clone(),
                                     has_children,
                                     next_column_id,
+                                    checked,
                                 );
                             }
                         });

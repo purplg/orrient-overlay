@@ -26,6 +26,7 @@ pub trait UiMarkerButtonExt {
         map_ids: Vec<u32>,
         has_children: bool,
         column_id: usize,
+        checked: bool,
     );
 }
 
@@ -124,12 +125,13 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
         map_ids: Vec<u32>,
         has_children: bool,
         column_id: usize,
+        checked: bool,
     ) {
         self.container(MarkerButton::frame(), |parent| {
             parent
                 .row(|parent| {
                     parent
-                        .checkbox(None, false)
+                        .checkbox(None, checked)
                         .insert(MarkerCheckbox(full_id.clone()));
                     parent.column(|parent| {
                         parent.spawn(TextBundle::from_section(
