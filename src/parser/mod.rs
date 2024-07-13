@@ -129,6 +129,12 @@ impl From<PackId> for String {
     }
 }
 
+impl From<&str> for PackId {
+    fn from(value: &str) -> Self {
+        Self(value.into())
+    }
+}
+
 impl std::fmt::Display for PackId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
@@ -299,7 +305,7 @@ mod tests {
     //  / \   \         / | \
     // C   D   F       J  K  L
     fn fake_markers() -> MarkerPack {
-        let mut markers = MarkerPackBuilder::new();
+        let mut markers = MarkerPackBuilder::new("TestPack");
         markers.add_marker(Marker::new("A", "A Name", MarkerKind::Category));
         markers.add_marker(Marker::new("B", "B Name", MarkerKind::Category));
         markers.add_marker(Marker::new("C", "C Name", MarkerKind::Category));
@@ -337,7 +343,7 @@ mod tests {
     #[test]
     fn test_iter() {
         let markers = fake_markers();
-        let mut iter = markers.iter_recursive("A");
+        let mut iter = markers.iter_recursive(&"A".into());
 
         //     A
         //    / \
@@ -357,7 +363,7 @@ mod tests {
         // H   I
         //   / | \
         //  J  K  L
-        let mut iter = markers.iter_recursive("G");
+        let mut iter = markers.iter_recursive(&"G".into());
         assert_eq!(iter.next().unwrap().id, "G");
         assert_eq!(iter.next().unwrap().id, "G.H");
         assert_eq!(iter.next().unwrap().id, "G.I");
@@ -371,7 +377,7 @@ mod tests {
         //   B   E
         //  / \   \
         // C   D   F
-        let mut iter = markers.iter_recursive("A.B");
+        let mut iter = markers.iter_recursive(&"A.B".into());
         assert_eq!(iter.next().unwrap().id, "A.B");
         assert_eq!(iter.next().unwrap().id, "A.B.C");
         assert_eq!(iter.next().unwrap().id, "A.B.D");
@@ -382,7 +388,7 @@ mod tests {
         //   B   E
         //  / \   \
         // C   D   F
-        let mut iter = markers.iter_recursive("A.B.C");
+        let mut iter = markers.iter_recursive(&"A.B.C".into());
         assert_eq!(iter.next().unwrap().id, "A.B.C");
         assert!(iter.next().is_none());
     }

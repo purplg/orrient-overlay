@@ -19,6 +19,12 @@ use super::{
 #[derive(Hash, Clone, Default, Debug, PartialEq, Eq)]
 pub struct MarkerId(pub String);
 
+impl From<&str> for MarkerId {
+    fn from(value: &str) -> Self {
+        Self(value.into())
+    }
+}
+
 impl std::fmt::Display for MarkerId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
@@ -293,9 +299,9 @@ impl Deref for MarkerPackBuilder {
 }
 
 impl MarkerPackBuilder {
-    pub fn new(pack_id: PackId) -> Self {
+    pub fn new(pack_id: impl Into<PackId>) -> Self {
         Self {
-            id: pack_id,
+            id: pack_id.into(),
             tree: Default::default(),
             count: Default::default(),
             parent_id: Default::default(),
