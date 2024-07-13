@@ -15,7 +15,9 @@ use bevy_inspector_egui::egui::TextBuffer;
 
 use bevy::prelude::*;
 use bevy::render::render_asset::RenderAssetUsages;
-use bevy::render::texture::{CompressedImageFormats, ImageSampler, ImageType};
+use bevy::render::texture::{
+    CompressedImageFormats, ImageAddressMode, ImageSampler, ImageSamplerDescriptor, ImageType,
+};
 use pack::{FullMarkerId, Marker, MarkerId, MarkerPack, MarkerPackBuilder};
 
 use std::fs::File;
@@ -216,10 +218,14 @@ fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<Marke
                 let image: Image = Image::from_buffer(
                     &bytes,
                     ImageType::Extension(ext),
-                    CompressedImageFormats::NONE,
+                    CompressedImageFormats::all(),
                     false,
-                    ImageSampler::Default,
-                    RenderAssetUsages::all(),
+                    ImageSampler::Descriptor(ImageSamplerDescriptor {
+                        address_mode_u: ImageAddressMode::Repeat,
+                        address_mode_v: ImageAddressMode::Repeat,
+                        ..default()
+                    }),
+                    RenderAssetUsages::all(), // TODO Maybe only needs to be RENDER_WORLD?
                 )
                 .unwrap();
                 builder.add_image(file_path, image, &mut images);

@@ -9,7 +9,7 @@ use bevy::{
 };
 use itertools::Itertools;
 
-use crate::{parser::prelude::*, UiEvent};
+use crate::{parser::prelude::*, player::Player, UiEvent};
 
 pub(crate) struct Plugin;
 
@@ -145,7 +145,6 @@ fn create_trail_mesh(path: impl Iterator<Item = Vec3>) -> Mesh {
 
 fn trail_event(
     mut commands: Commands,
-    mut assets: ResMut<DebugMarkerAssets>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut events: EventReader<UiEvent>,
     mut trail_meshes: ResMut<TrailMeshes>,
@@ -182,16 +181,13 @@ fn trail_event(
                     return;
                 };
 
-                info!("Loading trail: {}...", full_id);
+                debug!("Loading trail: {}...", full_id);
 
                 let iter = trail.path.iter().map(|path| Vec3 {
                     x: path.x,
                     y: path.y,
                     z: -path.z,
                 });
-
-                let handle = meshes.add(create_trail_mesh(iter));
-                assets.trails_mesh = Some(handle.clone());
 
                 let Some(texture) = pack.get_image(&trail.texture_file) else {
                     warn!("Could not find texture {}", trail.texture_file);
@@ -209,11 +205,13 @@ fn trail_event(
                     ..default()
                 });
 
+                let mesh = create_trail_mesh(iter);
+
                 let entity = commands
                     .spawn((
                         TrailMesh,
                         PbrBundle {
-                            mesh: handle,
+                            mesh: meshes.add(mesh),
                             material,
                             ..default()
                         },

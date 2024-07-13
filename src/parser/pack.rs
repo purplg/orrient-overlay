@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, render::texture::ImageSampler};
 use quick_xml::events::attributes::Attributes;
 use std::{collections::VecDeque, convert::identity, ops::Deref, str::FromStr as _};
 use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
