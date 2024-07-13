@@ -33,7 +33,7 @@ impl bevy::prelude::Plugin for Plugin {
 fn load_marker(mut events: EventReader<UiEvent>, mut loaded_markers: ResMut<LoadedMarkers>) {
     for event in events.read() {
         let UiEvent::LoadMarker(full_id) = event else {
-            return;
+            continue;
         };
 
         loaded_markers.insert(full_id.clone());

@@ -14,6 +14,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Update, checkbox_action);
         app.add_systems(Update, button_state);
         app.add_systems(Update, button_update);
+        app.add_systems(Update, checkbox_follow.run_if(on_event::<UiEvent>()));
     }
 }
 
@@ -31,9 +32,12 @@ pub trait UiMarkerButtonExt {
 #[derive(Component)]
 struct ColumnRef(usize);
 
+#[derive(Component, Deref, Debug)]
+struct MarkerCheckbox(FullMarkerId);
+
 #[derive(Component, Clone, Default, Debug, UiContext)]
 pub struct MarkerButton {
-    marker_id: FullMarkerId,
+    full_id: FullMarkerId,
     map_ids: Vec<u32>,
     has_children: bool,
     open: bool,
@@ -147,7 +151,7 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
                 })
                 .insert((
                     MarkerButton {
-                        marker_id: full_id,
+                        full_id,
                         has_children,
                         open: false,
                         map_ids,
@@ -166,11 +170,11 @@ fn button_update(
 ) {
     for (entity, button) in &buttons {
         if let Some(ref map_id) = map_id {
-            let Some(pack) = packs.get(&button.marker_id.pack_id) else {
+            let Some(pack) = packs.get(&button.full_id.pack_id) else {
                 panic!();
             };
 
-            if !pack.contains_map_id(&button.marker_id.marker_id, ***map_id) {
+            if !pack.contains_map_id(&button.full_id.marker_id, ***map_id) {
                 commands
                     .entity(entity)
                     .remove_pseudo_state(PseudoState::Open);
@@ -212,17 +216,17 @@ fn column_button(
                     continue;
                 }
 
-                let Some(pack) = packs.get(&button.marker_id.pack_id) else {
+                let Some(pack) = packs.get(&button.full_id.pack_id) else {
                     continue;
                 };
 
-                if pack.iter(&button.marker_id.marker_id).count() == 0 {
+                if pack.iter(&button.full_id.marker_id).count() == 0 {
                     continue;
                 }
 
                 column_events.send(MarkerWindowEvent::SetColumn {
                     column_id: column_ref.0 + 1,
-                    full_id: button.marker_id.clone(),
+                    full_id: button.full_id.clone(),
                 });
             }
             Interaction::Hovered => {}
@@ -250,24 +254,68 @@ fn button_state(
                 continue;
             }
 
-            button.open = *full_id == button.marker_id;
+            button.open = *full_id == button.full_id;
         }
     }
 }
 
 fn checkbox_action(
-    query: Query<(&Checkbox, &Parent), Changed<Checkbox>>,
-    buttons: Query<&MarkerButton>,
+    query: Query<(&Checkbox, &MarkerCheckbox, &FluxInteraction), Changed<FluxInteraction>>,
     mut ui_events: EventWriter<UiEvent>,
+    packs: Res<MarkerPacks>,
 ) {
-    for (checkbox, parent) in &query {
-        let Ok(button) = buttons.get(**parent) else {
-            return;
-        };
-        if checkbox.checked {
-            ui_events.send(UiEvent::LoadMarker(button.marker_id.clone()));
-        } else {
-            ui_events.send(UiEvent::UnloadMarker(button.marker_id.clone()));
+    for (checkbox, full_id, interaction) in &query {
+        if interaction.is_pressed() {
+            if let Some(pack) = packs.get(&full_id.pack_id) {
+                let markers = pack
+                    .iter_recursive(&full_id.marker_id)
+                    .map(|marker| full_id.with_marker_id(MarkerId(marker.id.clone())));
+
+                if checkbox.checked {
+                    ui_events.send_batch(markers.map(UiEvent::UnloadMarker));
+                } else {
+                    ui_events.send_batch(markers.map(UiEvent::LoadMarker));
+                }
+            }
+        }
+    }
+}
+
+fn checkbox_follow(
+    mut query: Query<(&mut Checkbox, &MarkerCheckbox)>,
+    mut ui_events: EventReader<UiEvent>,
+) {
+    for event in ui_events.read() {
+        match event {
+            UiEvent::LoadMarker(id_to_load) => {
+                for (mut checkbox, this_id) in &mut query {
+                    if checkbox.checked {
+                        continue;
+                    };
+                    if this_id.within(&id_to_load) {
+                        checkbox.checked = true;
+                    }
+                }
+            }
+            UiEvent::UnloadMarker(id_to_unload) => {
+                for (mut checkbox, this_id) in &mut query {
+                    if !checkbox.checked {
+                        continue;
+                    };
+                    if this_id.within(&id_to_unload) {
+                        checkbox.checked = false;
+                    }
+                }
+            }
+            UiEvent::UnloadAllMarkers => {
+                for (mut checkbox, _) in &mut query {
+                    if !checkbox.checked {
+                        continue;
+                    };
+                    checkbox.checked = false;
+                }
+            }
+            _ => {}
         }
     }
 }

@@ -196,12 +196,12 @@ fn trail_event(
             UiEvent::LoadMarker(full_id) => {
                 let Some(pack) = &packs.get(&full_id.pack_id) else {
                     warn!("Pack ID not found: {}", full_id.pack_id);
-                    return;
+                    continue;
                 };
 
                 let Some(trails) = pack.get_trails(&full_id.marker_id) else {
                     warn!("Trail not found for marker_id: {full_id}");
-                    return;
+                    continue;
                 };
 
                 debug!("Loading trails for {}...", full_id);

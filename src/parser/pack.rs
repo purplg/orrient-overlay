@@ -19,6 +19,26 @@ use super::{
 #[derive(Hash, Clone, Default, Debug, PartialEq, Eq)]
 pub struct MarkerId(pub String);
 
+impl MarkerId {
+    /// Returns true when `other` is a child of this `MarkerId`.
+    pub fn contains(&self, other: &MarkerId) -> bool {
+        self != other && other.0.starts_with(&self.0)
+    }
+
+    /// Returns true when `other` is a parent of this `MarkerId`.
+    pub fn within(&self, other: &MarkerId) -> bool {
+        self != other && self.0.starts_with(&other.0)
+    }
+}
+
+impl Deref for MarkerId {
+    type Target = String;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl From<&str> for MarkerId {
     fn from(value: &str) -> Self {
         Self(value.into())
@@ -33,7 +53,7 @@ impl std::fmt::Display for MarkerId {
 
 #[derive(Hash, Clone, Default, Debug, PartialEq, Eq)]
 pub struct FullMarkerId {
-    pub pack_id: super::PackId,
+    pub pack_id: PackId,
     pub marker_id: MarkerId,
 }
 
@@ -43,6 +63,16 @@ impl FullMarkerId {
             pack_id: self.pack_id.clone(),
             marker_id,
         }
+    }
+
+    /// Returns true when `other` is a child of this `FullMarkerId`.
+    pub fn contains(&self, other: &FullMarkerId) -> bool {
+        self.pack_id == other.pack_id && self.marker_id.contains(&other.marker_id)
+    }
+
+    /// Returns true when `other` is a parent of this `FullMarkerId`.
+    pub fn within(&self, other: &FullMarkerId) -> bool {
+        self.pack_id == other.pack_id && self.marker_id.within(&other.marker_id)
     }
 }
 
