@@ -236,6 +236,7 @@ fn parse_xml<R: Read + BufRead>(
     reader: R,
 ) -> Result<(), Error> {
     let mut reader = Reader::from_reader(reader);
+    reader.config_mut().trim_text(true);
     let mut buf = Vec::new();
 
     loop {
