@@ -124,14 +124,26 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
         self.container(MarkerButton::frame(), |parent| {
             parent
                 .row(|parent| {
-                    parent.checkbox(None, false);
-                    parent.spawn(TextBundle::from_section(
-                        label,
-                        TextStyle {
-                            font_size: 14.,
-                            ..default()
-                        },
-                    ));
+                    parent
+                        .checkbox(None, false)
+                        .insert(MarkerCheckbox(full_id.clone()));
+                    parent.column(|parent| {
+                        parent.spawn(TextBundle::from_section(
+                            label,
+                            TextStyle {
+                                font_size: 14.,
+                                ..default()
+                            },
+                        ));
+                        parent.spawn(TextBundle::from_section(
+                            &full_id.marker_id.0,
+                            TextStyle {
+                                color: Color::BEIGE,
+                                font_size: 10.,
+                                ..default()
+                            },
+                        ));
+                    });
                 })
                 .insert((
                     MarkerButton {
