@@ -137,8 +137,6 @@ fn load_pois_system(
                 });
             }
 
-            debug!("Spawned POI at {}", pos);
-
             if let Some(Behavior::ReappearDaily) = marker.behavior {
                 builder.insert(DisappearNearby);
             } else if let Some(Behavior::DisappearOnUse) = marker.behavior {
