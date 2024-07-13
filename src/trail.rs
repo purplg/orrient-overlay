@@ -3,7 +3,7 @@ use bevy::{
     render::{
         mesh::{Indices, PrimitiveTopology},
         render_asset::RenderAssetUsages,
-        render_resource::{Extent3d, TextureDimension, TextureFormat},
+        render_resource::{AsBindGroup, Extent3d, ShaderRef, TextureDimension, TextureFormat},
     },
     utils::HashMap,
 };
@@ -16,6 +16,7 @@ pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<TrailMeshes>();
+        app.add_plugins(MaterialPlugin::<TrailMaterial>::default());
         app.add_systems(Startup, load_marker_assets);
         app.add_systems(Update, trail_event.run_if(on_event::<UiEvent>()));
     }
@@ -143,12 +144,34 @@ fn create_trail_mesh(path: impl Iterator<Item = Vec3>) -> Mesh {
     .with_inserted_indices(Indices::U32(indices))
 }
 
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+struct TrailMaterial {
+    #[uniform(0)]
+    color: Color,
+    #[texture(1)]
+    #[sampler(2)]
+    color_texture: Option<Handle<Image>>,
+    alpha_mode: AlphaMode,
+    #[uniform(3)]
+    speed: f32,
+}
+
+impl Material for TrailMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "trail.wgsl".into()
+    }
+
+    fn alpha_mode(&self) -> AlphaMode {
+        self.alpha_mode
+    }
+}
+
 fn trail_event(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut events: EventReader<UiEvent>,
     mut trail_meshes: ResMut<TrailMeshes>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut trail_materials: ResMut<Assets<TrailMaterial>>,
     packs: Res<MarkerPacks>,
 ) {
     for event in events.read() {
@@ -197,13 +220,11 @@ fn trail_event(
 
                     debug!("Trail texture: {:?}", trail.texture_file);
 
-                    let material = materials.add(StandardMaterial {
-                        base_color_texture: Some(texture),
+                    let material = trail_materials.add(TrailMaterial {
+                        color: Color::WHITE,
+                        color_texture: Some(texture),
                         alpha_mode: AlphaMode::Blend,
-                        double_sided: true,
-                        cull_mode: None,
-                        unlit: true,
-                        ..default()
+                        speed: 1.0,
                     });
 
                     let mesh = create_trail_mesh(iter);
@@ -211,7 +232,7 @@ fn trail_event(
                     let entity = commands
                         .spawn((
                             TrailMesh,
-                            PbrBundle {
+                            MaterialMeshBundle {
                                 mesh: meshes.add(mesh),
                                 material,
                                 ..default()
