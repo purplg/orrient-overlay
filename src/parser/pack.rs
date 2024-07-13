@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::texture::ImageSampler};
+use bevy::prelude::*;
 use quick_xml::events::attributes::Attributes;
 use std::{collections::VecDeque, convert::identity, ops::Deref, str::FromStr as _};
 use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
@@ -192,7 +192,7 @@ pub struct MarkerPack {
     pois: HashMap<MarkerId, Vec<Poi>>,
 
     /// Trails associated with markers
-    trails: HashMap<MarkerId, Route>,
+    trails: HashMap<MarkerId, Vec<Route>>,
 
     icons: HashMap<String, Handle<Image>>,
 }
@@ -223,7 +223,7 @@ impl MarkerPack {
         self.icons.get(path).cloned()
     }
 
-    pub fn get_trails(&self, id: &MarkerId) -> Option<&Route> {
+    pub fn get_trails(&self, id: &MarkerId) -> Option<&Vec<Route>> {
         self.trails.get(id)
     }
 
@@ -279,7 +279,7 @@ pub struct MarkerPackBuilder {
 
     tree: MarkerPack,
 
-    trail_tags: HashMap<MarkerId, TrailXml>,
+    trail_tags: HashMap<MarkerId, Vec<TrailXml>>,
     trail_data: HashMap<String, TrailData>,
 
     /// The number of indices in the graph so to generate unique
@@ -339,11 +339,17 @@ impl MarkerPackBuilder {
     }
 
     pub fn add_trail_tag(&mut self, id: MarkerId, trail: TrailXml) {
-        self.trail_tags.insert(id, trail);
+        if let Some(tags) = self.trail_tags.get_mut(&id) {
+            tags.push(trail);
+        } else {
+            self.trail_tags.insert(id, vec![trail]);
+        }
     }
 
     pub fn add_trail_data(&mut self, file_path: String, data: TrailData) {
-        self.trail_data.insert(file_path, data);
+        if self.trail_data.insert(file_path.clone(), data).is_some() {
+            warn!("{file_path} already exists!");
+        }
     }
 
     pub fn add_image(&mut self, file_path: String, image: Image, image_assets: &mut Assets<Image>) {
@@ -377,19 +383,23 @@ impl MarkerPackBuilder {
     }
 
     pub fn build(mut self) -> MarkerPack {
-        for (id, xml) in self.trail_tags.drain() {
-            let Some(data) = self.trail_data.remove(&xml.trail_file) else {
-                warn!("TrailData not found for XML tag {id}");
-                continue;
-            };
-            self.tree.trails.insert(
-                id,
-                Route {
+        for (id, tags) in self.trail_tags.drain() {
+            for tag in tags {
+                let Some(data) = self.trail_data.remove(&tag.trail_file) else {
+                    warn!("TrailData not found for XML tag {id}");
+                    continue;
+                };
+                let route = Route {
                     map_id: data.map_id,
                     path: data.path,
-                    texture_file: xml.texture_file,
-                },
-            );
+                    texture_file: tag.texture_file,
+                };
+                if let Some(routes) = self.tree.trails.get_mut(&id) {
+                    routes.push(route);
+                } else {
+                    self.tree.trails.insert(id.clone(), vec![route]);
+                }
+            }
         }
 
         self.tree

@@ -9,7 +9,7 @@ use bevy::{
 };
 use itertools::Itertools;
 
-use crate::{parser::prelude::*, player::Player, UiEvent};
+use crate::{parser::prelude::*, UiEvent};
 
 pub(crate) struct Plugin;
 
@@ -176,52 +176,54 @@ fn trail_event(
                     return;
                 };
 
-                let Some(trail) = pack.get_trails(&full_id.marker_id) else {
+                let Some(trails) = pack.get_trails(&full_id.marker_id) else {
                     warn!("Trail not found for marker_id: {full_id}");
                     return;
                 };
 
-                debug!("Loading trail: {}...", full_id);
+                debug!("Loading trails for {}...", full_id);
 
-                let iter = trail.path.iter().map(|path| Vec3 {
-                    x: path.x,
-                    y: path.y,
-                    z: -path.z,
-                });
+                for trail in trails.iter() {
+                    let iter = trail.path.iter().map(|path| Vec3 {
+                        x: path.x,
+                        y: path.y,
+                        z: -path.z,
+                    });
 
-                let Some(texture) = pack.get_image(&trail.texture_file) else {
-                    warn!("Could not find texture {}", trail.texture_file);
-                    continue;
-                };
+                    let Some(texture) = pack.get_image(&trail.texture_file) else {
+                        warn!("Could not find texture {}", trail.texture_file);
+                        continue;
+                    };
 
-                debug!("Trail texture: {:?}", trail.texture_file);
+                    debug!("Trail texture: {:?}", trail.texture_file);
 
-                let material = materials.add(StandardMaterial {
-                    base_color_texture: Some(texture),
-                    alpha_mode: AlphaMode::Blend,
-                    double_sided: true,
-                    cull_mode: None,
-                    unlit: true,
-                    ..default()
-                });
+                    let material = materials.add(StandardMaterial {
+                        base_color_texture: Some(texture),
+                        alpha_mode: AlphaMode::Blend,
+                        double_sided: true,
+                        cull_mode: None,
+                        unlit: true,
+                        ..default()
+                    });
 
-                let mesh = create_trail_mesh(iter);
+                    let mesh = create_trail_mesh(iter);
 
-                let entity = commands
-                    .spawn((
-                        TrailMesh,
-                        PbrBundle {
-                            mesh: meshes.add(mesh),
-                            material,
-                            ..default()
-                        },
-                    ))
-                    .id();
+                    let entity = commands
+                        .spawn((
+                            TrailMesh,
+                            PbrBundle {
+                                mesh: meshes.add(mesh),
+                                material,
+                                ..default()
+                            },
+                        ))
+                        .id();
 
-                if let Some(entities) = trail_meshes.get_mut(full_id) {
-                    entities.push(entity);
-                } else {
-                    trail_meshes.insert(full_id.clone(), vec![entity]);
+                    if let Some(entities) = trail_meshes.get_mut(full_id) {
+                        entities.push(entity);
+                    } else {
+                        trail_meshes.insert(full_id.clone(), vec![entity]);
+                    }
                 }
                 info!("Trail {} loaded.", full_id);
             }
