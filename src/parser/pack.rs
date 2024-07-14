@@ -293,9 +293,17 @@ impl MarkerPack {
 
     pub fn iter<'a>(&'a self, start: &MarkerId) -> impl Iterator<Item = &'a Marker> {
         let start_id = self.index_of(start).unwrap();
-        self.graph
+        let items = self
+            .graph
             .neighbors_directed(start_id, Direction::Outgoing)
             .filter_map(|id| self.markers.get(&id))
+            .collect::<Vec<_>>();
+        // HACK Graph edges are created in reverse order so they get
+        //      collected and reversed here to be in the same order
+        //      listed in the pack.
+        // TODO Store nodes/edges and only build the graph backwards
+        //      when `MarkerPackBuilder::build()` is called.
+        items.into_iter().rev()
     }
 
     pub fn iter_recursive<'a>(&'a self, start: &MarkerId) -> impl Iterator<Item = &'a Marker> {
