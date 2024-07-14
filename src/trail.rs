@@ -92,7 +92,14 @@ fn load_marker_assets(
     })
 }
 
-const TRAIL_WIDTH: f32 = 0.2;
+const TRAIL_WIDTH: f32 = 0.5;
+
+#[derive(Clone, Copy)]
+struct OrientedPoint {
+    position: Vec3,
+    forward: Vec3,
+    distance: f32,
+}
 
 fn create_trail_mesh(path: impl Iterator<Item = Vec3>) -> Mesh {
     let mut indices: Vec<u32> = vec![];
@@ -101,29 +108,35 @@ fn create_trail_mesh(path: impl Iterator<Item = Vec3>) -> Mesh {
     let mut normals: Vec<Vec3> = vec![];
 
     let mut distance: f32 = 0.0;
-    for (prev_pos, next_pos) in path.tuple_windows() {
-        let prev_distance = distance;
-        distance += prev_pos.distance(next_pos);
-
+    let points = path.tuple_windows().map(|(prev_pos, next_pos)| {
         let forward = *Direction3d::new_unchecked((next_pos - prev_pos).normalize());
+        distance += prev_pos.distance(next_pos);
+        OrientedPoint {
+            position: next_pos,
+            forward,
+            distance,
+        }
+    });
+
+    for (prev_pos, next_pos) in points.tuple_windows() {
         let prev_left_vertex = positions.len() as u32;
-        positions.push(prev_pos + forward.cross(Vec3::NEG_Y) * TRAIL_WIDTH);
-        uvs.push(Vec2::new(0.0, prev_distance));
+        positions.push(prev_pos.position + prev_pos.forward.cross(Vec3::NEG_Y) * TRAIL_WIDTH);
+        uvs.push(Vec2::new(0.0, prev_pos.distance));
         normals.push(Vec3::Z);
 
         let prev_right_vertex = positions.len() as u32;
-        positions.push(prev_pos + forward.cross(Vec3::Y) * TRAIL_WIDTH);
-        uvs.push(Vec2::new(1.0, prev_distance));
+        positions.push(prev_pos.position + prev_pos.forward.cross(Vec3::Y) * TRAIL_WIDTH);
+        uvs.push(Vec2::new(1.0, prev_pos.distance));
         normals.push(Vec3::Z);
 
         let next_left_vertex = positions.len() as u32;
-        positions.push(next_pos + forward.cross(Vec3::NEG_Y) * TRAIL_WIDTH);
-        uvs.push(Vec2::new(0.0, distance));
+        positions.push(next_pos.position + next_pos.forward.cross(Vec3::NEG_Y) * TRAIL_WIDTH);
+        uvs.push(Vec2::new(0.0, next_pos.distance));
         normals.push(Vec3::Z);
 
         let next_right_vertex = positions.len() as u32;
-        positions.push(next_pos + forward.cross(Vec3::Y) * TRAIL_WIDTH);
-        uvs.push(Vec2::new(1.0, distance));
+        positions.push(next_pos.position + next_pos.forward.cross(Vec3::Y) * TRAIL_WIDTH);
+        uvs.push(Vec2::new(1.0, next_pos.distance));
         normals.push(Vec3::Z);
 
         indices.push(prev_left_vertex);
