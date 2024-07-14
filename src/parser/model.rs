@@ -69,7 +69,7 @@ pub struct Poi {
     // type
     pub id: String,
     // MapID
-    pub map_id: u32,
+    pub map_id: Option<u32>,
     // xpos, ypos, zpos
     pub position: Option<Vec3>,
     // iconFile
@@ -143,7 +143,7 @@ impl Poi {
 
         Ok(Poi {
             id: id.ok_or(Error::MissingField("poi.type".into()))?,
-            map_id: map_id.ok_or(Error::MissingField("poi.MapID".into()))?,
+            map_id,
             position,
             icon_file,
         })

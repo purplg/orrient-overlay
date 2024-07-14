@@ -187,7 +187,9 @@ impl Tag {
             }
             Tag::POIs => {}
             Tag::POI(poi) => {
-                builder.add_map_id(&poi.id, poi.map_id);
+                if let Some(map_id) = poi.map_id {
+                    builder.add_map_id(&poi.id, map_id);
+                }
                 builder.add_poi(poi);
             }
             Tag::Trail(trail) => {

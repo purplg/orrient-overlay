@@ -92,7 +92,7 @@ fn load_pois_system(
 
         let pois = pois.iter().filter(|poi| {
             if let Some(map_id) = &map_id {
-                poi.map_id == ***map_id
+                poi.map_id == Some(***map_id)
             } else {
                 true
             }
