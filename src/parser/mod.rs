@@ -5,7 +5,9 @@ mod trail;
 pub mod prelude {
     pub use super::pack::Behavior;
     pub use super::pack::FullMarkerId;
+    pub use super::pack::Marker;
     pub use super::pack::MarkerId;
+    pub use super::pack::MarkerPack;
     pub use super::pack::Route;
     pub use super::MarkerPacks;
 }
@@ -41,6 +43,7 @@ pub enum Error {
     UnknownField(String),
     AttrErr(quick_xml::events::attributes::AttrError),
     Utf8Error(std::string::FromUtf8Error),
+    MissingFileName(PathBuf),
 }
 
 pub(crate) struct Plugin;
@@ -196,9 +199,13 @@ impl Tag {
 }
 
 fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<MarkerPack, Error> {
-    let name = path.to_string_lossy().to_string();
+    let filename = path
+        .file_name()
+        .ok_or(Error::MissingFileName(path.to_path_buf()))?
+        .to_string_lossy()
+        .to_string();
 
-    let mut builder = MarkerPackBuilder::new(PackId(name));
+    let mut builder = MarkerPackBuilder::new(PackId(filename));
 
     let pack = File::open(path).map_err(Error::IoErr)?;
     let mut zip = zip::ZipArchive::new(pack).map_err(Error::ZipErr)?;

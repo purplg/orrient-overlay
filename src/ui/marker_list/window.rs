@@ -149,21 +149,10 @@ fn set_column(
                         scroll_view.column(|parent| {
                             parent.label(LabelConfig::from("Top"));
                             for (pack_id, pack) in packs.iter() {
-                                for marker in pack
-                                    .roots()
-                                    .filter_map(|marker| pack.get(&MarkerId(marker.id.clone())))
+                                for marker in pack.roots().filter_map(|marker| pack.get(&marker.id))
                                 {
-                                    let full_id =
-                                        pack_id.with_marker_id(MarkerId(marker.id.clone()));
-                                    let has_children = pack.iter(&full_id.marker_id).count() > 0;
-                                    parent.marker_button(
-                                        marker.label.clone(),
-                                        full_id,
-                                        marker.map_ids.clone(),
-                                        has_children,
-                                        0,
-                                        false,
-                                    );
+                                    let full_id = pack_id.with_marker_id(marker.id.clone());
+                                    parent.marker_button(&pack, marker, 0, false);
                                 }
                             }
                         });
@@ -201,18 +190,9 @@ fn set_column(
                         scroll_view.column(|parent| {
                             parent.label(LabelConfig::from(marker.label.clone()));
                             for child_marker in &submarkers {
-                                let full_id =
-                                    full_id.with_marker_id(MarkerId(child_marker.id.clone()));
-                                let has_children = pack.iter(&full_id.marker_id).count() > 0;
+                                let full_id = full_id.with_marker_id(child_marker.id.clone());
                                 let checked = loaded.contains(&full_id);
-                                parent.marker_button(
-                                    &child_marker.label,
-                                    full_id,
-                                    child_marker.map_ids.clone(),
-                                    has_children,
-                                    next_column_id,
-                                    checked,
-                                );
+                                parent.marker_button(&pack, &child_marker, next_column_id, checked);
                             }
                         });
                     })
@@ -262,14 +242,17 @@ fn checkbox(
 
         if checkbox.checked {
             ui_events.send(UiEvent::LoadMarker(item.id.clone()));
-            checkbox_events.send_batch(pack.iter(&item.id.marker_id).map(|marker| {
-                CheckboxEvent::Enable(item.id.with_marker_id(MarkerId(marker.id.clone())))
-            }));
+            checkbox_events
+                .send_batch(pack.iter(&item.id.marker_id).map(|marker| {
+                    CheckboxEvent::Enable(item.id.with_marker_id(marker.id.clone()))
+                }));
         } else {
             ui_events.send(UiEvent::UnloadMarker(item.id.clone().into()));
-            checkbox_events.send_batch(pack.iter(&item.id.marker_id).map(|marker| {
-                CheckboxEvent::Disable(item.id.with_marker_id(MarkerId(marker.id.clone())))
-            }));
+            checkbox_events.send_batch(
+                pack.iter(&item.id.marker_id).map(|marker| {
+                    CheckboxEvent::Disable(item.id.with_marker_id(marker.id.clone()))
+                }),
+            );
         }
     }
 }

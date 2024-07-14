@@ -19,16 +19,15 @@ impl bevy::prelude::Plugin for Plugin {
             button_mapid_disable.run_if(resource_exists_and_changed::<MapId>),
         );
         app.add_systems(Update, checkbox_follow.run_if(on_event::<UiEvent>()));
+        app.add_systems(Update, button_init.run_if(resource_exists::<MapId>));
     }
 }
 
 pub trait UiMarkerButtonExt {
     fn marker_button(
         &mut self,
-        label: impl Into<String>,
-        full_id: FullMarkerId,
-        map_ids: Vec<u32>,
-        has_children: bool,
+        pack: &MarkerPack,
+        marker: &Marker,
         column_id: usize,
         checked: bool,
     );
@@ -124,13 +123,12 @@ impl MarkerButton {
 impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
     fn marker_button(
         &mut self,
-        label: impl Into<String>,
-        full_id: FullMarkerId,
-        map_ids: Vec<u32>,
-        has_children: bool,
+        pack: &MarkerPack,
+        marker: &Marker,
         column_id: usize,
         checked: bool,
     ) {
+        let full_id = pack.full_id(marker.id.clone());
         self.container(MarkerButton::frame(), |parent| {
             parent
                 .row(|parent| {
@@ -139,7 +137,7 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
                         .insert(MarkerCheckbox(full_id.clone()));
                     parent.column(|parent| {
                         parent.spawn(TextBundle::from_section(
-                            label,
+                            &marker.label,
                             TextStyle {
                                 font_size: 14.,
                                 ..default()
@@ -156,13 +154,13 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
                     });
                 })
                 .insert((
+                    ColumnRef(column_id),
                     MarkerButton {
                         full_id,
-                        has_children,
+                        map_ids: marker.map_ids.clone(),
+                        has_children: pack.iter(&marker.id).count() > 0,
                         open: false,
-                        map_ids,
-                    }, //
-                    ColumnRef(column_id), //
+                    },
                 ));
         });
     }
@@ -182,9 +180,9 @@ fn button_mapid_disable(
         };
 
         if pack.contains_map_id(&button.full_id.marker_id, **map_id) {
-            entity_cmds.add_pseudo_state(PseudoState::Disabled);
-        } else {
             entity_cmds.remove_pseudo_state(PseudoState::Disabled);
+        } else {
+            entity_cmds.add_pseudo_state(PseudoState::Disabled);
         }
     }
 }
@@ -271,7 +269,7 @@ fn checkbox_action(
             if let Some(pack) = packs.get(&full_id.pack_id) {
                 let markers = pack
                     .iter_recursive(&full_id.marker_id)
-                    .map(|marker| full_id.with_marker_id(MarkerId(marker.id.clone())));
+                    .map(|marker| full_id.with_marker_id(marker.id.clone()));
 
                 if checkbox.checked {
                     ui_events.send_batch(markers.map(UiEvent::UnloadMarker));
@@ -318,6 +316,19 @@ fn checkbox_follow(
                 }
             }
             _ => {}
+        }
+    }
+}
+
+fn button_init(
+    mut commands: Commands,
+    buttons: Query<(Entity, &MarkerButton), Added<MarkerButton>>,
+    map_id: Res<MapId>,
+) {
+    for (entity, button) in &buttons {
+        let mut entity_cmds = commands.entity(entity);
+        if !button.map_ids.contains(&map_id) {
+            entity_cmds.add_pseudo_state(PseudoState::Disabled);
         }
     }
 }

@@ -130,7 +130,7 @@ impl Behavior {
 
 #[derive(Clone, Debug, Default)]
 pub struct Marker {
-    pub id: String,
+    pub id: MarkerId,
     pub label: String,
     pub kind: MarkerKind,
     pub depth: usize,
@@ -144,7 +144,7 @@ pub struct Marker {
 impl Marker {
     pub(super) fn new(id: impl Into<String>, label: impl Into<String>, kind: MarkerKind) -> Self {
         Self {
-            id: id.into(),
+            id: MarkerId(id.into()),
             label: label.into(),
             kind,
             ..Default::default()
@@ -152,7 +152,7 @@ impl Marker {
     }
 
     fn copy_from_parent(&mut self, parent: &Marker) {
-        self.id = format!("{}.{}", parent.id, self.id);
+        self.id = MarkerId(format!("{}.{}", parent.id, self.id));
         self.depth = parent.depth + 1;
         self.behavior = self.behavior.or(parent.behavior);
         if self.icon_file.is_none() {
@@ -175,7 +175,7 @@ impl Marker {
             };
 
             match key.to_lowercase().as_str() {
-                "name" => this.id = value,
+                "name" => this.id = MarkerId(value),
                 "displayname" => this.label = value,
                 "isseparator" => {
                     if "true" == value.to_lowercase() {
@@ -203,8 +203,10 @@ pub struct Route {
     pub texture_file: String,
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Debug)]
 pub struct MarkerPack {
+    id: PackId,
+
     /// Nodes without any parents. Useful for iterating through all
     /// content in the graph.
     roots: HashSet<NodeIndex>,
@@ -228,8 +230,24 @@ pub struct MarkerPack {
 }
 
 impl MarkerPack {
-    fn new() -> Self {
-        Self::default()
+    fn new(id: PackId) -> Self {
+        Self {
+            id,
+            roots: Default::default(),
+            indexes: Default::default(),
+            markers: Default::default(),
+            graph: Default::default(),
+            pois: Default::default(),
+            trails: Default::default(),
+            icons: Default::default(),
+        }
+    }
+
+    pub fn full_id(&self, id: MarkerId) -> FullMarkerId {
+        FullMarkerId {
+            pack_id: self.id.clone(),
+            marker_id: id.clone(),
+        }
     }
 
     fn index_of(&self, id: &MarkerId) -> Option<NodeIndex> {
@@ -305,8 +323,6 @@ impl<'a, VM: VisitMap<NodeIndex>> Iterator for MarkerPackIter<'a, VM> {
 }
 
 pub struct MarkerPackBuilder {
-    id: PackId,
-
     tree: MarkerPack,
 
     trail_tags: HashMap<MarkerId, Vec<TrailXml>>,
@@ -331,8 +347,7 @@ impl Deref for MarkerPackBuilder {
 impl MarkerPackBuilder {
     pub fn new(pack_id: impl Into<PackId>) -> Self {
         Self {
-            id: pack_id.into(),
-            tree: Default::default(),
+            tree: MarkerPack::new(pack_id.into()),
             count: Default::default(),
             parent_id: Default::default(),
             trail_tags: Default::default(),
@@ -341,7 +356,7 @@ impl MarkerPackBuilder {
     }
 
     pub fn add_marker(&mut self, mut marker: Marker) -> &mut Self {
-        let node_id = self.get_or_create_index(&MarkerId(marker.id.clone()));
+        let node_id = self.get_or_create_index(&marker.id);
         self.tree.graph.add_node(node_id);
 
         if let Some(parent_id) = self.parent_id.front() {
@@ -354,7 +369,7 @@ impl MarkerPackBuilder {
 
         self.parent_id.push_front(node_id);
         self.tree.markers.insert(node_id, marker.clone());
-        self.tree.indexes.insert(MarkerId(marker.id), node_id);
+        self.tree.indexes.insert(marker.id, node_id);
         self
     }
 
