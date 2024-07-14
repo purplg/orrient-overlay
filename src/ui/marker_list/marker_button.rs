@@ -323,11 +323,17 @@ fn checkbox_follow(
 fn button_init(
     mut commands: Commands,
     buttons: Query<(Entity, &MarkerButton), Added<MarkerButton>>,
+    packs: Res<MarkerPacks>,
     map_id: Res<MapId>,
 ) {
     for (entity, button) in &buttons {
         let mut entity_cmds = commands.entity(entity);
-        if !button.map_ids.contains(&map_id) {
+        let Some(pack) = packs.get(&button.full_id.pack_id) else {
+            warn!("Pack for button not found.");
+            return;
+        };
+
+        if !pack.contains_map_id(&button.full_id.marker_id, **map_id) {
             entity_cmds.add_pseudo_state(PseudoState::Disabled);
         }
     }
