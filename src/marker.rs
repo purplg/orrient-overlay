@@ -100,10 +100,13 @@ fn load_pois_system(
 
         let mut count = 0;
         for poi in pois {
-            let pos = Vec3 {
-                x: poi.position.x,
-                y: poi.position.y,
-                z: -poi.position.z,
+            let Some(pos) = poi.position.map(|position| Vec3 {
+                x: position.x,
+                y: position.y,
+                z: -position.z,
+            }) else {
+                // No position recorded for this POI.
+                continue;
             };
 
             let icon = poi

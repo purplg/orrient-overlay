@@ -71,7 +71,7 @@ pub struct Poi {
     // MapID
     pub map_id: u32,
     // xpos, ypos, zpos
-    pub position: Vec3,
+    pub position: Option<Vec3>,
     // iconFile
     pub icon_file: Option<Utf8PathBuf<Utf8UnixEncoding>>,
 }
@@ -123,14 +123,28 @@ impl Poi {
                 _ => {}
             }
         }
+
+        // Catch if only a position is only partially defined.
+        // `num_coords` should only be 3 or 0. If it's anything else,
+        // then a xpos, ypos, zpos is either duplicate or missing.
+        let num_coords = [x, y, z].into_iter().filter_map(identity).count();
+        let position = if num_coords == 3 {
+            Some(Vec3::new(x.unwrap(), y.unwrap(), z.unwrap()))
+        } else {
+            if num_coords != 0 {
+                if let Some(ref id) = id {
+                    warn!("POI has an invalid position: {id}");
+                } else {
+                    warn!("POI has an invalid position.");
+                }
+            }
+            None
+        };
+
         Ok(Poi {
             id: id.ok_or(Error::MissingField("poi.type".into()))?,
             map_id: map_id.ok_or(Error::MissingField("poi.MapID".into()))?,
-            position: Vec3 {
-                x: x.ok_or(Error::MissingField("poi.xpos".into()))?,
-                y: y.ok_or(Error::MissingField("poi.ypos".into()))?,
-                z: z.ok_or(Error::MissingField("poi.zpos".into()))?,
-            },
+            position,
             icon_file,
         })
     }
