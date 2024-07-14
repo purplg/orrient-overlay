@@ -157,7 +157,7 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
                     ColumnRef(column_id),
                     MarkerButton {
                         full_id,
-                        map_ids: marker.map_ids.clone(),
+                        map_ids: marker.map_ids.clone().into_iter().collect::<Vec<_>>(),
                         has_children: pack.iter(&marker.id).count() > 0,
                         open: false,
                     },

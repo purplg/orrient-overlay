@@ -137,7 +137,7 @@ pub struct Marker {
     pub behavior: Option<Behavior>,
     pub poi_tip: Option<String>,
     pub poi_description: Option<String>,
-    pub map_ids: Vec<u32>,
+    pub map_ids: HashSet<u32>,
     pub icon_file: Option<Utf8PathBuf<Utf8UnixEncoding>>,
 }
 
@@ -405,7 +405,7 @@ impl MarkerPackBuilder {
 
     pub fn add_map_id(&mut self, id: impl Into<String>, map_id: u32) {
         if let Some(marker) = self.tree.get_mut(&MarkerId(id.into())) {
-            marker.map_ids.push(map_id);
+            marker.map_ids.insert(map_id);
         }
     }
 
