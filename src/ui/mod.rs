@@ -36,7 +36,7 @@ fn setup(mut commands: Commands) {
     let camera = commands
         .spawn(Camera3dBundle {
             camera: Camera {
-                clear_color: ClearColorConfig::Custom(Color::rgba(0.0, 0.0, 0.0, 0.0)),
+                clear_color: ClearColorConfig::Custom(Color::srgba(0.0, 0.0, 0.0, 0.0)),
                 ..default()
             },
             ..default()

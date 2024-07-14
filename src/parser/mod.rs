@@ -13,7 +13,6 @@ pub mod prelude {
 }
 
 use bevy::utils::HashMap;
-use bevy_inspector_egui::egui::TextBuffer;
 
 use bevy::prelude::*;
 use bevy::render::render_asset::RenderAssetUsages;
@@ -22,6 +21,7 @@ use bevy::render::texture::{
 };
 use pack::{FullMarkerId, Marker, MarkerId, MarkerPack, MarkerPackBuilder};
 
+use std::borrow::Cow;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
@@ -99,15 +99,17 @@ fn load(path: &Path, mut images: &mut Assets<Image>) -> Result<HashMap<PackId, M
             continue;
         };
 
-        match extension.as_str() {
-            "taco" | "zip" => match read_marker_pack(&path, &mut images) {
-                Ok(pack) => {
-                    packs.insert(PackId(filename), pack);
+        match extension {
+            Cow::Borrowed("taco") | Cow::Borrowed("zip") => {
+                match read_marker_pack(&path, &mut images) {
+                    Ok(pack) => {
+                        packs.insert(PackId(filename), pack);
+                    }
+                    Err(err) => {
+                        warn!("Error when reading marker pack {err:?}");
+                    }
                 }
-                Err(err) => {
-                    warn!("Error when reading marker pack {err:?}");
-                }
-            },
+            }
             _ => {
                 warn!("Unknown file extension: {:?}", path);
             }

@@ -1,5 +1,4 @@
 mod camera;
-mod console;
 mod input;
 mod link;
 mod marker;
@@ -10,7 +9,7 @@ mod ui;
 
 use bevy::window::{CompositeAlphaMode, WindowResolution};
 use bevy::{prelude::*, window::WindowLevel};
-use parser::prelude::*;
+use parser::{prelude::*, PackId};
 
 #[derive(Event, Clone, Debug)]
 pub enum WorldEvent {
@@ -61,7 +60,6 @@ fn main() {
     app.add_plugins(link::Plugin);
     app.add_plugins(player::Plugin);
     app.add_plugins(ui::Plugin);
-    app.add_plugins(console::Plugin);
     app.add_plugins(marker::Plugin);
     app.add_plugins(trail::Plugin);
     app.add_plugins(parser::Plugin);

@@ -20,20 +20,20 @@ typed-path = "0.9.0"
 zip = "2.1.3"
 
 # https://github.com/bevyengine/bevy/
-bevy = { version = "0.13.2", features = ["wayland"] }
+bevy = { version = "0.14.0", features = ["wayland", "file_watcher"] }
 
 # https://github.com/RichoDemus/bevy-console/
-bevy_console = "0.11.1"
-clap = "4.5.7"
+# bevy_console = "0.11.1"
+# clap = "4.5.7"
 
 # https://github.com/jakobhellermann/bevy-inspector-egui/
-bevy-inspector-egui = "0.24.0"
+# bevy-inspector-egui = "0.24.0"
 
 # https://github.com/kulkalkul/bevy_mod_billboard
-bevy_mod_billboard = "0.6.0"
+bevy_mod_billboard = "0.7.0"
 
 # https://github.com/UmbraLuminosa/sickle_ui
-sickle_ui = { rev = "d09e1c98d608fd5ca99b21fad1c15a6321d466b6", git = "https://github.com/UmbraLuminosa/sickle_ui" }
+sickle_ui = { rev = "2f2fae98ef745a6ed51fe71e00188fb9f1be733e", git = "https://github.com/UmbraLuminosa/sickle_ui" }
 itertools = "0.13.0"
 
 [workspace]

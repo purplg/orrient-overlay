@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{color::palettes, prelude::*};
 use sickle_ui::{prelude::*, ui_builder::UiBuilder};
 
 use crate::{link::MapId, parser::prelude::*, UiEvent};
@@ -146,7 +146,7 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
                         parent.spawn(TextBundle::from_section(
                             &full_id.marker_id.0,
                             TextStyle {
-                                color: Color::BEIGE,
+                                color: palettes::tailwind::GRAY_500.into(),
                                 font_size: 10.,
                                 ..default()
                             },

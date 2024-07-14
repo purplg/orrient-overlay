@@ -1,4 +1,5 @@
 use bevy::{
+    color::palettes,
     prelude::*,
     render::{
         mesh::{Indices, PrimitiveTopology},
@@ -79,14 +80,14 @@ fn load_marker_assets(
         trails_mesh: None,
         trail_material: materials.add(StandardMaterial {
             base_color_texture: Some(images.add(uv_debug_texture())),
-            base_color: Color::BLUE,
+            base_color: palettes::tailwind::BLUE_500.into(),
             double_sided: true,
             cull_mode: None,
             ..default()
         }),
         poi_material: materials.add(StandardMaterial {
             base_color_texture: Some(images.add(uv_debug_texture())),
-            base_color: Color::RED,
+            base_color: palettes::tailwind::RED_500.into(),
             ..default()
         }),
     })
@@ -109,7 +110,7 @@ fn create_trail_mesh(path: impl Iterator<Item = Vec3>) -> Mesh {
 
     let mut distance: f32 = 0.0;
     let points = path.tuple_windows().map(|(prev_pos, next_pos)| {
-        let forward = *Direction3d::new_unchecked((next_pos - prev_pos).normalize());
+        let forward = *Dir3::new_unchecked((next_pos - prev_pos).normalize());
         distance += prev_pos.distance(next_pos);
         OrientedPoint {
             position: next_pos,
@@ -160,7 +161,7 @@ fn create_trail_mesh(path: impl Iterator<Item = Vec3>) -> Mesh {
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 struct TrailMaterial {
     #[uniform(0)]
-    color: Color,
+    color: LinearRgba,
     #[texture(1)]
     #[sampler(2)]
     color_texture: Option<Handle<Image>>,
@@ -234,7 +235,7 @@ fn trail_event(
                     debug!("Trail texture: {:?}", trail.texture_file);
 
                     let material = trail_materials.add(TrailMaterial {
-                        color: Color::WHITE,
+                        color: palettes::tailwind::ZINC_500.into(),
                         color_texture: Some(texture),
                         alpha_mode: AlphaMode::Blend,
                         speed: 1.0,
