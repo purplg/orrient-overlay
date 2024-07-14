@@ -9,6 +9,7 @@ pub mod prelude {
     pub use super::pack::MarkerId;
     pub use super::pack::MarkerPack;
     pub use super::pack::Route;
+    pub use super::pack::MarkerKind;
     pub use super::MarkerPacks;
 }
 

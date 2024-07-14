@@ -88,7 +88,6 @@ impl std::fmt::Display for FullMarkerId {
 pub enum MarkerKind {
     #[default]
     Category,
-    Leaf,
     Separator,
 }
 
@@ -177,11 +176,10 @@ impl Marker {
             match key.to_lowercase().as_str() {
                 "name" => this.id = MarkerId(value),
                 "displayname" => this.label = value,
-                "isseparator" => {
-                    if "true" == value.to_lowercase() {
-                        this.kind = MarkerKind::Separator
-                    };
-                }
+                "isseparator" => match value.to_lowercase().as_str() {
+                    "true" | "1" => this.kind = MarkerKind::Separator,
+                    _ => {}
+                },
                 "iconfile" => {
                     if let Ok(path) = Utf8WindowsPathBuf::from_str(&value) {
                         this.icon_file = Some(path.with_unix_encoding().to_path_buf());

@@ -7,7 +7,9 @@ use sickle_ui::{
 
 use crate::{marker::LoadedMarkers, parser::prelude::*, ui::OrrientMenuItem, UiEvent};
 
-use super::{marker_button::UiMarkerButtonExt, tooltip::UiToolTipExt as _};
+use super::{
+    marker_button::UiMarkerButtonExt, separator::UiMarkerSeparatorExt, tooltip::UiToolTipExt as _,
+};
 
 pub(crate) struct Plugin;
 
@@ -148,10 +150,9 @@ fn set_column(
                     .scroll_view(None, |scroll_view| {
                         scroll_view.column(|parent| {
                             parent.label(LabelConfig::from("Top"));
-                            for (pack_id, pack) in packs.iter() {
+                            for (_pack_id, pack) in packs.iter() {
                                 for marker in pack.roots().filter_map(|marker| pack.get(&marker.id))
                                 {
-                                    let full_id = pack_id.with_marker_id(marker.id.clone());
                                     parent.marker_button(&pack, marker, 0, false);
                                 }
                             }
@@ -167,12 +168,12 @@ fn set_column(
                     continue;
                 };
 
-                let Some(marker) = pack.get(&full_id.marker_id) else {
+                let Some(parent_marker) = pack.get(&full_id.marker_id) else {
                     warn!("Marker {} not found", full_id.marker_id);
                     continue;
                 };
 
-                let submarkers = pack.iter(&full_id.marker_id).collect::<Vec<_>>();
+                let markers = pack.iter(&full_id.marker_id).collect::<Vec<_>>();
 
                 let next_column_id = column_id + 1;
 
@@ -188,11 +189,15 @@ fn set_column(
                     .ui_builder(marker_view)
                     .scroll_view(None, |scroll_view| {
                         scroll_view.column(|parent| {
-                            parent.label(LabelConfig::from(marker.label.clone()));
-                            for child_marker in &submarkers {
-                                let full_id = full_id.with_marker_id(child_marker.id.clone());
-                                let checked = loaded.contains(&full_id);
-                                parent.marker_button(&pack, &child_marker, next_column_id, checked);
+                            parent.label(LabelConfig::from(parent_marker.label.clone()));
+                            for marker in &markers {
+                                if let MarkerKind::Separator = marker.kind {
+                                    parent.marker_separator(&marker.label);
+                                } else {
+                                    let full_id = full_id.with_marker_id(marker.id.clone());
+                                    let checked = loaded.contains(&full_id);
+                                    parent.marker_button(&pack, &marker, next_column_id, checked);
+                                }
                             }
                         });
                     })
