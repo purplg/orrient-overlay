@@ -161,14 +161,14 @@ fn set_column(
                                         full_id,
                                         marker.map_ids.clone(),
                                         has_children,
-                                        1,
+                                        0,
                                         false,
                                     );
                                 }
                             }
                         });
                     })
-                    // .insert(Column(next_column_id))
+                    .insert(Column(0))
                     .style()
                     .width(Val::Px(200.));
             }

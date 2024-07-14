@@ -10,10 +10,14 @@ pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ComponentThemePlugin::<MarkerButton>::default());
-        app.add_systems(Update, column_button);
+        app.add_systems(Update, button_interaction);
         app.add_systems(Update, checkbox_action);
         app.add_systems(Update, button_state);
-        app.add_systems(Update, button_update);
+        app.add_systems(Update, button_track_state);
+        app.add_systems(
+            Update,
+            button_mapid_disable.run_if(resource_exists_and_changed::<MapId>),
+        );
         app.add_systems(Update, checkbox_follow.run_if(on_event::<UiEvent>()));
     }
 }
@@ -164,49 +168,45 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
     }
 }
 
-fn button_update(
+fn button_mapid_disable(
     mut commands: Commands,
     buttons: Query<(Entity, &MarkerButton)>,
-    map_id: Option<Res<MapId>>,
+    map_id: Res<MapId>,
     packs: Res<MarkerPacks>,
 ) {
     for (entity, button) in &buttons {
-        if let Some(ref map_id) = map_id {
-            let Some(pack) = packs.get(&button.full_id.pack_id) else {
-                panic!();
-            };
+        let mut entity_cmds = commands.entity(entity);
+        let Some(pack) = packs.get(&button.full_id.pack_id) else {
+            warn!("Button doesn't exist in pack.");
+            continue;
+        };
 
-            if !pack.contains_map_id(&button.full_id.marker_id, ***map_id) {
-                commands
-                    .entity(entity)
-                    .remove_pseudo_state(PseudoState::Open);
-                commands
-                    .entity(entity)
-                    .remove_pseudo_state(PseudoState::Closed);
-                commands
-                    .entity(entity)
-                    .add_pseudo_state(PseudoState::Disabled);
-                continue;
-            }
-        }
-
-        if button.open {
-            commands
-                .entity(entity)
-                .remove_pseudo_state(PseudoState::Closed);
-            commands.entity(entity).add_pseudo_state(PseudoState::Open);
+        if pack.contains_map_id(&button.full_id.marker_id, **map_id) {
+            entity_cmds.add_pseudo_state(PseudoState::Disabled);
         } else {
-            commands
-                .entity(entity)
-                .remove_pseudo_state(PseudoState::Open);
-            commands
-                .entity(entity)
-                .add_pseudo_state(PseudoState::Closed);
+            entity_cmds.remove_pseudo_state(PseudoState::Disabled);
         }
     }
 }
 
-fn column_button(
+fn button_track_state(
+    mut commands: Commands,
+    buttons: Query<(Entity, &MarkerButton), Changed<MarkerButton>>,
+) {
+    for (entity, button) in &buttons {
+        let mut entity_cmds = commands.entity(entity);
+
+        if button.open {
+            entity_cmds.remove_pseudo_state(PseudoState::Closed);
+            entity_cmds.add_pseudo_state(PseudoState::Open);
+        } else {
+            entity_cmds.remove_pseudo_state(PseudoState::Open);
+            entity_cmds.add_pseudo_state(PseudoState::Closed);
+        }
+    }
+}
+
+fn button_interaction(
     mut query: Query<(&mut MarkerButton, &ColumnRef, &Interaction), Changed<Interaction>>,
     mut column_events: EventWriter<MarkerWindowEvent>,
     packs: Res<MarkerPacks>,
@@ -248,7 +248,7 @@ fn button_state(
 
         for (mut button, column) in &mut buttons {
             // Only for a single column
-            if *column_id != column.0 {
+            if *column_id - 1 != column.0 {
                 continue;
             }
 
