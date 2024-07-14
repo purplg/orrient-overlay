@@ -6,10 +6,8 @@ pub mod prelude {
     pub use super::pack::Behavior;
     pub use super::pack::FullMarkerId;
     pub use super::pack::Marker;
-    pub use super::pack::MarkerId;
-    pub use super::pack::MarkerPack;
-    pub use super::pack::Route;
     pub use super::pack::MarkerKind;
+    pub use super::pack::MarkerPack;
     pub use super::MarkerPacks;
 }
 
@@ -81,7 +79,7 @@ fn load_system(
     }
 }
 
-fn load(path: &Path, mut images: &mut Assets<Image>) -> Result<HashMap<PackId, MarkerPack>, Error> {
+fn load(path: &Path, images: &mut Assets<Image>) -> Result<HashMap<PackId, MarkerPack>, Error> {
     let mut packs: HashMap<PackId, MarkerPack> = Default::default();
 
     let iter = std::fs::read_dir(path).unwrap();
@@ -101,16 +99,14 @@ fn load(path: &Path, mut images: &mut Assets<Image>) -> Result<HashMap<PackId, M
         };
 
         match extension {
-            Cow::Borrowed("taco") | Cow::Borrowed("zip") => {
-                match read_marker_pack(&path, &mut images) {
-                    Ok(pack) => {
-                        packs.insert(PackId(filename), pack);
-                    }
-                    Err(err) => {
-                        warn!("Error when reading marker pack {err:?}");
-                    }
+            Cow::Borrowed("taco") | Cow::Borrowed("zip") => match read_marker_pack(&path, images) {
+                Ok(pack) => {
+                    packs.insert(PackId(filename), pack);
                 }
-            }
+                Err(err) => {
+                    warn!("Error when reading marker pack {err:?}");
+                }
+            },
             _ => {
                 warn!("Unknown file extension: {:?}", path);
             }
@@ -157,7 +153,7 @@ enum Tag {
     OverlayData,
     Marker(Marker),
     POIs,
-    POI(model::Poi),
+    Poi(model::Poi),
     Trail(model::TrailXml),
     Route,
     UnknownField(String),
@@ -170,7 +166,7 @@ impl Tag {
             b"OverlayData" => Tag::OverlayData,
             b"MarkerCategory" => Tag::Marker(Marker::from_attrs(element.attributes())?),
             b"POIs" => Tag::POIs,
-            b"POI" => Tag::POI(model::Poi::from_attrs(element.attributes())?),
+            b"POI" => Tag::Poi(model::Poi::from_attrs(element.attributes())?),
             b"Trail" => Tag::Trail(model::TrailXml::from_attrs(element.attributes())?),
             field => Tag::UnknownField(String::from_utf8_lossy(field).to_string()),
         };
@@ -187,7 +183,7 @@ impl Tag {
                 builder.add_marker(marker);
             }
             Tag::POIs => {}
-            Tag::POI(poi) => {
+            Tag::Poi(poi) => {
                 if let Some(map_id) = poi.map_id {
                     builder.add_map_id(&poi.id, map_id);
                 }

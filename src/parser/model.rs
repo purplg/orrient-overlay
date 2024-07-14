@@ -85,7 +85,7 @@ impl Poi {
         let mut id: Option<String> = None;
         let mut icon_file: Option<Utf8PathBuf<Utf8UnixEncoding>> = None;
 
-        for attr in attrs.map(Result::ok).filter_map(identity) {
+        for attr in attrs.map(Result::ok).flatten() {
             let Ok(key) = String::from_utf8(attr.key.0.to_vec()) else {
                 warn!("Key is not UTF-8 encoded: {:?}", attr);
                 continue;

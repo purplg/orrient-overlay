@@ -290,7 +290,7 @@ fn checkbox_follow(
                     if checkbox.checked {
                         continue;
                     };
-                    if this_id.within(&id_to_load) {
+                    if this_id.within(id_to_load) {
                         checkbox.checked = true;
                     }
                 }
@@ -300,7 +300,7 @@ fn checkbox_follow(
                     if !checkbox.checked {
                         continue;
                     };
-                    if this_id.within(&id_to_unload) {
+                    if this_id.within(id_to_unload) {
                         checkbox.checked = false;
                     }
                 }

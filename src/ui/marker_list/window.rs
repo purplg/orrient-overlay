@@ -153,7 +153,7 @@ fn set_column(
                             for (_pack_id, pack) in packs.iter() {
                                 for marker in pack.roots().filter_map(|marker| pack.get(&marker.id))
                                 {
-                                    parent.marker_button(&pack, marker, 0, false);
+                                    parent.marker_button(pack, marker, 0, false);
                                 }
                             }
                         });
@@ -196,7 +196,7 @@ fn set_column(
                                 } else {
                                     let full_id = full_id.with_marker_id(marker.id.clone());
                                     let checked = loaded.contains(&full_id);
-                                    parent.marker_button(&pack, &marker, next_column_id, checked);
+                                    parent.marker_button(pack, marker, next_column_id, checked);
                                 }
                             }
                         });
@@ -252,7 +252,7 @@ fn checkbox(
                     CheckboxEvent::Enable(item.id.with_marker_id(marker.id.clone()))
                 }));
         } else {
-            ui_events.send(UiEvent::UnloadMarker(item.id.clone().into()));
+            ui_events.send(UiEvent::UnloadMarker(item.id.clone()));
             checkbox_events.send_batch(
                 pack.iter(&item.id.marker_id).map(|marker| {
                     CheckboxEvent::Disable(item.id.with_marker_id(marker.id.clone()))

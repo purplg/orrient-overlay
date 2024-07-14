@@ -29,9 +29,6 @@ impl bevy::prelude::Plugin for Plugin {
 #[derive(Component)]
 struct OrrientMenuItem(pub UiEvent);
 
-#[derive(Component)]
-struct FileBrowser;
-
 fn setup(mut commands: Commands) {
     let camera = commands
         .spawn(Camera3dBundle {

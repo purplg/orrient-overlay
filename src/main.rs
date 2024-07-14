@@ -9,7 +9,7 @@ mod ui;
 
 use bevy::window::{CompositeAlphaMode, WindowResolution};
 use bevy::{prelude::*, window::WindowLevel};
-use parser::{prelude::*, PackId};
+use parser::prelude::*;
 
 #[derive(Event, Clone, Debug)]
 pub enum WorldEvent {
