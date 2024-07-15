@@ -350,12 +350,12 @@ mod tests {
         //   B   E
         //  / \   \
         // C   D   F
-        assert_eq!(iter.next().unwrap().id, "A");
-        assert_eq!(iter.next().unwrap().id, "A.B");
-        assert_eq!(iter.next().unwrap().id, "A.B.C");
-        assert_eq!(iter.next().unwrap().id, "A.B.D");
-        assert_eq!(iter.next().unwrap().id, "A.E");
-        assert_eq!(iter.next().unwrap().id, "A.E.F");
+        assert_eq!(iter.next().unwrap().id.0, "A");
+        assert_eq!(iter.next().unwrap().id.0, "A.B");
+        assert_eq!(iter.next().unwrap().id.0, "A.B.C");
+        assert_eq!(iter.next().unwrap().id.0, "A.B.D");
+        assert_eq!(iter.next().unwrap().id.0, "A.E");
+        assert_eq!(iter.next().unwrap().id.0, "A.E.F");
         assert!(iter.next().is_none());
 
         //   G
@@ -364,12 +364,12 @@ mod tests {
         //   / | \
         //  J  K  L
         let mut iter = markers.iter_recursive(&"G".into());
-        assert_eq!(iter.next().unwrap().id, "G");
-        assert_eq!(iter.next().unwrap().id, "G.H");
-        assert_eq!(iter.next().unwrap().id, "G.I");
-        assert_eq!(iter.next().unwrap().id, "G.I.J");
-        assert_eq!(iter.next().unwrap().id, "G.I.K");
-        assert_eq!(iter.next().unwrap().id, "G.I.L");
+        assert_eq!(iter.next().unwrap().id.0, "G");
+        assert_eq!(iter.next().unwrap().id.0, "G.H");
+        assert_eq!(iter.next().unwrap().id.0, "G.I");
+        assert_eq!(iter.next().unwrap().id.0, "G.I.J");
+        assert_eq!(iter.next().unwrap().id.0, "G.I.K");
+        assert_eq!(iter.next().unwrap().id.0, "G.I.L");
         assert!(iter.next().is_none());
 
         //     A
@@ -378,9 +378,9 @@ mod tests {
         //  / \   \
         // C   D   F
         let mut iter = markers.iter_recursive(&"A.B".into());
-        assert_eq!(iter.next().unwrap().id, "A.B");
-        assert_eq!(iter.next().unwrap().id, "A.B.C");
-        assert_eq!(iter.next().unwrap().id, "A.B.D");
+        assert_eq!(iter.next().unwrap().id.0, "A.B");
+        assert_eq!(iter.next().unwrap().id.0, "A.B.C");
+        assert_eq!(iter.next().unwrap().id.0, "A.B.D");
         assert!(iter.next().is_none());
 
         //     A
@@ -389,7 +389,7 @@ mod tests {
         //  / \   \
         // C   D   F
         let mut iter = markers.iter_recursive(&"A.B.C".into());
-        assert_eq!(iter.next().unwrap().id, "A.B.C");
+        assert_eq!(iter.next().unwrap().id.0, "A.B.C");
         assert!(iter.next().is_none());
     }
 }

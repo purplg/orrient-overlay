@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use bevy::utils::{HashMap, HashSet};
 use petgraph::{
     graph::{DiGraph, NodeIndex},
-    visit::{Dfs, VisitMap},
     Direction,
 };
 use quick_xml::events::attributes::Attributes;
@@ -297,26 +296,12 @@ impl MarkerPack {
     }
 
     pub fn iter_recursive<'a>(&'a self, start: &MarkerId) -> impl Iterator<Item = &'a Marker> {
-        let start_id = self.index_of(start).unwrap();
-        MarkerPackIter {
-            tree: self,
-            iter: Dfs::new(&self.graph, start_id),
-        }
-    }
-}
-
-pub struct MarkerPackIter<'a, VM: VisitMap<NodeIndex>> {
-    tree: &'a MarkerPack,
-    iter: Dfs<NodeIndex, VM>,
-}
-
-impl<'a, VM: VisitMap<NodeIndex>> Iterator for MarkerPackIter<'a, VM> {
-    type Item = &'a Marker;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter
-            .next(&self.tree.graph)
-            .and_then(|id| self.tree.markers.get(&id))
+        let start_marker = self.get(start).unwrap();
+        [start_marker].into_iter().chain(
+            self.iter(start)
+                .map(|marker| [marker].into_iter().chain(self.iter(&marker.id)))
+                .flatten(),
+        )
     }
 }
 
