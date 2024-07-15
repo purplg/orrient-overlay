@@ -291,17 +291,9 @@ impl MarkerPack {
 
     pub fn iter<'a>(&'a self, start: &MarkerId) -> impl Iterator<Item = &'a Marker> {
         let start_id = self.index_of(start).unwrap();
-        let items = self
-            .graph
+        self.graph
             .neighbors_directed(start_id, Direction::Outgoing)
             .filter_map(|id| self.markers.get(&id))
-            .collect::<Vec<_>>();
-        // HACK Graph edges are created in reverse order so they get
-        //      collected and reversed here to be in the same order
-        //      listed in the pack.
-        // TODO Store nodes/edges and only build the graph backwards
-        //      when `MarkerPackBuilder::build()` is called.
-        items.into_iter().rev()
     }
 
     pub fn iter_recursive<'a>(&'a self, start: &MarkerId) -> impl Iterator<Item = &'a Marker> {
@@ -331,6 +323,8 @@ impl<'a, VM: VisitMap<NodeIndex>> Iterator for MarkerPackIter<'a, VM> {
 pub struct MarkerPackBuilder {
     tree: MarkerPack,
 
+    edges: HashMap<NodeIndex, Vec<NodeIndex>>,
+
     trail_tags: HashMap<MarkerId, Vec<TrailXml>>,
     trail_data: HashMap<String, TrailData>,
 
@@ -354,6 +348,7 @@ impl MarkerPackBuilder {
     pub fn new(pack_id: impl Into<PackId>) -> Self {
         Self {
             tree: MarkerPack::new(pack_id.into()),
+            edges: Default::default(),
             count: Default::default(),
             parent_id: Default::default(),
             trail_tags: Default::default(),
@@ -366,7 +361,11 @@ impl MarkerPackBuilder {
         self.tree.graph.add_node(node_id);
 
         if let Some(parent_id) = self.parent_id.front() {
-            self.tree.graph.add_edge(*parent_id, node_id, ());
+            if let Some(children) = self.edges.get_mut(parent_id) {
+                children.push(node_id);
+            } else {
+                self.edges.insert(*parent_id, vec![node_id]);
+            }
             let parent_marker = self.tree.markers.get(parent_id).unwrap();
             marker.copy_from_parent(parent_marker);
         } else {
@@ -408,7 +407,7 @@ impl MarkerPackBuilder {
     }
 
     pub fn add_image(&mut self, file_path: String, image: Image, image_assets: &mut Assets<Image>) {
-        debug!("Found image: {pack_id}/{file_path}", pack_id = self.tree.id);
+        // debug!("Found image: {pack_id}/{file_path}", pack_id = self.tree.id);
         let handle = image_assets.add(image);
         self.tree.icons.insert(file_path, handle);
     }
@@ -438,6 +437,15 @@ impl MarkerPackBuilder {
     }
 
     pub fn build(mut self) -> MarkerPack {
+        for (parent, mut children) in self.edges.drain() {
+            // Reverse the list of child nodes to ensure they're order
+            // is maintained from the marker pack.
+            children.reverse();
+            for child in children {
+                self.tree.graph.add_edge(parent, child, ());
+            }
+        }
+
         for (id, tags) in self.trail_tags.drain() {
             for tag in tags {
                 let Some(data) = self.trail_data.remove(&tag.trail_file) else {
