@@ -31,8 +31,8 @@ pub fn read<R: Read>(mut input: R) -> Result<TrailData> {
     // The rest of the file are tuples of 3 f32 values. An x, y, and
     // z.
     let mut path: Vec<Vec3> = vec![];
+    let mut buf = [0u8; 12];
     loop {
-        let mut buf = [0u8; 12];
         let read = input.read(&mut buf)?;
         if read == 0 {
             // If no bytes are read, then we've reached the end of the
