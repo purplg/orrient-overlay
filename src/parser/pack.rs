@@ -1,19 +1,19 @@
+use anyhow::Result;
 use bevy::prelude::*;
-use quick_xml::events::attributes::Attributes;
-use std::{collections::VecDeque, convert::identity, ops::Deref, str::FromStr as _};
-use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
-
 use bevy::utils::{HashMap, HashSet};
 use petgraph::{
     graph::{DiGraph, NodeIndex},
     visit::{Dfs, VisitMap},
     Direction,
 };
+use quick_xml::events::attributes::Attributes;
+use std::{collections::VecDeque, convert::identity, ops::Deref, str::FromStr as _};
+use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
 
 use super::{
     model::{self, Poi, TrailXml},
     trail::TrailData,
-    Error, PackId,
+    PackId,
 };
 
 #[derive(Hash, Clone, Default, Debug, PartialEq, Eq)]
@@ -159,7 +159,7 @@ impl Marker {
         }
     }
 
-    pub fn from_attrs(attrs: Attributes) -> Result<Self, Error> {
+    pub fn from_attrs(attrs: Attributes) -> Result<Self> {
         let mut this = Self::default();
 
         for attr in attrs.map(Result::ok).filter_map(identity) {

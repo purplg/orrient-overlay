@@ -1,10 +1,9 @@
 use std::{convert::identity, str::FromStr};
 
+use anyhow::{anyhow, Result};
 use bevy::{log::warn, math::Vec3};
 use quick_xml::events::attributes::Attributes;
 use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
-
-use super::Error;
 
 #[derive(Clone, Debug, Default)]
 pub(super) struct MarkerCategory {
@@ -77,7 +76,7 @@ pub struct Poi {
 }
 
 impl Poi {
-    pub(super) fn from_attrs(attrs: Attributes) -> Result<Self, Error> {
+    pub(super) fn from_attrs(attrs: Attributes) -> Result<Self> {
         let mut map_id: Option<u32> = None;
         let mut x: Option<f32> = None;
         let mut y: Option<f32> = None;
@@ -142,7 +141,7 @@ impl Poi {
         };
 
         Ok(Poi {
-            id: id.ok_or(Error::MissingField("poi.type".into()))?,
+            id: id.ok_or(anyhow!("POI missing field `poi.type`."))?,
             map_id,
             position,
             icon_file,
@@ -161,7 +160,7 @@ pub(super) struct TrailXml {
 }
 
 impl TrailXml {
-    pub(super) fn from_attrs(attrs: Attributes) -> Result<Self, Error> {
+    pub(super) fn from_attrs(attrs: Attributes) -> Result<Self> {
         let mut id: Option<String> = None;
         let mut trail_file: Option<String> = None;
         let mut texture_file: Option<String> = None;
@@ -192,9 +191,9 @@ impl TrailXml {
         }
 
         Ok(Self {
-            id: id.ok_or(Error::MissingField("poi.type".into()))?,
-            trail_file: trail_file.ok_or(Error::MissingField("trail.trailData".into()))?,
-            texture_file: texture_file.ok_or(Error::MissingField("trail.texture".into()))?,
+            id: id.ok_or(anyhow!("Trail missing field `type`."))?,
+            trail_file: trail_file.ok_or(anyhow!("Trail missing field `trailData`."))?,
+            texture_file: texture_file.ok_or(anyhow!("Trail missing field `texture`."))?,
         })
     }
 }

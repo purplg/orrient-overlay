@@ -11,39 +11,22 @@ pub mod prelude {
     pub use super::MarkerPacks;
 }
 
-use bevy::utils::HashMap;
-
+use anyhow::{Context, Result};
+use bevy::log::{debug, warn};
 use bevy::prelude::*;
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::texture::{
     CompressedImageFormats, ImageAddressMode, ImageSampler, ImageSamplerDescriptor, ImageType,
 };
+use bevy::utils::HashMap;
 use pack::{FullMarkerId, Marker, MarkerId, MarkerPack, MarkerPackBuilder};
-
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Reader;
 use std::borrow::Cow;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 use std::path::PathBuf;
-
-use bevy::log::{debug, warn};
-use quick_xml::events::{BytesStart, Event};
-use quick_xml::Reader;
-
-#[derive(Debug)]
-pub enum Error {
-    EmptyCategory,
-    IoErr(std::io::Error),
-    ZipErr(zip::result::ZipError),
-    Eof,
-    Xml(quick_xml::Error),
-    MissingField(String),
-    TrailParseError(String),
-    UnknownField(String),
-    AttrErr(quick_xml::events::attributes::AttrError),
-    Utf8Error(std::string::FromUtf8Error),
-    MissingFileName(PathBuf),
-}
 
 pub(crate) struct Plugin;
 
@@ -79,7 +62,7 @@ fn load_system(
     }
 }
 
-fn load(path: &Path, images: &mut Assets<Image>) -> Result<HashMap<PackId, MarkerPack>, Error> {
+fn load(path: &Path, images: &mut Assets<Image>) -> Result<HashMap<PackId, MarkerPack>> {
     let mut packs: HashMap<PackId, MarkerPack> = Default::default();
 
     let iter = std::fs::read_dir(path).unwrap();
@@ -161,7 +144,7 @@ enum Tag {
 }
 
 impl Tag {
-    fn from_element(element: &BytesStart) -> Result<Tag, Error> {
+    fn from_element(element: &BytesStart) -> Result<Tag> {
         let tag = match element.name().0 {
             b"OverlayData" => Tag::OverlayData,
             b"MarkerCategory" => Tag::Marker(Marker::from_attrs(element.attributes())?),
@@ -199,19 +182,19 @@ impl Tag {
     }
 }
 
-fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<MarkerPack, Error> {
+fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<MarkerPack> {
     let filename = path
         .file_name()
-        .ok_or(Error::MissingFileName(path.to_path_buf()))?
+        .context("Could not determine filename in {path:?}")?
         .to_string_lossy()
         .to_string();
 
     let mut builder = MarkerPackBuilder::new(PackId(filename));
 
-    let pack = File::open(path).map_err(Error::IoErr)?;
-    let mut zip = zip::ZipArchive::new(pack).map_err(Error::ZipErr)?;
+    let pack = File::open(path)?;
+    let mut zip = zip::ZipArchive::new(pack)?;
     for i in 0..zip.len() {
-        let mut file = zip.by_index(i).map_err(Error::ZipErr)?;
+        let mut file = zip.by_index(i)?;
         let file_path = file.name().to_string();
         let Some(ext) = file_path.rsplit(".").next() else {
             continue;
@@ -222,7 +205,7 @@ fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<Marke
             }
             "png" => {
                 let mut bytes = Vec::new();
-                file.read_to_end(&mut bytes).map_err(Error::IoErr)?;
+                file.read_to_end(&mut bytes)?;
                 let image: Image = Image::from_buffer(
                     &bytes,
                     ImageType::Extension(ext),
@@ -241,7 +224,7 @@ fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<Marke
             "trl" => match trail::read(file) {
                 Ok(trail_data) => builder.add_trail_data(file_path, trail_data),
                 Err(err) => {
-                    warn!("Erroring parsing trail file {file_path}: {err:?}")
+                    warn!("Error parsing trail file: {err}: {file_path}")
                 }
             },
             _ => (),
@@ -254,7 +237,7 @@ fn parse_xml<R: Read + BufRead>(
     tree: &mut MarkerPackBuilder,
     filename: &str,
     reader: R,
-) -> Result<(), Error> {
+) -> Result<()> {
     let mut reader = Reader::from_reader(reader);
     reader.config_mut().trim_text(true);
     let mut buf = Vec::new();
