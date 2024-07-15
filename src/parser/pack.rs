@@ -278,8 +278,11 @@ impl MarkerPack {
     }
 
     pub fn get_mut(&mut self, id: &MarkerId) -> Option<&mut Marker> {
-        let node_id = self.indexes.get(id).unwrap();
-        self.markers.get_mut(node_id)
+        if let Some(node_id) = self.indexes.get(id) {
+            self.markers.get_mut(node_id)
+        } else {
+            None
+        }
     }
 
     pub fn roots(&self) -> impl Iterator<Item = &Marker> {
