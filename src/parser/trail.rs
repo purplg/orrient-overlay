@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use bevy::math::Vec3;
+use bevy::{log::warn, math::Vec3};
 use std::{fs::File, io::Read, path::Path};
 
 /// The raw trail data read directly from a file.
@@ -32,8 +32,8 @@ pub fn read<R: Read>(mut input: R) -> Result<TrailData> {
     // The rest of the file are tuples of 3 f32 values. An x, y, and
     // z.
     let mut path: Vec<Vec3> = vec![];
-    let mut buf = [0u8; 12];
     loop {
+        let mut buf = [0u8; 12];
         let read = input.read(&mut buf)?;
         if read == 0 {
             // If no bytes are read, then we've reached the end of the
@@ -44,16 +44,23 @@ pub fn read<R: Read>(mut input: R) -> Result<TrailData> {
                 path,
             });
         }
-        if read < buf.len() {
-            // If we read some but not enough bytes, the file is corrupt.
-            return Err(anyhow!(
-                "Only read {read} bytes when expected {len}",
-                len = buf.len()
-            ));
-        }
+
         let x = f32::from_le_bytes(buf[0..4].try_into().unwrap());
         let y = f32::from_le_bytes(buf[4..8].try_into().unwrap());
         let z = f32::from_le_bytes(buf[8..12].try_into().unwrap());
         path.push(Vec3 { x, y, z });
+
+        if read < buf.len() {
+            // If we read some but not enough bytes, the file is corrupt.
+            warn!(
+                "Trail file seems corrupt. Read {read} bytes but expected {len}",
+                len = buf.len()
+            );
+            return Ok(TrailData {
+                version,
+                map_id,
+                path,
+            });
+        }
     }
 }
