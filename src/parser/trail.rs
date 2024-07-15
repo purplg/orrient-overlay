@@ -10,6 +10,7 @@ pub struct TrailData {
     pub path: Vec<Vec3>,
 }
 
+#[allow(unused)]
 /// Convenience function to try to read a Trail file.
 pub fn from_file<P: AsRef<Path>>(path: P) -> Result<TrailData> {
     read(File::open(path)?)
