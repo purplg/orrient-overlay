@@ -95,6 +95,7 @@ fn load(path: &Path, images: &mut Assets<Image>) -> Result<HashMap<PackId, Marke
             }
         }
     }
+    info!("Loaded {} packs.", packs.len());
     Ok(packs)
 }
 
@@ -183,13 +184,13 @@ impl Tag {
 }
 
 fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<MarkerPack> {
-    let filename = path
+    let pack_filename = path
         .file_name()
         .context("Could not determine filename in {path:?}")?
         .to_string_lossy()
         .to_string();
 
-    let mut builder = MarkerPackBuilder::new(PackId(filename));
+    let mut builder = MarkerPackBuilder::new(PackId(pack_filename.clone()));
 
     let pack = File::open(path)?;
     let mut zip = zip::ZipArchive::new(pack)?;
@@ -230,6 +231,7 @@ fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<Marke
             _ => (),
         }
     }
+    info!("Finished reading pack: {pack_filename}");
     Ok(builder.build())
 }
 
@@ -275,7 +277,8 @@ fn parse_xml<R: Read + BufRead>(
                     tree.up();
                 }
                 Event::Eof => break,
-                unknown_event => debug!("unknown_event: {:?}", unknown_event),
+                Event::Comment(_) => {}
+                unknown_event => debug!("unknown_event in {filename}: {unknown_event:?}"),
             },
             Err(err) => panic!(
                 "Error reading {:?} at position {}: {:?}",

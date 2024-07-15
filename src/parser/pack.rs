@@ -398,13 +398,17 @@ impl MarkerPackBuilder {
     }
 
     pub fn add_trail_data(&mut self, file_path: String, data: TrailData) {
+        debug!(
+            "Found trail data: {pack_id}/{file_path}",
+            pack_id = self.tree.id
+        );
         if self.trail_data.insert(file_path.clone(), data).is_some() {
             warn!("{file_path} already exists!");
         }
     }
 
     pub fn add_image(&mut self, file_path: String, image: Image, image_assets: &mut Assets<Image>) {
-        debug!("Found image: {file_path}");
+        debug!("Found image: {pack_id}/{file_path}", pack_id = self.tree.id);
         let handle = image_assets.add(image);
         self.tree.icons.insert(file_path, handle);
     }
