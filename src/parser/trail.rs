@@ -37,7 +37,11 @@ pub fn read<R: Read>(mut input: R) -> Result<TrailData> {
         if read == 0 {
             // If no bytes are read, then we've reached the end of the
             // file and we can break from the loop.
-            break;
+            return Ok(TrailData {
+                version,
+                map_id,
+                path,
+            });
         }
         if read < buf.len() {
             // If we read some but not enough bytes, the file is corrupt.
@@ -51,10 +55,4 @@ pub fn read<R: Read>(mut input: R) -> Result<TrailData> {
         let z = f32::from_le_bytes(buf[8..12].try_into().unwrap());
         path.push(Vec3 { x, y, z });
     }
-
-    Ok(TrailData {
-        version,
-        map_id,
-        path,
-    })
 }
