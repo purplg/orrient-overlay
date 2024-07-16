@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use bincode::Options as _;
 use crossbeam_channel::Receiver;
-use std::{net::UdpSocket, ops::Deref};
+use std::{
+    net::UdpSocket,
+    ops::{Deref, DerefMut},
+};
 
 use orrient_link::MumbleLinkMessage;
 
@@ -42,7 +45,7 @@ impl bevy::prelude::Plugin for Plugin {
 }
 
 #[derive(Resource, Clone, Copy, Debug)]
-pub struct MapId(u32);
+pub struct MapId(pub u32);
 
 impl Deref for MapId {
     type Target = u32;

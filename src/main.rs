@@ -1,4 +1,5 @@
 mod camera;
+mod console;
 mod input;
 mod link;
 mod marker;
@@ -62,6 +63,7 @@ fn main() {
     app.add_plugins(ui::Plugin);
     app.add_plugins(marker::Plugin);
     app.add_plugins(trail::Plugin);
+    app.add_plugins(console::Plugin);
     app.add_plugins(parser::Plugin);
 
     app.run();
