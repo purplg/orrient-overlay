@@ -74,16 +74,10 @@ impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
                 parent.menu_bar(|parent| {
                     parent.menu(
                         MenuConfig {
-                            name: "File".into(),
+                            name: "Menu".into(),
                             ..default()
                         },
                         |parent| {
-                            parent
-                                .menu_item(MenuItemConfig {
-                                    name: "Open markers...".into(),
-                                    ..default()
-                                })
-                                .insert(OrrientMenuItem(UiEvent::ShowMarkerBrowser));
                             parent
                                 .menu_item(MenuItemConfig {
                                     name: "Unload all markers".into(),
