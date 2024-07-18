@@ -15,13 +15,10 @@ pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<CheckboxEvent>();
         app.add_event::<MarkerWindowEvent>();
         app.add_systems(Update, menu_interaction);
         app.add_systems(Update, set_column);
         app.add_systems(Update, toggle_show_ui);
-        app.add_systems(Update, checkbox);
-        app.add_systems(Update, checkbox_events);
         app.add_systems(
             Update,
             (remove_window, setup_window)
@@ -203,73 +200,6 @@ fn set_column(
                 continue;
             }
         };
-    }
-}
-
-#[derive(Event, Debug)]
-enum CheckboxEvent {
-    Enable(FullMarkerId),
-    Disable(FullMarkerId),
-}
-
-impl CheckboxEvent {
-    fn id(&self) -> &FullMarkerId {
-        match self {
-            CheckboxEvent::Enable(id) => id,
-            CheckboxEvent::Disable(id) => id,
-        }
-    }
-
-    fn enabled(&self) -> bool {
-        match self {
-            CheckboxEvent::Enable(_) => true,
-            CheckboxEvent::Disable(_) => false,
-        }
-    }
-}
-
-fn checkbox(
-    query: Query<(&Checkbox, &MarkerItem), Changed<Checkbox>>,
-    mut checkbox_events: EventWriter<CheckboxEvent>,
-    mut ui_events: EventWriter<UiEvent>,
-    packs: Res<MarkerPacks>,
-) {
-    for (checkbox, item) in query.iter() {
-        let Some(pack) = packs.get(&item.id.pack_id) else {
-            continue;
-        };
-
-        if checkbox.checked {
-            ui_events.send(UiEvent::LoadMarker(item.id.clone()));
-            checkbox_events
-                .send_batch(pack.iter(&item.id.marker_id).map(|marker| {
-                    CheckboxEvent::Enable(item.id.with_marker_id(marker.id.clone()))
-                }));
-        } else {
-            ui_events.send(UiEvent::UnloadMarker(item.id.clone()));
-            checkbox_events.send_batch(
-                pack.iter(&item.id.marker_id).map(|marker| {
-                    CheckboxEvent::Disable(item.id.with_marker_id(marker.id.clone()))
-                }),
-            );
-        }
-    }
-}
-
-fn checkbox_events(
-    mut query: Query<(&mut Checkbox, &MarkerItem)>,
-    mut checkbox_events: EventReader<CheckboxEvent>,
-) {
-    for event in checkbox_events.read() {
-        if let Some(mut checkbox) = query.iter_mut().find_map(|(checkbox, item)| {
-            if &item.id == event.id() {
-                Some(checkbox)
-            } else {
-                None
-            }
-        }) {
-            checkbox.checked = event.enabled();
-        }
     }
 }
 

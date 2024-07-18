@@ -3,7 +3,7 @@ use sickle_ui::{prelude::*, ui_builder::UiBuilder};
 
 use crate::{link::MapId, parser::prelude::*, UiEvent};
 
-use super::window::MarkerWindowEvent;
+use super::window::{MarkerItem, MarkerWindowEvent};
 
 pub(crate) struct Plugin;
 
@@ -14,6 +14,11 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Update, checkbox_action);
         app.add_systems(Update, button_state);
         app.add_systems(Update, button_track_state);
+
+        app.add_event::<CheckboxEvent>();
+        app.add_systems(Update, checkbox);
+        app.add_systems(Update, checkbox_events);
+
         app.add_systems(
             Update,
             button_mapid_disable.run_if(resource_exists_and_changed::<MapId>),
@@ -333,6 +338,73 @@ fn button_init(
 
         if !pack.contains_map_id(&button.full_id.marker_id, **map_id) {
             entity_cmds.add_pseudo_state(PseudoState::Disabled);
+        }
+    }
+}
+
+#[derive(Event, Debug)]
+enum CheckboxEvent {
+    Enable(FullMarkerId),
+    Disable(FullMarkerId),
+}
+
+impl CheckboxEvent {
+    fn id(&self) -> &FullMarkerId {
+        match self {
+            CheckboxEvent::Enable(id) => id,
+            CheckboxEvent::Disable(id) => id,
+        }
+    }
+
+    fn enabled(&self) -> bool {
+        match self {
+            CheckboxEvent::Enable(_) => true,
+            CheckboxEvent::Disable(_) => false,
+        }
+    }
+}
+
+fn checkbox(
+    query: Query<(&Checkbox, &MarkerItem), Changed<Checkbox>>,
+    mut checkbox_events: EventWriter<CheckboxEvent>,
+    mut ui_events: EventWriter<UiEvent>,
+    packs: Res<MarkerPacks>,
+) {
+    for (checkbox, item) in query.iter() {
+        let Some(pack) = packs.get(&item.id.pack_id) else {
+            continue;
+        };
+
+        if checkbox.checked {
+            ui_events.send(UiEvent::LoadMarker(item.id.clone()));
+            checkbox_events
+                .send_batch(pack.iter(&item.id.marker_id).map(|marker| {
+                    CheckboxEvent::Enable(item.id.with_marker_id(marker.id.clone()))
+                }));
+        } else {
+            ui_events.send(UiEvent::UnloadMarker(item.id.clone()));
+            checkbox_events.send_batch(
+                pack.iter(&item.id.marker_id).map(|marker| {
+                    CheckboxEvent::Disable(item.id.with_marker_id(marker.id.clone()))
+                }),
+            );
+        }
+    }
+}
+
+fn checkbox_events(
+    mut query: Query<(&mut Checkbox, &MarkerItem)>,
+    mut checkbox_events: EventReader<CheckboxEvent>,
+) {
+    for event in checkbox_events.read() {
+        if let Some(mut checkbox) = query.iter_mut().find_map(|(checkbox, item)| {
+            if &item.id == event.id() {
+                Some(checkbox)
+            } else {
+                None
+            }
+        }) {
+            checkbox.checked = event.enabled();
         }
     }
 }
