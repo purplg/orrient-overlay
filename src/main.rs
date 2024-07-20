@@ -25,7 +25,8 @@ pub enum WorldEvent {
 
 #[derive(Event, Clone, Debug)]
 pub enum UiEvent {
-    ToggleUI,
+    OpenUi,
+    CloseUi,
     LoadMarker(FullMarkerId),
     UnloadMarker(FullMarkerId),
     UnloadAllMarkers,

@@ -209,18 +209,26 @@ fn toggle_show_ui(
     mut ui: Query<&mut FloatingPanelConfig, With<MarkerWindow>>,
 ) {
     for event in events.read() {
-        if let UiEvent::ToggleUI = event {
-            let mut window = window.single_mut();
-            let visible = !window.cursor.hit_test;
-            if visible {
-                window.cursor.hit_test = true;
-                ui.single_mut().folded = false;
-                info!("UI enabled");
-            } else {
+        match event {
+            UiEvent::OpenUi => {
+                let mut window = window.single_mut();
+                if window.cursor.hit_test {
+                    window.cursor.hit_test = false;
+                    ui.single_mut().folded = true;
+                    info!("UI disabled");
+                } else {
+                    window.cursor.hit_test = true;
+                    ui.single_mut().folded = false;
+                    info!("UI enabled");
+                }
+            }
+            UiEvent::CloseUi => {
+                let mut window = window.single_mut();
                 window.cursor.hit_test = false;
                 ui.single_mut().folded = true;
                 info!("UI disabled");
             }
+            _ => {}
         }
     }
 }

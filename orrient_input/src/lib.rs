@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 
 fn input_map(value: &KeyCode) -> Option<Action> {
     Some(match value {
-        KeyCode::Escape => Action::Menu,
+        KeyCode::Tab => Action::Menu,
+        KeyCode::Escape => Action::Close,
         KeyCode::ControlLeft => Action::Modifier,
         _ => return None,
     })
@@ -55,6 +56,7 @@ impl ActionEvent {
 pub enum Action {
     Modifier,
     Menu,
+    Close,
     Overlay,
 }
 

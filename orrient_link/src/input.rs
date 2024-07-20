@@ -16,6 +16,8 @@ impl IntoBevyKeyExt for rdev::Key {
     fn into_bevy_key(self) -> KeyCode {
         match self {
             Key::Escape => KeyCode::Escape,
+            Key::BackQuote => KeyCode::Backquote,
+            Key::Tab => KeyCode::Tab,
             Key::ControlLeft => KeyCode::ControlLeft,
             _ => KeyCode::Unidentified(NativeKeyCode::Unidentified),
         }

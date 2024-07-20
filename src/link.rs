@@ -102,12 +102,12 @@ fn socket_system(
                     state: ButtonState::Pressed,
                 } => match action {
                     Action::Menu => {
-                        ui_events.send(UiEvent::ToggleUI);
+                        ui_events.send(UiEvent::OpenUi);
                     }
-                    Action::Overlay => {
-                        ui_events.send(UiEvent::ToggleUI);
+                    Action::Close => {
+                        ui_events.send(UiEvent::CloseUi);
                     }
-                    Action::Modifier => {}
+                    _ => {}
                 },
                 _ => {}
             },

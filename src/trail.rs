@@ -262,7 +262,7 @@ fn trail_event(
                 }
                 info!("Trail {} loaded.", full_id);
             }
-            UiEvent::ToggleUI => {}
+            _ => {}
         }
     }
 }
