@@ -1,8 +1,8 @@
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
-use bevy_input::{keyboard::NativeKeyCode, prelude::*};
+use bevy_input::{keyboard::NativeKeyCode, prelude::*, ButtonState};
 
-use orrient_input::ActionEvent;
+use orrient_input::{Action, ActionEvent};
 use orrient_link::SocketMessage;
 use rdev::{listen, Event, EventType::*, Key};
 
@@ -58,10 +58,38 @@ fn input_system(
 }
 
 /// Read input actions and queue them to be sent over socket
-fn action_system(mut events: EventReader<ActionEvent>, tx: Res<ChannelTx<SocketMessage>>) {
+fn action_system(
+    mut events: EventReader<ActionEvent>,
+    tx: Res<ChannelTx<SocketMessage>>,
+    mut modifier_pressed: Local<bool>,
+) {
     for event in events.read() {
-        if let Err(err) = tx.send(SocketMessage::Action(event.clone())) {
-            println!("err: {:?}", err);
+        match event {
+            ActionEvent {
+                action: Action::Modifier,
+                state: ButtonState::Pressed,
+            } => {
+                *modifier_pressed = true;
+                if let Err(err) = tx.send(SocketMessage::Action(event.clone())) {
+                    println!("err: {:?}", err);
+                }
+            }
+            ActionEvent {
+                action: Action::Modifier,
+                state: ButtonState::Released,
+            } => {
+                *modifier_pressed = false;
+                if let Err(err) = tx.send(SocketMessage::Action(event.clone())) {
+                    println!("err: {:?}", err);
+                }
+            }
+            _ => {
+                if *modifier_pressed {
+                    if let Err(err) = tx.send(SocketMessage::Action(event.clone())) {
+                        println!("err: {:?}", err);
+                    }
+                }
+            }
         }
     }
 }
