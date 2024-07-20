@@ -2,7 +2,7 @@ use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_input::{keyboard::NativeKeyCode, prelude::*};
 
-use orrient_input::Action;
+use orrient_input::ActionEvent;
 use orrient_link::SocketMessage;
 use rdev::{listen, Event, EventType::*, Key};
 
@@ -58,7 +58,7 @@ fn input_system(
 }
 
 /// Read input actions and queue them to be sent over socket
-fn action_system(mut events: EventReader<Action>, tx: Res<ChannelTx<SocketMessage>>) {
+fn action_system(mut events: EventReader<ActionEvent>, tx: Res<ChannelTx<SocketMessage>>) {
     for event in events.read() {
         if let Err(err) = tx.send(SocketMessage::Action(event.clone())) {
             println!("err: {:?}", err);
@@ -74,6 +74,6 @@ impl bevy_app::prelude::Plugin for Plugin {
         app.add_plugins(orrient_input::Plugin);
         app.add_systems(Startup, setup);
         app.add_systems(Update, input_system);
-        app.add_systems(Update, action_system.run_if(on_event::<Action>()));
+        app.add_systems(Update, action_system.run_if(on_event::<ActionEvent>()));
     }
 }

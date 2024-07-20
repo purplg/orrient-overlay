@@ -1,6 +1,7 @@
-use bevy::prelude::*;
+use bevy::{input::ButtonState, prelude::*};
 use bincode::Options as _;
 use crossbeam_channel::Receiver;
+use orrient_input::{Action, ActionEvent};
 use std::{
     net::UdpSocket,
     ops::{Deref, DerefMut},
@@ -96,12 +97,19 @@ fn socket_system(
                 }
             }
             SocketMessage::Action(action) => match action {
-                orrient_input::Action::Menu => {
-                    ui_events.send(UiEvent::ToggleUI);
-                }
-                orrient_input::Action::Overlay => {
-                    ui_events.send(UiEvent::ToggleUI);
-                }
+                ActionEvent {
+                    action,
+                    state: ButtonState::Pressed,
+                } => match action {
+                    Action::Menu => {
+                        ui_events.send(UiEvent::ToggleUI);
+                    }
+                    Action::Overlay => {
+                        ui_events.send(UiEvent::ToggleUI);
+                    }
+                    Action::Modifier => {}
+                },
+                _ => {}
             },
         }
     }

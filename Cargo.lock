@@ -819,6 +819,7 @@ dependencies = [
  "bevy_math",
  "bevy_reflect",
  "bevy_utils",
+ "serde",
  "smol_str",
  "thiserror",
 ]
@@ -3647,6 +3648,7 @@ dependencies = [
  "bevy_ecs",
  "bevy_input",
  "serde",
+ "smol_str",
 ]
 
 [[package]]
@@ -3664,6 +3666,7 @@ dependencies = [
  "rdev",
  "serde",
  "serde_json",
+ "smol_str",
 ]
 
 [[package]]

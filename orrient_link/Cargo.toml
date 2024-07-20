@@ -5,8 +5,10 @@ edition = "2021"
 
 [dependencies]
 bevy_app = "0.14.0"
-bevy_ecs = "0.14.0"
-bevy_input = "0.14.0"
+bevy_ecs = { version = "0.14.0", features = ["serialize"] }
+# serde feature Required for bevy_input serialization
+smol_str = { version = "0.2.2", features = ["serde"] }
+bevy_input = { version = "0.14.0", features = ["serialize"] }
 bincode = "1.3.3"
 byteorder = "1.5.0"
 crossbeam-channel = "0.5.13"

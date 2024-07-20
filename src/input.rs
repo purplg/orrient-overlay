@@ -1,5 +1,5 @@
-use bevy::prelude::*;
-use orrient_input::Action;
+use bevy::{input::ButtonState, prelude::*};
+use orrient_input::{Action, ActionEvent};
 
 use crate::UiEvent;
 
@@ -12,13 +12,20 @@ impl bevy::prelude::Plugin for Plugin {
     }
 }
 
-fn update(mut events: EventReader<Action>, mut mumble_link_event: EventWriter<UiEvent>) {
+fn update(mut events: EventReader<ActionEvent>, mut mumble_link_event: EventWriter<UiEvent>) {
     for event in events.read() {
         match event {
-            Action::Menu => {
-                mumble_link_event.send(UiEvent::ToggleUI);
-            }
-            Action::Overlay => {},
+            ActionEvent {
+                action,
+                state: ButtonState::Pressed,
+            } => match action {
+                Action::Modifier => {}
+                Action::Menu => {
+                    mumble_link_event.send(UiEvent::ToggleUI);
+                }
+                Action::Overlay => {}
+            },
+            _ => {}
         }
     }
 }
