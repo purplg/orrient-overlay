@@ -2,13 +2,13 @@ use std::{io::Seek, net::Ipv4Addr};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use mumblelink_reader::mumble_link::{MumbleLinkData, Position, Vector3D};
+use orrient_input::Action;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
-pub enum MumbleLinkMessage {
+#[derive(Serialize, Deserialize, Debug)]
+pub enum SocketMessage {
     MumbleLinkData(Box<MumbleLinkDataDef>),
-    Toggle,
-    Save,
+    Action(Action),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

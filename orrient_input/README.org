@@ -1,0 +1,3 @@
+#+TITLE: Orrient Input
+
+A Bevy library to share the input configuration between the main overlay app and the background mumblelink connector app.

@@ -1,0 +1,10 @@
+[package]
+name = "orrient_input"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy_app = "0.14.0"
+bevy_ecs = "0.14.0"
+bevy_input = "0.14.0"
+serde = "1.0.204"

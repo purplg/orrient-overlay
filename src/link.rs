@@ -6,11 +6,11 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use orrient_link::MumbleLinkMessage;
+use orrient_link::SocketMessage;
 
 use crate::{UiEvent, WorldEvent};
 
-fn run(tx: crossbeam_channel::Sender<MumbleLinkMessage>) {
+fn run(tx: crossbeam_channel::Sender<SocketMessage>) {
     let socket = UdpSocket::bind("127.0.0.1:5001").unwrap();
     loop {
         let mut buf = [0; 240];
@@ -35,7 +35,7 @@ pub struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        let (tx, rx) = crossbeam_channel::unbounded::<MumbleLinkMessage>();
+        let (tx, rx) = crossbeam_channel::unbounded::<SocketMessage>();
 
         std::thread::spawn(|| run(tx));
 
@@ -56,7 +56,7 @@ impl Deref for MapId {
 }
 
 #[derive(Resource, Deref)]
-struct MumbleLinkMessageReceiver(pub Receiver<MumbleLinkMessage>);
+struct MumbleLinkMessageReceiver(pub Receiver<SocketMessage>);
 
 fn socket_system(
     mut commands: Commands,
@@ -67,7 +67,7 @@ fn socket_system(
 ) {
     while let Ok(message) = rx.try_recv() {
         match message {
-            MumbleLinkMessage::MumbleLinkData(data) => {
+            SocketMessage::MumbleLinkData(data) => {
                 let facing = Vec3::new(
                     data.camera.front[0],
                     data.camera.front[1],
@@ -95,12 +95,14 @@ fn socket_system(
                     *prev_mapid = data.identity.map_id;
                 }
             }
-            MumbleLinkMessage::Toggle => {
-                ui_events.send(UiEvent::ToggleUI);
-            }
-            MumbleLinkMessage::Save => {
-                world_events.send(WorldEvent::SavePosition);
-            }
+            SocketMessage::Action(action) => match action {
+                orrient_input::Action::Menu => {
+                    ui_events.send(UiEvent::ToggleUI);
+                }
+                orrient_input::Action::Overlay => {
+                    ui_events.send(UiEvent::ToggleUI);
+                }
+            },
         }
     }
 }

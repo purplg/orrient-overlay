@@ -2612,6 +2612,7 @@ dependencies = [
  "env_logger",
  "itertools 0.13.0",
  "mumblelink_reader",
+ "orrient_input",
  "orrient_link",
  "petgraph",
  "quick-xml 0.32.0",
@@ -3639,13 +3640,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "orrient_input"
+version = "0.1.0"
+dependencies = [
+ "bevy_app",
+ "bevy_ecs",
+ "bevy_input",
+ "serde",
+]
+
+[[package]]
 name = "orrient_link"
 version = "0.1.0"
 dependencies = [
+ "bevy_app",
+ "bevy_ecs",
+ "bevy_input",
  "bincode",
  "byteorder",
  "crossbeam-channel",
  "mumblelink_reader",
+ "orrient_input",
  "rdev",
  "serde",
  "serde_json",
