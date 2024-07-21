@@ -13,12 +13,25 @@ impl bevy::prelude::Plugin for Plugin {
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct CompassWindow {
     ui_offset: Vec2,
     ui_position: Vec2,
     ui_size: Vec2,
     map_center: Vec2,
+    map_scale: f32,
+}
+
+impl Default for CompassWindow {
+    fn default() -> Self {
+        Self {
+            ui_offset: Default::default(),
+            ui_position: Default::default(),
+            ui_size: Default::default(),
+            map_center: Default::default(),
+            map_scale: 1.0,
+        }
+    }
 }
 
 impl CompassWindow {
@@ -36,7 +49,7 @@ impl CompassWindow {
 
     pub fn clamp(&self, map_position: Vec2) -> Vec2 {
         let map_offset = map_position - self.map_center;
-        let mut ui_position = map_offset + self.ui_position + self.ui_size * 0.5;
+        let mut ui_position = map_offset / self.map_scale + self.ui_position + self.ui_size * 0.5;
 
         let ui_bounds = self.ui_bounds();
 
@@ -133,6 +146,10 @@ fn update_size(
                     .absolute_position(compass.ui_position)
                     .width(Val::Px(compass.ui_size.x))
                     .height(Val::Px(compass.ui_size.y));
+            }
+            UiEvent::MapScale(scale) => {
+                let (entity, mut compass) = q_compass.single_mut();
+                compass.map_scale = *scale;
             }
             _ => {}
         }
