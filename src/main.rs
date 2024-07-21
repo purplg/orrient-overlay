@@ -27,6 +27,7 @@ pub enum WorldEvent {
 pub enum UiEvent {
     OpenUi,
     CloseUi,
+    CompassSize(UVec2),
     LoadMarker(FullMarkerId),
     UnloadMarker(FullMarkerId),
     UnloadAllMarkers,

@@ -91,6 +91,11 @@ fn socket_system(
                     z: -data.avatar.position[2],
                 }));
 
+                ui_events.send(UiEvent::CompassSize(UVec2 {
+                    x: data.context.compass_width as u32,
+                    y: data.context.compass_height as u32,
+                }));
+
                 if *prev_mapid != data.identity.map_id {
                     commands.insert_resource(MapId(data.identity.map_id));
                     *prev_mapid = data.identity.map_id;

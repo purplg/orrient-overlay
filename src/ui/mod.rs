@@ -1,8 +1,10 @@
+mod compass;
 mod debug_panel;
 mod marker_list;
 
 use bevy::prelude::*;
 
+use compass::UiCompassWindowExt as _;
 use debug_panel::UiDebugPanelExt as _;
 use marker_list::window::UiMarkerWindowExt as _;
 use sickle_ui::{
@@ -19,6 +21,7 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(SickleUiPlugin);
 
+        app.add_plugins(compass::Plugin);
         app.add_plugins(marker_list::Plugin);
         app.add_plugins(debug_panel::Plugin);
 
@@ -49,6 +52,7 @@ fn setup(mut commands: Commands) {
             TargetCamera(camera),
         ),
         |container| {
+            container.compass();
             container.marker_window();
             container.debug_panel();
         },

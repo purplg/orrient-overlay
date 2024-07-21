@@ -13,7 +13,6 @@ pub enum SocketMessage {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GW2Context {
-    pub unknown: u32,
     pub server_address: Ipv4Addr,
     pub map_id: u32,
     pub map_type: u32,
@@ -37,7 +36,6 @@ impl GW2Context {
     fn from_bytes(value: [u8; 256]) -> Result<Self, std::io::Error> {
         let mut cursor = std::io::Cursor::new(value);
         Ok(Self {
-            unknown: cursor.read_u32::<LittleEndian>()?,
             server_address: {
                 let addr = Ipv4Addr::new(
                     cursor.read_u8()?,
@@ -45,6 +43,7 @@ impl GW2Context {
                     cursor.read_u8()?,
                     cursor.read_u8()?,
                 );
+                // 28 bits are reserved to include ipv6 support.
                 cursor.seek_relative(24)?;
                 addr
             },
