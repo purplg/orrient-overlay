@@ -54,19 +54,37 @@ impl UiDebugPanelExt for UiBuilder<'_, Entity> {
                     .row(|parent| {
                         parent.column(|parent| {
                             parent.spawn((
-                                TextBundle::from_section("".to_string(), TextStyle::default()),
+                                TextBundle::from_section(
+                                    "".to_string(),
+                                    TextStyle {
+                                        font_size: 14.,
+                                        ..default()
+                                    },
+                                ),
                                 DebugText::PlayerX,
                             ));
                         });
                         parent.column(|parent| {
                             parent.spawn((
-                                TextBundle::from_section("".to_string(), TextStyle::default()),
+                                TextBundle::from_section(
+                                    "".to_string(),
+                                    TextStyle {
+                                        font_size: 14.,
+                                        ..default()
+                                    },
+                                ),
                                 DebugText::PlayerY,
                             ));
                         });
                         parent.column(|parent| {
                             parent.spawn((
-                                TextBundle::from_section("".to_string(), TextStyle::default()),
+                                TextBundle::from_section(
+                                    "".to_string(),
+                                    TextStyle {
+                                        font_size: 14.,
+                                        ..default()
+                                    },
+                                ),
                                 DebugText::PlayerZ,
                             ));
                         });
@@ -80,7 +98,13 @@ impl UiDebugPanelExt for UiBuilder<'_, Entity> {
                 parent.row(|parent| {
                     parent.column(|parent| {
                         parent.spawn((
-                            TextBundle::from_section("".to_string(), TextStyle::default()),
+                            TextBundle::from_section(
+                                "".to_string(),
+                                TextStyle {
+                                    font_size: 14.,
+                                    ..default()
+                                },
+                            ),
                             MapIdText,
                         ));
                     });
