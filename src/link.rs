@@ -96,6 +96,18 @@ fn socket_system(
                     y: data.context.compass_height as u32,
                 }));
 
+                ui_events.send(UiEvent::MapPosition(Vec2 {
+                    x: data.context.map_center_x,
+                    y: data.context.map_center_y,
+                }));
+
+                ui_events.send(UiEvent::PlayerPosition(Vec2 {
+                    x: data.context.player_x,
+                    y: data.context.player_y,
+                }));
+
+                ui_events.send(UiEvent::MapScale(data.context.map_scale));
+
                 if *prev_mapid != data.identity.map_id {
                     commands.insert_resource(MapId(data.identity.map_id));
                     *prev_mapid = data.identity.map_id;
