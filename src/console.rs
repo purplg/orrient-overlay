@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_console::{clap::Parser, AddConsoleCommand, ConsoleCommand, ConsolePlugin};
+use clap::ValueEnum;
 
 use crate::{link::MapId, MarkerPacks, UiEvent};
 
@@ -11,6 +12,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_console_command::<UnloadAllCommand, _>(unload_all_command);
         app.add_console_command::<MapIdCommand, _>(mapid_command);
         app.add_console_command::<PacksCommand, _>(packs_command);
+        app.add_console_command::<SetupCommand, _>(setup_command);
     }
 }
 
@@ -49,6 +51,32 @@ fn packs_command(mut log: ConsoleCommand<PacksCommand>, packs: Res<MarkerPacks>)
     if let Some(Ok(PacksCommand)) = log.take() {
         for id in packs.keys() {
             log.reply(&id.0);
+        }
+        log.reply_ok("");
+    }
+}
+
+#[derive(ValueEnum, Clone, Copy)]
+enum System {
+    Compass,
+}
+
+/// Initialize some systems to some default value
+#[derive(Parser, ConsoleCommand)]
+#[command(name = "setup")]
+struct SetupCommand {
+    system: System,
+}
+
+fn setup_command(
+    mut log: ConsoleCommand<SetupCommand>,
+    mut ui_events: EventWriter<UiEvent>,
+) {
+    if let Some(Ok(SetupCommand { system })) = log.take() {
+        match system {
+            System::Compass => {
+                ui_events.send(UiEvent::CompassSize(UVec2 { x: 362, y: 362 }));
+            }
         }
         log.reply_ok("");
     }
