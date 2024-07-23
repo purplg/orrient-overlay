@@ -1,5 +1,5 @@
-mod marker;
-mod window;
+pub mod marker;
+pub mod window;
 
 use crate::UiEvent;
 

@@ -5,7 +5,8 @@ use bevy_mod_billboard::{
 };
 
 use crate::{
-    link::MapId, parser::prelude::*, player::Player, trail::DebugMarkerAssets, UiEvent, WorldEvent,
+    link::MapId, parser::prelude::*, player::Player, trail::DebugMarkerAssets,
+    ui::compass::marker::ShowOnCompass, UiEvent, WorldEvent,
 };
 
 pub(crate) struct Plugin;
@@ -146,6 +147,9 @@ fn load_pois_system(
             } else if let Some(Behavior::DisappearOnUse) = marker.behavior {
                 builder.insert(DisappearNearby);
             }
+
+            builder.insert(ShowOnCompass);
+
             count += 1;
         }
 

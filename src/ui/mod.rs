@@ -1,4 +1,4 @@
-mod compass;
+pub mod compass;
 mod debug_panel;
 mod marker_list;
 

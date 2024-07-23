@@ -3,8 +3,6 @@ use sickle_ui::prelude::*;
 
 use crate::UiEvent;
 
-use super::marker::UiCompassMarkerExt;
-
 pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
@@ -15,11 +13,11 @@ impl bevy::prelude::Plugin for Plugin {
 
 #[derive(Component)]
 pub struct CompassWindow {
-    ui_offset: Vec2,
-    ui_position: Vec2,
-    ui_size: Vec2,
-    map_center: Vec2,
-    map_scale: f32,
+    pub ui_offset: Vec2,
+    pub ui_position: Vec2,
+    pub ui_size: Vec2,
+    pub map_center: Vec2,
+    pub map_scale: f32,
 }
 
 impl Default for CompassWindow {
@@ -112,8 +110,7 @@ impl UiCompassWindowExt for UiBuilder<'_, Entity> {
             .insert(CompassWindow {
                 ui_offset: Vec2 { x: 0.0, y: 36.0 },
                 ..default()
-            })
-            .compass_marker();
+            });
     }
 }
 
