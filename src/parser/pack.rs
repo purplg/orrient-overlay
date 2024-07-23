@@ -291,14 +291,14 @@ impl MarkerPack {
             .filter_map(|index| self.markers.get(index))
     }
 
-    pub fn iter<'a>(&'a self, start: &MarkerId) -> impl Iterator<Item = &'a Marker> {
+    pub fn iter(&self, start: &MarkerId) -> impl Iterator<Item = &Marker> {
         let start_id = self.index_of(start).unwrap();
         self.graph
             .neighbors_directed(start_id, Direction::Outgoing)
             .filter_map(|id| self.markers.get(&id))
     }
 
-    pub fn iter_recursive<'a>(&'a self, start: &MarkerId) -> impl Iterator<Item = &'a Marker> {
+    pub fn iter_recursive(&self, start: &MarkerId) -> impl Iterator<Item = &Marker> {
         let start_marker = self.get(start).unwrap();
         [start_marker].into_iter().chain(
             self.iter(start)
