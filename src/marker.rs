@@ -121,6 +121,7 @@ fn load_pois_system(
 
             let mut builder = commands.spawn(Poi(full_id.clone()));
             if let Some(icon) = icon {
+                builder.insert(ShowOnCompass(icon.clone()));
                 builder.insert(BillboardTextureBundle {
                     mesh: BillboardMeshHandle(assets.image_quad.clone()),
                     texture: BillboardTextureHandle(icon),
@@ -147,8 +148,6 @@ fn load_pois_system(
             } else if let Some(Behavior::DisappearOnUse) = marker.behavior {
                 builder.insert(DisappearNearby);
             }
-
-            builder.insert(ShowOnCompass);
 
             count += 1;
         }

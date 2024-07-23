@@ -39,16 +39,26 @@ impl CompassMarker {
 }
 
 #[derive(Component)]
-pub struct ShowOnCompass;
+pub struct ShowOnCompass(pub Handle<Image>);
 
 pub trait UiCompassMarkerExt {
-    fn compass_marker(&mut self, entity: Entity);
+    fn compass_marker(&mut self, entity: Entity, image: Handle<Image>);
 }
 
 impl UiCompassMarkerExt for UiBuilder<'_, Entity> {
-    fn compass_marker(&mut self, entity: Entity) {
-        self.container(CompassMarker::frame(), |parent| {})
-            .insert(CompassMarker(entity));
+    fn compass_marker(&mut self, entity: Entity, icon: Handle<Image>) {
+        let mut builder = self.container(CompassMarker::frame(), |parent| {
+            parent.insert(ImageBundle {
+                image: icon.into(),
+                style: Style {
+                    width: Val::Px(16.),
+                    height: Val::Px(16.),
+                    ..default()
+                },
+                ..default()
+            });
+        });
+        builder.insert(CompassMarker(entity));
     }
 }
 
@@ -66,13 +76,13 @@ impl ShowOnCompass {
 
 fn spawn_markers(
     mut commands: Commands,
-    q_compass_markers: Query<Entity, Added<ShowOnCompass>>,
+    q_compass_markers: Query<(Entity, &ShowOnCompass), Added<ShowOnCompass>>,
     q_compass: Query<Entity, With<CompassWindow>>,
 ) {
-    for marker in &q_compass_markers {
+    for (entity, icon) in &q_compass_markers {
         commands
             .ui_builder(q_compass.single())
-            .compass_marker(marker);
+            .compass_marker(entity, icon.0.clone());
     }
 }
 
