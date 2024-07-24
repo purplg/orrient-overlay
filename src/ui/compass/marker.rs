@@ -21,7 +21,7 @@ const CONTINENT_QUEENSDALE: Rect = Rect {
 };
 
 #[derive(Component)]
-struct CompassMarker(Entity);
+pub struct CompassMarker(pub Entity);
 
 impl CompassMarker {
     fn frame() -> impl Bundle {

@@ -272,6 +272,10 @@ impl MarkerPack {
         self.trails.get(id)
     }
 
+    pub fn get_images(&self) -> impl Iterator<Item = &Handle<Image>> {
+        self.icons.values()
+    }
+
     pub fn get(&self, id: &MarkerId) -> Option<&Marker> {
         let node_id = self.indexes.get(id)?;
         self.markers.get(node_id)

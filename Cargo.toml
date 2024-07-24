@@ -26,7 +26,7 @@ bevy = { version = "0.14.0", features = ["wayland", "file_watcher"] }
 
 # https://github.com/RichoDemus/bevy-console/
 bevy_console = { git = "https://github.com/msklosak/bevy-console", branch = "bevy_014" }
-clap = "4.5.7"
+clap = { version = "4.5.10", features = ["derive"] }
 
 # https://github.com/jakobhellermann/bevy-inspector-egui/
 # bevy-inspector-egui = "0.24.0"
