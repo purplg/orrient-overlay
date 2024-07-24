@@ -64,7 +64,9 @@ fn socket_system(
     rx: Res<MumbleLinkMessageReceiver>,
     mut world_events: EventWriter<WorldEvent>,
     mut ui_events: EventWriter<UiEvent>,
+    mut prev_compass_size: Local<UVec2>,
     mut prev_mapid: Local<u32>,
+    mut prev_mapopen: Local<bool>,
 ) {
     while let Ok(message) = rx.try_recv() {
         match message {
@@ -91,10 +93,14 @@ fn socket_system(
                     z: -data.avatar.position[2],
                 }));
 
-                ui_events.send(UiEvent::CompassSize(UVec2 {
+                let compass_size = UVec2 {
                     x: data.context.compass_width as u32,
                     y: data.context.compass_height as u32,
-                }));
+                };
+                if *prev_compass_size != compass_size {
+                    ui_events.send(UiEvent::CompassSize(compass_size));
+                    *prev_compass_size = compass_size;
+                }
 
                 ui_events.send(UiEvent::MapPosition(Vec2 {
                     x: data.context.map_center_x,
@@ -107,6 +113,12 @@ fn socket_system(
                 }));
 
                 ui_events.send(UiEvent::MapScale(data.context.map_scale));
+
+                let mapopen = data.context.ui_state & 1 == 1;
+                if mapopen != *prev_mapopen {
+                    ui_events.send(UiEvent::MapOpen(mapopen));
+                    *prev_mapopen = mapopen;
+                }
 
                 if *prev_mapid != data.identity.map_id {
                     commands.insert_resource(MapId(data.identity.map_id));

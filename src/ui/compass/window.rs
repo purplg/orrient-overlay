@@ -13,7 +13,8 @@ impl bevy::prelude::Plugin for Plugin {
 
 #[derive(Component)]
 pub struct CompassWindow {
-    pub ui_offset: Vec2,
+    pub fullscreen: bool,
+    pub docked_offset: Vec2,
     pub ui_position: Vec2,
     pub ui_size: Vec2,
     pub map_center: Vec2,
@@ -23,7 +24,8 @@ pub struct CompassWindow {
 impl Default for CompassWindow {
     fn default() -> Self {
         Self {
-            ui_offset: Default::default(),
+            fullscreen: false,
+            docked_offset: Default::default(),
             ui_position: Default::default(),
             ui_size: Default::default(),
             map_center: Default::default(),
@@ -49,22 +51,23 @@ impl CompassWindow {
         let map_offset = map_position - self.map_center;
         let mut ui_position = map_offset / self.map_scale + self.ui_position + self.ui_size * 0.5;
 
-        let ui_bounds = self.ui_bounds();
+        if !self.fullscreen {
+            let ui_bounds = self.ui_bounds();
+            if ui_position.x < ui_bounds.min.x {
+                // LEFT
+                ui_position.x = ui_bounds.min.x;
+            } else if ui_position.x > ui_bounds.max.x - 16.0 {
+                // RIGHT
+                ui_position.x = ui_bounds.max.x - 16.0;
+            }
 
-        if ui_position.x < ui_bounds.min.x {
-            // LEFT
-            ui_position.x = ui_bounds.min.x;
-        } else if ui_position.x > ui_bounds.max.x - 16.0 {
-            // RIGHT
-            ui_position.x = ui_bounds.max.x - 16.0;
-        }
-
-        if ui_position.y > ui_bounds.max.y - 16.0 {
-            // BOTTOM
-            ui_position.y = ui_bounds.max.y - 16.0;
-        } else if ui_position.y < ui_bounds.min.y {
-            // TOP
-            ui_position.y = ui_bounds.min.y;
+            if ui_position.y > ui_bounds.max.y - 16.0 {
+                // BOTTOM
+                ui_position.y = ui_bounds.max.y - 16.0;
+            } else if ui_position.y < ui_bounds.min.y {
+                // TOP
+                ui_position.y = ui_bounds.min.y;
+            }
         }
 
         ui_position
@@ -108,7 +111,7 @@ impl UiCompassWindowExt for UiBuilder<'_, Entity> {
     fn compass(&mut self) {
         self.container(CompassWindow::frame(), |parent| {})
             .insert(CompassWindow {
-                ui_offset: Vec2 { x: 0.0, y: 36.0 },
+                docked_offset: Vec2 { x: 0.0, y: 36.0 },
                 ..default()
             });
     }
@@ -122,21 +125,49 @@ fn update_size(
 ) {
     for event in ui_events.read() {
         match event {
-            UiEvent::MapPosition(pos) => {
+            UiEvent::MapOpen(is_open) => {
+                let window = window.single();
                 let (entity, mut compass) = q_compass.single_mut();
+                compass.fullscreen = *is_open;
+                if compass.fullscreen {
+                    commands
+                        .ui_builder(entity)
+                        .style()
+                        .absolute_position(Vec2::ZERO)
+                        .width(Val::Px(window.width()))
+                        .height(Val::Px(window.height()));
+                } else {
+                    commands
+                        .ui_builder(entity)
+                        .style()
+                        .absolute_position(compass.ui_position)
+                        .width(Val::Px(compass.ui_size.x))
+                        .height(Val::Px(compass.ui_size.y));
+                }
+            }
+            UiEvent::MapPosition(pos) => {
+                let (_entity, mut compass) = q_compass.single_mut();
                 compass.map_center = *pos;
             }
             UiEvent::CompassSize(size) => {
                 let window = window.single();
                 let (entity, mut compass) = q_compass.single_mut();
-                compass.ui_position = Vec2 {
-                    x: window.width() - size.x as f32 - compass.ui_offset.x,
-                    y: window.height() - size.y as f32 - compass.ui_offset.y,
-                };
-                compass.ui_size = Vec2 {
-                    x: size.x as f32,
-                    y: size.y as f32,
-                };
+                if compass.fullscreen {
+                    compass.ui_position = Vec2 { x: 0.0, y: 0.0 };
+                    compass.ui_size = Vec2 {
+                        x: window.width(),
+                        y: window.height(),
+                    };
+                } else {
+                    compass.ui_position = Vec2 {
+                        x: window.width() - size.x as f32 - compass.docked_offset.x,
+                        y: window.height() - size.y as f32 - compass.docked_offset.y,
+                    };
+                    compass.ui_size = Vec2 {
+                        x: size.x as f32,
+                        y: size.y as f32,
+                    };
+                }
                 commands
                     .ui_builder(entity)
                     .style()
@@ -145,7 +176,7 @@ fn update_size(
                     .height(Val::Px(compass.ui_size.y));
             }
             UiEvent::MapScale(scale) => {
-                let (entity, mut compass) = q_compass.single_mut();
+                let (_entity, mut compass) = q_compass.single_mut();
                 compass.map_scale = *scale;
             }
             _ => {}

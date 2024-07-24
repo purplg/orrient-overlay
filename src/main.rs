@@ -31,6 +31,7 @@ pub enum UiEvent {
     PlayerPosition(Vec2),
     MapPosition(Vec2),
     MapScale(f32),
+    MapOpen(bool),
     LoadMarker(FullMarkerId),
     UnloadMarker(FullMarkerId),
     UnloadAllMarkers,
