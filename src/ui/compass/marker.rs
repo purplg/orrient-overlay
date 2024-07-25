@@ -1,24 +1,72 @@
 use bevy::color::palettes;
 use bevy::prelude::*;
+use bevy::utils::HashMap;
+use lazy_static::lazy_static;
 use sickle_ui::prelude::UiContainerExt as _;
 use sickle_ui::ui_builder::UiBuilder;
 use sickle_ui::ui_builder::UiBuilderExt;
 use sickle_ui::ui_style::manual::SetAbsolutePositionExt;
 
-use crate::MarkerPacks;
-use crate::UiEvent;
+use crate::link::MapId;
 
 use super::window::CompassWindow;
 
-const MAP_QUEENSDALE: Rect = Rect {
-    min: Vec2::new(-43008., -27648.),
-    max: Vec2::new(43008., 30720.),
-};
+mod mapid {
+    pub const QUEENSDALE: u32 = 15;
+    pub const MISTLOCK: u32 = 1206;
+}
 
-const CONTINENT_QUEENSDALE: Rect = Rect {
-    min: Vec2::new(42624., 28032.),
-    max: Vec2::new(46208., 30464.),
-};
+// TODO Replace with API.
+lazy_static! {
+    static ref MAP: HashMap<u32, Rect> = {
+        let mut m = HashMap::new();
+        m.insert(
+            mapid::QUEENSDALE,
+            Rect {
+                min: Vec2::new(-43008., -27648.),
+                max: Vec2::new(43008., 30720.),
+            },
+        );
+        m.insert(
+            mapid::MISTLOCK,
+            Rect {
+                min: Vec2::new(-12288., -12288.),
+                max: Vec2::new(12288., 12288.),
+            },
+        );
+        m
+    };
+    static ref CONTINENT: HashMap<u32, Rect> = {
+        let mut m = HashMap::new();
+        m.insert(
+            mapid::QUEENSDALE,
+            Rect {
+                min: Vec2::new(42624., 28032.),
+                max: Vec2::new(46208., 30464.),
+            },
+        );
+        m.insert(
+            mapid::MISTLOCK,
+            Rect {
+                min: Vec2::new(46368., 33520.),
+                max: Vec2::new(48416., 35568.),
+            },
+        );
+        m
+    };
+}
+
+fn get_bounds(map_id: &u32) -> Option<Bounds> {
+    Some(Bounds {
+        map: MAP.get(map_id)?,
+        continent: CONTINENT.get(map_id)?,
+    })
+}
+
+struct Bounds<'a> {
+    map: &'a Rect,
+    continent: &'a Rect,
+}
 
 #[derive(Component)]
 pub struct CompassMarker(pub Entity);
@@ -62,18 +110,6 @@ impl UiCompassMarkerExt for UiBuilder<'_, Entity> {
     }
 }
 
-impl ShowOnCompass {
-    /// Convert the world position to screen space position relative
-    /// to the compass widget.
-    fn to_compass(&self, continent: Rect, map: Rect, coords: Vec2) -> Vec2 {
-        let x = continent.min.x + (1. * coords.x - map.min.x) / (map.width()) * (continent.width());
-        let y =
-            continent.min.y + (1. * coords.y - map.min.y) / (map.height()) * (continent.height());
-
-        Vec2 { x, y }
-    }
-}
-
 fn spawn_markers(
     mut commands: Commands,
     q_compass_markers: Query<(Entity, &ShowOnCompass), Added<ShowOnCompass>>,
@@ -94,6 +130,7 @@ fn position_system(
     q_world_markers: Query<&Transform, With<ShowOnCompass>>,
     mut q_compass_markers: Query<(Entity, &CompassMarker)>,
     q_compass: Query<&CompassWindow>,
+    map_id: Res<MapId>,
 ) {
     let compass_window = q_compass.single();
     for (entity, marker) in &mut q_compass_markers {
@@ -103,18 +140,21 @@ fn position_system(
         };
         // TODO Account for compass rotation
         let world_position = transform.translation.xz() * METERS_TO_INCHES;
+        let Some(Bounds { map, continent }) = get_bounds(&map_id.0) else {
+            warn!("No bounds defined for map_id: {}", map_id.0);
+            return;
+        };
 
-        let d = world_position - MAP_QUEENSDALE.min;
-        let px = d.x / MAP_QUEENSDALE.width();
-        let py = d.y / MAP_QUEENSDALE.height();
-
-        let continent_x = CONTINENT_QUEENSDALE.min.x + px * CONTINENT_QUEENSDALE.width();
-        let continent_y = CONTINENT_QUEENSDALE.min.y + py * CONTINENT_QUEENSDALE.height();
+        let d = world_position - map.min;
+        let px = d.x / map.width();
+        let py = d.y / map.height();
+        let x = continent.min.x + px * continent.width();
+        let y = continent.min.y + py * continent.height();
 
         commands
             .ui_builder(entity)
             .style()
-            .absolute_position(compass_window.clamp(Vec2::new(continent_x, continent_y)));
+            .absolute_position(compass_window.clamp(Vec2 { x, y }));
     }
 }
 

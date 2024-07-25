@@ -38,6 +38,7 @@ bevy_mod_billboard = "0.7.0"
 sickle_ui = { rev = "2f2fae98ef745a6ed51fe71e00188fb9f1be733e", git = "https://github.com/UmbraLuminosa/sickle_ui" }
 itertools = "0.13.0"
 anyhow = "1.0.86"
+lazy_static = "1.5.0"
 
 [workspace]
 resolver = "2"
