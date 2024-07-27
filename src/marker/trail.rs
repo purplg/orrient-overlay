@@ -122,7 +122,7 @@ fn show_trails(
         debug!("Loading trails for {}...", full_id);
 
         for trail in trails.iter().filter(|trail| trail.map_id == map_id.0) {
-            let iter = trail.path.iter().map(|path| Vec3 {
+            let iter = trail.path.iter().rev().map(|path| Vec3 {
                 x: path.x,
                 y: path.y,
                 z: -path.z,
