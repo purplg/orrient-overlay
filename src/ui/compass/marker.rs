@@ -115,11 +115,16 @@ fn spawn_marker(
     mut commands: Commands,
     q_compass_markers: Query<&ShowOnCompass>,
     q_compass: Query<Entity, With<CompassWindow>>,
+    map_id: Res<MapId>,
 ) {
-    commands.ui_builder(q_compass.single()).compass_marker(
-        trigger.entity(),
-        q_compass_markers.get(trigger.entity()).unwrap().0.clone(),
-    );
+    if get_bounds(&map_id.0).is_some() {
+        commands.ui_builder(q_compass.single()).compass_marker(
+            trigger.entity(),
+            q_compass_markers.get(trigger.entity()).unwrap().0.clone(),
+        );
+    } else {
+        warn!("No bounds defined for map_id: {}", map_id.0);
+    }
 }
 
 fn despawn_marker(
@@ -153,7 +158,6 @@ fn position_system(
         // TODO Account for compass rotation
         let world_position = transform.translation.xz() * METERS_TO_INCHES;
         let Some(Bounds { map, continent }) = get_bounds(&map_id.0) else {
-            warn!("No bounds defined for map_id: {}", map_id.0);
             return;
         };
 
