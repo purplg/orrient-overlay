@@ -5,11 +5,10 @@ use bevy_mod_billboard::{
 };
 
 use crate::{
-    link::MapId, parser::prelude::*, player::Player, ui::compass::marker::ShowOnCompass, UiEvent,
-    WorldEvent,
+    link::MapId, parser::prelude::*, player::Player, ui::compass::marker::ShowOnCompass, WorldEvent,
 };
 
-use super::LoadedMarkers;
+use super::{LoadedMarkers, MarkerEvent};
 
 pub(super) struct Plugin;
 
@@ -22,7 +21,7 @@ impl bevy::prelude::Plugin for Plugin {
 
         app.add_systems(
             PreUpdate,
-            load_marker.run_if(resource_exists::<MarkerPacks>.and_then(on_event::<UiEvent>())),
+            load_marker.run_if(resource_exists::<MarkerPacks>.and_then(on_event::<MarkerEvent>())),
         );
         app.add_systems(
             Update,
@@ -30,9 +29,12 @@ impl bevy::prelude::Plugin for Plugin {
         );
         app.add_systems(
             Update,
-            (load_pois_system, unload_pois_system).run_if(on_event::<UiEvent>()),
+            (load_pois_system, unload_pois_system).run_if(on_event::<MarkerEvent>()),
         );
-        app.add_systems(Update, track_loaded_system.run_if(on_event::<UiEvent>()));
+        app.add_systems(
+            Update,
+            track_loaded_system.run_if(on_event::<MarkerEvent>()),
+        );
     }
 }
 
@@ -40,9 +42,9 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     commands.insert_resource(PoiQuad(meshes.add(Rectangle::from_size(Vec2::splat(2.0)))));
 }
 
-fn load_marker(mut events: EventReader<UiEvent>, mut loaded_markers: ResMut<LoadedMarkers>) {
+fn load_marker(mut events: EventReader<MarkerEvent>, mut loaded_markers: ResMut<LoadedMarkers>) {
     for event in events.read() {
-        let UiEvent::ShowMarker(full_id) = event else {
+        let MarkerEvent::ShowMarker(full_id) = event else {
             continue;
         };
 
@@ -75,13 +77,13 @@ struct PoiQuad(Handle<Mesh>);
 
 fn load_pois_system(
     mut commands: Commands,
-    mut ui_events: EventReader<UiEvent>,
+    mut marker_events: EventReader<MarkerEvent>,
     packs: Res<MarkerPacks>,
     assets: Res<PoiQuad>,
     map_id: Option<Res<MapId>>,
 ) {
-    for event in ui_events.read() {
-        let UiEvent::ShowMarker(full_id) = event else {
+    for event in marker_events.read() {
+        let MarkerEvent::ShowMarker(full_id) = event else {
             return;
         };
 
@@ -169,13 +171,13 @@ fn load_pois_system(
 
 fn unload_pois_system(
     mut commands: Commands,
-    mut ui_events: EventReader<UiEvent>,
+    mut marker_events: EventReader<MarkerEvent>,
     poi_query: Query<(Entity, &Poi)>,
 ) {
-    for event in ui_events.read() {
+    for event in marker_events.read() {
         let mut count = 0;
         match event {
-            UiEvent::HideMarker(marker_id) => {
+            MarkerEvent::HideMarker(marker_id) => {
                 for (entity, poi) in &poi_query {
                     if poi.0 == *marker_id {
                         commands.entity(entity).despawn_recursive();
@@ -183,7 +185,7 @@ fn unload_pois_system(
                     }
                 }
             }
-            UiEvent::HideAllMarkers => {
+            MarkerEvent::HideAllMarkers => {
                 for (entity, _) in &poi_query {
                     commands.entity(entity).despawn_recursive();
                     count += 1;
@@ -199,20 +201,19 @@ fn unload_pois_system(
 
 fn track_loaded_system(
     mut loaded_markers: ResMut<LoadedMarkers>,
-    mut ui_events: EventReader<UiEvent>,
+    mut marker_events: EventReader<MarkerEvent>,
 ) {
-    for event in ui_events.read() {
+    for event in marker_events.read() {
         match event {
-            UiEvent::ShowMarker(full_id) => {
+            MarkerEvent::ShowMarker(full_id) => {
                 loaded_markers.insert(full_id.clone());
             }
-            UiEvent::HideMarker(full_id) => {
+            MarkerEvent::HideMarker(full_id) => {
                 loaded_markers.remove(full_id);
             }
-            UiEvent::HideAllMarkers => {
+            MarkerEvent::HideAllMarkers => {
                 loaded_markers.clear();
             }
-            _ => {}
         }
     }
 }

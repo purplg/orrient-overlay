@@ -13,7 +13,7 @@ use sickle_ui::{
     SickleUiPlugin,
 };
 
-use crate::UiEvent;
+use crate::marker::MarkerEvent;
 
 pub(crate) struct Plugin;
 
@@ -30,7 +30,7 @@ impl bevy::prelude::Plugin for Plugin {
 }
 
 #[derive(Component)]
-struct OrrientMenuItem(pub UiEvent);
+struct OrrientMenuItem(pub MarkerEvent);
 
 fn setup(mut commands: Commands) {
     let camera = commands

@@ -10,6 +10,7 @@ mod ui;
 use bevy::window::{CompositeAlphaMode, WindowResolution};
 use bevy::{prelude::*, window::WindowLevel};
 use link::MapId;
+use marker::MarkerEvent;
 use parser::prelude::*;
 
 #[derive(Event, Clone, Debug)]
@@ -32,9 +33,6 @@ pub enum UiEvent {
     MapPosition(Vec2),
     MapScale(f32),
     MapOpen(bool),
-    ShowMarker(FullMarkerId),
-    HideMarker(FullMarkerId),
-    HideAllMarkers,
 }
 
 fn main() {

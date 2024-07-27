@@ -1,9 +1,8 @@
 use bevy::{color::palettes, prelude::*};
 use sickle_ui::{prelude::*, ui_builder::UiBuilder};
 
-use crate::{link::MapId, parser::prelude::*, UiEvent};
-
 use super::window::{MarkerItem, MarkerWindowEvent};
+use crate::{link::MapId, marker::MarkerEvent, parser::prelude::*};
 
 pub(crate) struct Plugin;
 
@@ -23,7 +22,7 @@ impl bevy::prelude::Plugin for Plugin {
             Update,
             button_mapid_disable.run_if(resource_exists_and_changed::<MapId>),
         );
-        app.add_systems(Update, checkbox_follow.run_if(on_event::<UiEvent>()));
+        app.add_systems(Update, checkbox_follow.run_if(on_event::<MarkerEvent>()));
         app.add_systems(Update, button_init.run_if(resource_exists::<MapId>));
     }
 }
@@ -264,7 +263,7 @@ fn button_state(
 
 fn checkbox_action(
     query: Query<(&Checkbox, &MarkerCheckbox, &FluxInteraction), Changed<FluxInteraction>>,
-    mut ui_events: EventWriter<UiEvent>,
+    mut events: EventWriter<MarkerEvent>,
     packs: Res<MarkerPacks>,
 ) {
     for (checkbox, full_id, interaction) in &query {
@@ -275,9 +274,9 @@ fn checkbox_action(
                     .map(|marker| full_id.with_marker_id(marker.id.clone()));
 
                 if checkbox.checked {
-                    ui_events.send_batch(markers.map(UiEvent::HideMarker));
+                    events.send_batch(markers.map(MarkerEvent::HideMarker));
                 } else {
-                    ui_events.send_batch(markers.map(UiEvent::ShowMarker));
+                    events.send_batch(markers.map(MarkerEvent::ShowMarker));
                 }
             }
         }
@@ -286,11 +285,11 @@ fn checkbox_action(
 
 fn checkbox_follow(
     mut query: Query<(&mut Checkbox, &MarkerCheckbox)>,
-    mut ui_events: EventReader<UiEvent>,
+    mut events: EventReader<MarkerEvent>,
 ) {
-    for event in ui_events.read() {
+    for event in events.read() {
         match event {
-            UiEvent::ShowMarker(id_to_load) => {
+            MarkerEvent::ShowMarker(id_to_load) => {
                 for (mut checkbox, this_id) in &mut query {
                     if checkbox.checked {
                         continue;
@@ -300,7 +299,7 @@ fn checkbox_follow(
                     }
                 }
             }
-            UiEvent::HideMarker(id_to_unload) => {
+            MarkerEvent::HideMarker(id_to_unload) => {
                 for (mut checkbox, this_id) in &mut query {
                     if !checkbox.checked {
                         continue;
@@ -310,7 +309,7 @@ fn checkbox_follow(
                     }
                 }
             }
-            UiEvent::HideAllMarkers => {
+            MarkerEvent::HideAllMarkers => {
                 for (mut checkbox, _) in &mut query {
                     if !checkbox.checked {
                         continue;
@@ -318,7 +317,6 @@ fn checkbox_follow(
                     checkbox.checked = false;
                 }
             }
-            _ => {}
         }
     }
 }
@@ -367,7 +365,7 @@ impl CheckboxEvent {
 fn checkbox(
     query: Query<(&Checkbox, &MarkerItem), Changed<Checkbox>>,
     mut checkbox_events: EventWriter<CheckboxEvent>,
-    mut ui_events: EventWriter<UiEvent>,
+    mut events: EventWriter<MarkerEvent>,
     packs: Res<MarkerPacks>,
 ) {
     for (checkbox, item) in query.iter() {
@@ -376,13 +374,13 @@ fn checkbox(
         };
 
         if checkbox.checked {
-            ui_events.send(UiEvent::ShowMarker(item.id.clone()));
+            events.send(MarkerEvent::ShowMarker(item.id.clone()));
             checkbox_events
                 .send_batch(pack.iter(&item.id.marker_id).map(|marker| {
                     CheckboxEvent::Enable(item.id.with_marker_id(marker.id.clone()))
                 }));
         } else {
-            ui_events.send(UiEvent::HideMarker(item.id.clone()));
+            events.send(MarkerEvent::HideMarker(item.id.clone()));
             checkbox_events.send_batch(
                 pack.iter(&item.id.marker_id).map(|marker| {
                     CheckboxEvent::Disable(item.id.with_marker_id(marker.id.clone()))

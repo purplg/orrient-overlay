@@ -4,6 +4,7 @@ use clap::{Subcommand, ValueEnum};
 
 use crate::{
     link::MapId,
+    marker::MarkerEvent,
     ui::compass::marker::{CompassMarker, ShowOnCompass},
     MarkerPacks, UiEvent,
 };
@@ -27,9 +28,12 @@ impl bevy::prelude::Plugin for Plugin {
 #[command(name = "unloadall")]
 struct UnloadAllCommand;
 
-fn unload_all_command(mut log: ConsoleCommand<UnloadAllCommand>, mut events: EventWriter<UiEvent>) {
+fn unload_all_command(
+    mut log: ConsoleCommand<UnloadAllCommand>,
+    mut events: EventWriter<MarkerEvent>,
+) {
     if let Some(Ok(UnloadAllCommand)) = log.take() {
-        events.send(UiEvent::HideAllMarkers);
+        events.send(MarkerEvent::HideAllMarkers);
         log.reply_ok("Unloaded all markers");
     }
 }

@@ -10,7 +10,8 @@ use bevy::{
 };
 use itertools::Itertools;
 
-use crate::{parser::prelude::*, UiEvent};
+use super::MarkerEvent;
+use crate::parser::prelude::*;
 
 pub(super) struct Plugin;
 
@@ -18,7 +19,7 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<TrailMeshes>();
         app.add_plugins(MaterialPlugin::<TrailMaterial>::default());
-        app.add_systems(Update, trail_event.run_if(on_event::<UiEvent>()));
+        app.add_systems(Update, trail_event.run_if(on_event::<MarkerEvent>()));
     }
 }
 
@@ -118,14 +119,14 @@ impl Material for TrailMaterial {
 fn trail_event(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut events: EventReader<UiEvent>,
+    mut events: EventReader<MarkerEvent>,
     mut trail_meshes: ResMut<TrailMeshes>,
     mut trail_materials: ResMut<Assets<TrailMaterial>>,
     packs: Res<MarkerPacks>,
 ) {
     for event in events.read() {
         match event {
-            UiEvent::HideMarker(full_id) => {
+            MarkerEvent::HideMarker(full_id) => {
                 if let Some(entities) = trail_meshes.remove(full_id) {
                     for entity in entities {
                         info!("Unloading trail: {:?}", full_id);
@@ -133,7 +134,7 @@ fn trail_event(
                     }
                 }
             }
-            UiEvent::HideAllMarkers => {
+            MarkerEvent::HideAllMarkers => {
                 for (trail_id, entities) in trail_meshes.drain() {
                     for entity in entities {
                         info!("Unloading trail: {:?}", trail_id);
@@ -142,7 +143,7 @@ fn trail_event(
                 }
             }
 
-            UiEvent::ShowMarker(full_id) => {
+            MarkerEvent::ShowMarker(full_id) => {
                 let Some(pack) = &packs.get(&full_id.pack_id) else {
                     warn!("Pack ID not found: {}", full_id.pack_id);
                     continue;
@@ -197,7 +198,6 @@ fn trail_event(
                 }
                 info!("Trail {} loaded.", full_id);
             }
-            _ => {}
         }
     }
 }

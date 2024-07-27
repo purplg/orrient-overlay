@@ -5,7 +5,12 @@ use sickle_ui::{
     widgets::prelude::*,
 };
 
-use crate::{marker::LoadedMarkers, parser::prelude::*, ui::OrrientMenuItem, UiEvent};
+use crate::{
+    marker::{LoadedMarkers, MarkerEvent},
+    parser::prelude::*,
+    ui::OrrientMenuItem,
+    UiEvent,
+};
 
 use super::{
     marker_button::UiMarkerButtonExt, separator::UiMarkerSeparatorExt, tooltip::UiToolTipExt as _,
@@ -80,7 +85,7 @@ impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
                                     name: "Unload all markers".into(),
                                     ..default()
                                 })
-                                .insert(OrrientMenuItem(UiEvent::HideAllMarkers));
+                                .insert(OrrientMenuItem(MarkerEvent::HideAllMarkers));
                         },
                     );
                 });
@@ -235,7 +240,7 @@ fn toggle_show_ui(
 
 fn menu_interaction(
     query: Query<(&MenuItem, &OrrientMenuItem), Changed<MenuItem>>,
-    mut events: EventWriter<UiEvent>,
+    mut events: EventWriter<MarkerEvent>,
 ) {
     for (menu_item, orrient_menu_item) in &query {
         if menu_item.interacted() {
