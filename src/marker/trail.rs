@@ -1,10 +1,11 @@
+use super::debug::{uv_debug_texture, DebugMarkerAssets};
 use bevy::{
     color::palettes,
     prelude::*,
     render::{
         mesh::{Indices, PrimitiveTopology},
         render_asset::RenderAssetUsages,
-        render_resource::{AsBindGroup, Extent3d, ShaderRef, TextureDimension, TextureFormat},
+        render_resource::{AsBindGroup, ShaderRef},
     },
     utils::HashMap,
 };
@@ -12,7 +13,7 @@ use itertools::Itertools;
 
 use crate::{parser::prelude::*, UiEvent};
 
-pub(crate) struct Plugin;
+pub(super) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
@@ -28,43 +29,6 @@ struct TrailMeshes(HashMap<FullMarkerId, Vec<Entity>>);
 
 #[derive(Component)]
 struct TrailMesh;
-
-#[derive(Resource)]
-pub struct DebugMarkerAssets {
-    pub mesh: Handle<Mesh>,
-    pub image_quad: Handle<Mesh>,
-    pub trails_mesh: Option<Handle<Mesh>>,
-    pub trail_material: Handle<StandardMaterial>,
-    pub poi_material: Handle<StandardMaterial>,
-}
-
-pub fn uv_debug_texture() -> Image {
-    const TEXTURE_SIZE: usize = 8;
-
-    let mut palette: [u8; 32] = [
-        255, 102, 159, 255, 255, 159, 102, 255, 236, 255, 102, 255, 121, 255, 102, 255, 102, 255,
-        198, 255, 102, 198, 255, 255, 121, 102, 255, 255, 236, 102, 255, 255,
-    ];
-
-    let mut texture_data = [0; TEXTURE_SIZE * TEXTURE_SIZE * 4];
-    for y in 0..TEXTURE_SIZE {
-        let offset = TEXTURE_SIZE * y * 4;
-        texture_data[offset..(offset + TEXTURE_SIZE * 4)].copy_from_slice(&palette);
-        palette.rotate_right(4);
-    }
-
-    Image::new_fill(
-        Extent3d {
-            width: TEXTURE_SIZE as u32,
-            height: TEXTURE_SIZE as u32,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        &texture_data,
-        TextureFormat::Rgba8UnormSrgb,
-        RenderAssetUsages::RENDER_WORLD,
-    )
-}
 
 fn load_marker_assets(
     mut commands: Commands,

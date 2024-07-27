@@ -5,7 +5,6 @@ mod link;
 mod marker;
 mod parser;
 mod player;
-mod trail;
 mod ui;
 
 use bevy::window::{CompositeAlphaMode, WindowResolution};
@@ -68,7 +67,6 @@ fn main() {
     app.add_plugins(player::Plugin);
     app.add_plugins(ui::Plugin);
     app.add_plugins(marker::Plugin);
-    app.add_plugins(trail::Plugin);
     app.add_plugins(console::Plugin);
     app.add_plugins(parser::Plugin);
 

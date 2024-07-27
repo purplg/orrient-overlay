@@ -1,15 +1,17 @@
-use bevy::{prelude::*, utils::HashSet};
+use bevy::prelude::*;
 use bevy_mod_billboard::{
     plugin::BillboardPlugin, BillboardMeshHandle, BillboardTextBundle, BillboardTextureBundle,
     BillboardTextureHandle,
 };
 
 use crate::{
-    link::MapId, parser::prelude::*, player::Player, trail::DebugMarkerAssets,
-    ui::compass::marker::ShowOnCompass, UiEvent, WorldEvent,
+    link::MapId, parser::prelude::*, player::Player, ui::compass::marker::ShowOnCompass, UiEvent,
+    WorldEvent,
 };
 
-pub(crate) struct Plugin;
+use super::{debug::DebugMarkerAssets, LoadedMarkers};
+
+pub(super) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
@@ -185,9 +187,6 @@ fn unload_pois_system(
         }
     }
 }
-
-#[derive(Resource, Clone, Deref, DerefMut, Debug, Default)]
-pub struct LoadedMarkers(pub HashSet<FullMarkerId>);
 
 fn track_loaded_system(
     mut loaded_markers: ResMut<LoadedMarkers>,
