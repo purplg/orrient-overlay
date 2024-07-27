@@ -1,3 +1,4 @@
+pub(crate) mod api;
 mod camera;
 mod console;
 mod input;
@@ -59,6 +60,7 @@ fn main() {
 
     app.insert_resource(ClearColor(Color::NONE));
 
+    app.add_plugins(api::Plugin);
     app.add_plugins(camera::Plugin);
     app.add_plugins(input::Plugin);
     app.add_plugins(link::Plugin);

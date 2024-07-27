@@ -8,7 +8,6 @@ use sickle_ui::ui_style::manual::SetAbsolutePositionExt;
 use crate::link::MapId;
 
 use super::map_bounds::MapBounds;
-use super::map_bounds::MapBoundsCache;
 use super::window::CompassWindow;
 
 #[derive(Component)]
@@ -58,17 +57,11 @@ fn spawn_marker(
     mut commands: Commands,
     q_compass_markers: Query<&ShowOnCompass>,
     q_compass: Query<Entity, With<CompassWindow>>,
-    bounds: Res<MapBoundsCache>,
-    map_id: Res<MapId>,
 ) {
-    if bounds.get(&map_id.0).is_some() {
-        commands.ui_builder(q_compass.single()).compass_marker(
-            trigger.entity(),
-            q_compass_markers.get(trigger.entity()).unwrap().0.clone(),
-        );
-    } else {
-        warn!("No bounds defined for map_id: {}", map_id.0);
-    }
+    commands.ui_builder(q_compass.single()).compass_marker(
+        trigger.entity(),
+        q_compass_markers.get(trigger.entity()).unwrap().0.clone(),
+    );
 }
 
 fn despawn_marker(
@@ -91,8 +84,7 @@ fn position_system(
     q_world_markers: Query<&Transform, With<ShowOnCompass>>,
     mut q_compass_markers: Query<(Entity, &CompassMarker)>,
     q_compass: Query<&CompassWindow>,
-    bounds: Res<MapBoundsCache>,
-    map_id: Res<MapId>,
+    bounds: Res<MapBounds>,
 ) {
     let compass_window = q_compass.single();
     for (entity, marker) in &mut q_compass_markers {
@@ -102,15 +94,12 @@ fn position_system(
         };
         // TODO Account for compass rotation
         let world_position = transform.translation.xz() * METERS_TO_INCHES;
-        let Some(MapBounds { map, continent }) = bounds.get(&map_id.0) else {
-            return;
-        };
 
-        let d = world_position - map.min;
-        let px = d.x / map.width();
-        let py = d.y / map.height();
-        let x = continent.min.x + px * continent.width();
-        let y = continent.min.y + py * continent.height();
+        let d = world_position - bounds.map.min;
+        let px = d.x / bounds.map.width();
+        let py = d.y / bounds.map.height();
+        let x = bounds.continent.min.x + px * bounds.continent.width();
+        let y = bounds.continent.min.y + py * bounds.continent.height();
 
         commands
             .ui_builder(entity)
@@ -123,7 +112,10 @@ pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, position_system.run_if(resource_exists::<MapId>));
+        app.add_systems(
+            Update,
+            position_system.run_if(resource_exists::<MapId>.and_then(resource_exists::<MapBounds>)),
+        );
         app.observe(spawn_marker);
         app.observe(despawn_marker);
     }
