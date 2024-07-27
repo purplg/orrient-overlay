@@ -35,7 +35,7 @@ clap = { version = "4.5.10", features = ["derive"] }
 bevy_mod_billboard = "0.7.0"
 
 # https://github.com/UmbraLuminosa/sickle_ui
-sickle_ui = { rev = "2f2fae98ef745a6ed51fe71e00188fb9f1be733e", git = "https://github.com/UmbraLuminosa/sickle_ui" }
+sickle_ui = { rev = "34005a18ae600f09a0f300034e3fc6fd608929ef", git = "https://github.com/UmbraLuminosa/sickle_ui" }
 itertools = "0.13.0"
 anyhow = "1.0.86"
 lazy_static = "1.5.0"

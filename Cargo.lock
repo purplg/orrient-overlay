@@ -4227,8 +4227,8 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "sickle_macros"
-version = "0.2.0"
-source = "git+https://github.com/UmbraLuminosa/sickle_ui?rev=2f2fae98ef745a6ed51fe71e00188fb9f1be733e#2f2fae98ef745a6ed51fe71e00188fb9f1be733e"
+version = "0.2.1"
+source = "git+https://github.com/UmbraLuminosa/sickle_ui?rev=34005a18ae600f09a0f300034e3fc6fd608929ef#34005a18ae600f09a0f300034e3fc6fd608929ef"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4237,8 +4237,8 @@ dependencies = [
 
 [[package]]
 name = "sickle_math"
-version = "0.2.0"
-source = "git+https://github.com/UmbraLuminosa/sickle_ui?rev=2f2fae98ef745a6ed51fe71e00188fb9f1be733e#2f2fae98ef745a6ed51fe71e00188fb9f1be733e"
+version = "0.2.1"
+source = "git+https://github.com/UmbraLuminosa/sickle_ui?rev=34005a18ae600f09a0f300034e3fc6fd608929ef#34005a18ae600f09a0f300034e3fc6fd608929ef"
 dependencies = [
  "bevy",
  "serde",
@@ -4246,8 +4246,8 @@ dependencies = [
 
 [[package]]
 name = "sickle_ui"
-version = "0.2.0"
-source = "git+https://github.com/UmbraLuminosa/sickle_ui?rev=2f2fae98ef745a6ed51fe71e00188fb9f1be733e#2f2fae98ef745a6ed51fe71e00188fb9f1be733e"
+version = "0.2.1"
+source = "git+https://github.com/UmbraLuminosa/sickle_ui?rev=34005a18ae600f09a0f300034e3fc6fd608929ef#34005a18ae600f09a0f300034e3fc6fd608929ef"
 dependencies = [
  "bevy",
  "bevy_ecs_macros",
@@ -4260,8 +4260,8 @@ dependencies = [
 
 [[package]]
 name = "sickle_ui_scaffold"
-version = "0.2.0"
-source = "git+https://github.com/UmbraLuminosa/sickle_ui?rev=2f2fae98ef745a6ed51fe71e00188fb9f1be733e#2f2fae98ef745a6ed51fe71e00188fb9f1be733e"
+version = "0.2.1"
+source = "git+https://github.com/UmbraLuminosa/sickle_ui?rev=34005a18ae600f09a0f300034e3fc6fd608929ef#34005a18ae600f09a0f300034e3fc6fd608929ef"
 dependencies = [
  "bevy",
  "bevy_reflect",
