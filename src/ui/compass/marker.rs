@@ -110,15 +110,28 @@ impl UiCompassMarkerExt for UiBuilder<'_, Entity> {
     }
 }
 
-fn spawn_markers(
+fn spawn_marker(
+    trigger: Trigger<OnAdd, ShowOnCompass>,
     mut commands: Commands,
-    q_compass_markers: Query<(Entity, &ShowOnCompass), Added<ShowOnCompass>>,
+    q_compass_markers: Query<&ShowOnCompass>,
     q_compass: Query<Entity, With<CompassWindow>>,
 ) {
-    for (entity, icon) in &q_compass_markers {
-        commands
-            .ui_builder(q_compass.single())
-            .compass_marker(entity, icon.0.clone());
+    commands.ui_builder(q_compass.single()).compass_marker(
+        trigger.entity(),
+        q_compass_markers.get(trigger.entity()).unwrap().0.clone(),
+    );
+}
+
+fn despawn_marker(
+    trigger: Trigger<OnRemove, ShowOnCompass>,
+    mut commands: Commands,
+    q_compass_markers: Query<(Entity, &CompassMarker)>,
+) {
+    for (entity, _) in q_compass_markers
+        .iter()
+        .filter(|(_, compass_marker)| compass_marker.0 == trigger.entity())
+    {
+        commands.entity(entity).despawn_recursive();
     }
 }
 
@@ -161,7 +174,8 @@ pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, spawn_markers);
         app.add_systems(Update, position_system.run_if(resource_exists::<MapId>));
+        app.observe(spawn_marker);
+        app.observe(despawn_marker);
     }
 }
