@@ -122,7 +122,6 @@ fn spawn_markers(
     }
 }
 
-const INCHES_TO_METERS: f32 = 0.0254;
 const METERS_TO_INCHES: f32 = 39.3700787;
 
 fn position_system(

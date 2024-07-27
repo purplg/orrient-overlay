@@ -1,4 +1,3 @@
-use super::debug::{uv_debug_texture, DebugMarkerAssets};
 use bevy::{
     color::palettes,
     prelude::*,
@@ -19,7 +18,6 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<TrailMeshes>();
         app.add_plugins(MaterialPlugin::<TrailMaterial>::default());
-        app.add_systems(Startup, load_marker_assets);
         app.add_systems(Update, trail_event.run_if(on_event::<UiEvent>()));
     }
 }
@@ -29,33 +27,6 @@ struct TrailMeshes(HashMap<FullMarkerId, Vec<Entity>>);
 
 #[derive(Component)]
 struct TrailMesh;
-
-fn load_marker_assets(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    let mesh = meshes.add(Sphere::default().mesh().ico(5).unwrap());
-    let image_quad = meshes.add(Rectangle::from_size(Vec2::splat(2.0)));
-    commands.insert_resource(DebugMarkerAssets {
-        mesh,
-        image_quad,
-        trails_mesh: None,
-        trail_material: materials.add(StandardMaterial {
-            base_color_texture: Some(images.add(uv_debug_texture())),
-            base_color: palettes::tailwind::BLUE_500.into(),
-            double_sided: true,
-            cull_mode: None,
-            ..default()
-        }),
-        poi_material: materials.add(StandardMaterial {
-            base_color_texture: Some(images.add(uv_debug_texture())),
-            base_color: palettes::tailwind::RED_500.into(),
-            ..default()
-        }),
-    })
-}
 
 const TRAIL_WIDTH: f32 = 0.5;
 

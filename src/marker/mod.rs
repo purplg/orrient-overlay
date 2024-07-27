@@ -1,4 +1,3 @@
-mod debug;
 mod poi;
 mod trail;
 

@@ -77,8 +77,8 @@ impl FullMarkerId {
 
 impl std::fmt::Display for FullMarkerId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.pack_id.fmt(f);
-        ":".fmt(f);
+        let _ = self.pack_id.fmt(f);
+        let _ = ":".fmt(f);
         self.marker_id.fmt(f)
     }
 }

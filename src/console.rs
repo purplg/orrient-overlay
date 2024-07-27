@@ -1,10 +1,9 @@
 use bevy::prelude::*;
-use bevy_console::{clap::Parser, reply, AddConsoleCommand, ConsoleCommand, ConsolePlugin};
-use clap::{Args, Subcommand, ValueEnum};
+use bevy_console::{clap::Parser, AddConsoleCommand, ConsoleCommand, ConsolePlugin};
+use clap::{Subcommand, ValueEnum};
 
 use crate::{
     link::MapId,
-    player::Player,
     ui::compass::marker::{CompassMarker, ShowOnCompass},
     MarkerPacks, UiEvent,
 };

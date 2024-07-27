@@ -5,8 +5,7 @@ use crate::UiEvent;
 
 pub use window::UiCompassWindowExt;
 
-use bevy::{color::palettes, prelude::*, window::PrimaryWindow};
-use sickle_ui::prelude::*;
+use bevy::prelude::*;
 
 #[derive(Resource, Default)]
 struct MapOrientation {

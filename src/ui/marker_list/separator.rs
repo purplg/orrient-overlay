@@ -4,8 +4,6 @@ use sickle_ui::{prelude::*, ui_builder::UiBuilder};
 #[derive(Component, Clone, Default, Debug, UiContext)]
 pub struct MarkerSeparator;
 
-use bevy::prelude::*;
-
 pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {

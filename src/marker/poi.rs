@@ -9,7 +9,7 @@ use crate::{
     WorldEvent,
 };
 
-use super::{debug::DebugMarkerAssets, LoadedMarkers};
+use super::LoadedMarkers;
 
 pub(super) struct Plugin;
 
@@ -17,6 +17,8 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(BillboardPlugin);
         app.init_resource::<LoadedMarkers>();
+
+        app.add_systems(Startup, setup);
 
         app.add_systems(
             PreUpdate,
@@ -32,6 +34,10 @@ impl bevy::prelude::Plugin for Plugin {
         );
         app.add_systems(Update, track_loaded_system.run_if(on_event::<UiEvent>()));
     }
+}
+
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+    commands.insert_resource(PoiQuad(meshes.add(Rectangle::from_size(Vec2::splat(2.0)))));
 }
 
 fn load_marker(mut events: EventReader<UiEvent>, mut loaded_markers: ResMut<LoadedMarkers>) {
@@ -64,11 +70,14 @@ fn disappear_nearby_system(
     }
 }
 
+#[derive(Resource)]
+struct PoiQuad(Handle<Mesh>);
+
 fn load_pois_system(
     mut commands: Commands,
     mut ui_events: EventReader<UiEvent>,
     packs: Res<MarkerPacks>,
-    assets: Res<DebugMarkerAssets>,
+    assets: Res<PoiQuad>,
     map_id: Option<Res<MapId>>,
 ) {
     for event in ui_events.read() {
@@ -125,7 +134,7 @@ fn load_pois_system(
             if let Some(icon) = icon {
                 builder.insert(ShowOnCompass(icon.clone()));
                 builder.insert(BillboardTextureBundle {
-                    mesh: BillboardMeshHandle(assets.image_quad.clone()),
+                    mesh: BillboardMeshHandle(assets.0.clone()),
                     texture: BillboardTextureHandle(icon),
                     transform: Transform::from_translation(pos),
                     ..default()

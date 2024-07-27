@@ -2,10 +2,7 @@ use bevy::{input::ButtonState, prelude::*};
 use bincode::Options as _;
 use crossbeam_channel::Receiver;
 use orrient_input::{Action, ActionEvent};
-use std::{
-    net::UdpSocket,
-    ops::{Deref, DerefMut},
-};
+use std::{net::UdpSocket, ops::Deref};
 
 use orrient_link::SocketMessage;
 
