@@ -34,7 +34,7 @@ impl bevy::prelude::Plugin for Plugin {
 
 fn load_marker(mut events: EventReader<UiEvent>, mut loaded_markers: ResMut<LoadedMarkers>) {
     for event in events.read() {
-        let UiEvent::LoadMarker(full_id) = event else {
+        let UiEvent::ShowMarker(full_id) = event else {
             continue;
         };
 
@@ -70,7 +70,7 @@ fn load_pois_system(
     map_id: Option<Res<MapId>>,
 ) {
     for event in ui_events.read() {
-        let UiEvent::LoadMarker(full_id) = event else {
+        let UiEvent::ShowMarker(full_id) = event else {
             return;
         };
 
@@ -164,7 +164,7 @@ fn unload_pois_system(
     for event in ui_events.read() {
         let mut count = 0;
         match event {
-            UiEvent::UnloadMarker(marker_id) => {
+            UiEvent::HideMarker(marker_id) => {
                 for (entity, poi) in &poi_query {
                     if poi.0 == *marker_id {
                         commands.entity(entity).despawn_recursive();
@@ -172,7 +172,7 @@ fn unload_pois_system(
                     }
                 }
             }
-            UiEvent::UnloadAllMarkers => {
+            UiEvent::HideAllMarkers => {
                 for (entity, _) in &poi_query {
                     commands.entity(entity).despawn_recursive();
                     count += 1;
@@ -195,13 +195,13 @@ fn track_loaded_system(
 ) {
     for event in ui_events.read() {
         match event {
-            UiEvent::LoadMarker(full_id) => {
+            UiEvent::ShowMarker(full_id) => {
                 loaded_markers.insert(full_id.clone());
             }
-            UiEvent::UnloadMarker(full_id) => {
+            UiEvent::HideMarker(full_id) => {
                 loaded_markers.remove(full_id);
             }
-            UiEvent::UnloadAllMarkers => {
+            UiEvent::HideAllMarkers => {
                 loaded_markers.clear();
             }
             _ => {}

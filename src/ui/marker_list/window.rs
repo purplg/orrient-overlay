@@ -80,7 +80,7 @@ impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
                                     name: "Unload all markers".into(),
                                     ..default()
                                 })
-                                .insert(OrrientMenuItem(UiEvent::UnloadAllMarkers));
+                                .insert(OrrientMenuItem(UiEvent::HideAllMarkers));
                         },
                     );
                 });

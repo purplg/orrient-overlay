@@ -30,7 +30,7 @@ struct UnloadAllCommand;
 
 fn unload_all_command(mut log: ConsoleCommand<UnloadAllCommand>, mut events: EventWriter<UiEvent>) {
     if let Some(Ok(UnloadAllCommand)) = log.take() {
-        events.send(UiEvent::UnloadAllMarkers);
+        events.send(UiEvent::HideAllMarkers);
         log.reply_ok("Unloaded all markers");
     }
 }

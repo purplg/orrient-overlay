@@ -190,7 +190,7 @@ fn trail_event(
 ) {
     for event in events.read() {
         match event {
-            UiEvent::UnloadMarker(full_id) => {
+            UiEvent::HideMarker(full_id) => {
                 if let Some(entities) = trail_meshes.remove(full_id) {
                     for entity in entities {
                         info!("Unloading trail: {:?}", full_id);
@@ -198,7 +198,7 @@ fn trail_event(
                     }
                 }
             }
-            UiEvent::UnloadAllMarkers => {
+            UiEvent::HideAllMarkers => {
                 for (trail_id, entities) in trail_meshes.drain() {
                     for entity in entities {
                         info!("Unloading trail: {:?}", trail_id);
@@ -207,7 +207,7 @@ fn trail_event(
                 }
             }
 
-            UiEvent::LoadMarker(full_id) => {
+            UiEvent::ShowMarker(full_id) => {
                 let Some(pack) = &packs.get(&full_id.pack_id) else {
                     warn!("Pack ID not found: {}", full_id.pack_id);
                     continue;
