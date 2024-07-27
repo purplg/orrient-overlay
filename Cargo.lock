@@ -2612,7 +2612,6 @@ dependencies = [
  "dirs",
  "env_logger",
  "itertools 0.13.0",
- "lazy_static",
  "mumblelink_reader",
  "orrient_input",
  "orrient_link",

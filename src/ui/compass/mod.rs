@@ -1,3 +1,4 @@
+mod map_bounds;
 pub mod marker;
 pub mod window;
 
@@ -34,6 +35,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.init_resource::<MapOrientation>();
         app.add_plugins(marker::Plugin);
         app.add_plugins(window::Plugin);
+        app.add_plugins(map_bounds::Plugin);
         app.add_systems(Update, map_system);
     }
 }
