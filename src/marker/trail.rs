@@ -6,15 +6,10 @@ use bevy::{
         render_asset::RenderAssetUsages,
         render_resource::{AsBindGroup, ShaderRef},
     },
-    utils::HashMap,
 };
 use itertools::Itertools;
 
-use super::MarkerEvent;
-use crate::parser::prelude::*;
-
-#[derive(Resource, Deref, DerefMut, Default)]
-struct TrailMeshes(HashMap<FullMarkerId, Vec<Entity>>);
+use crate::{link::MapId, parser::prelude::*};
 
 #[derive(Component)]
 struct TrailMesh;
@@ -106,89 +101,70 @@ impl Material for TrailMaterial {
     }
 }
 
-fn trail_event(
+fn show_trails(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut events: EventReader<MarkerEvent>,
-    mut trail_meshes: ResMut<TrailMeshes>,
     mut trail_materials: ResMut<Assets<TrailMaterial>>,
     packs: Res<MarkerPacks>,
+    map_id: Res<MapId>,
 ) {
-    for event in events.read() {
-        match event {
-            MarkerEvent::HideMarker(full_id) => {
-                if let Some(entities) = trail_meshes.remove(full_id) {
-                    for entity in entities {
-                        info!("Unloading trail: {:?}", full_id);
-                        commands.entity(entity).despawn_recursive();
-                    }
-                }
-            }
-            MarkerEvent::HideAllMarkers => {
-                for (trail_id, entities) in trail_meshes.drain() {
-                    for entity in entities {
-                        info!("Unloading trail: {:?}", trail_id);
-                        commands.entity(entity).despawn_recursive();
-                    }
-                }
-            }
+    for full_id in packs.get_map_markers(&map_id.0) {
+        let Some(pack) = &packs.get(&full_id.pack_id) else {
+            warn!("Pack ID not found: {}", full_id.pack_id);
+            continue;
+        };
 
-            MarkerEvent::ShowMarker(full_id) => {
-                let Some(pack) = &packs.get(&full_id.pack_id) else {
-                    warn!("Pack ID not found: {}", full_id.pack_id);
-                    continue;
-                };
+        let Some(trails) = pack.get_trails(&full_id.marker_id) else {
+            warn!("Trail not found for marker_id: {full_id}");
+            continue;
+        };
 
-                let Some(trails) = pack.get_trails(&full_id.marker_id) else {
-                    warn!("Trail not found for marker_id: {full_id}");
-                    continue;
-                };
+        debug!("Loading trails for {}...", full_id);
 
-                debug!("Loading trails for {}...", full_id);
+        for trail in trails.iter().filter(|trail| trail.map_id == map_id.0) {
+            let iter = trail.path.iter().map(|path| Vec3 {
+                x: path.x,
+                y: path.y,
+                z: -path.z,
+            });
 
-                for trail in trails.iter() {
-                    let iter = trail.path.iter().map(|path| Vec3 {
-                        x: path.x,
-                        y: path.y,
-                        z: -path.z,
-                    });
+            let Some(texture) = pack.get_image(&trail.texture_file) else {
+                warn!("Could not find texture {}", trail.texture_file);
+                continue;
+            };
 
-                    let Some(texture) = pack.get_image(&trail.texture_file) else {
-                        warn!("Could not find texture {}", trail.texture_file);
-                        continue;
-                    };
+            debug!("Trail texture: {:?}", trail.texture_file);
 
-                    debug!("Trail texture: {:?}", trail.texture_file);
+            let material = trail_materials.add(TrailMaterial {
+                color: palettes::tailwind::ZINC_500.into(),
+                color_texture: Some(texture),
+                alpha_mode: AlphaMode::Blend,
+                speed: 1.0,
+            });
 
-                    let material = trail_materials.add(TrailMaterial {
-                        color: palettes::tailwind::ZINC_500.into(),
-                        color_texture: Some(texture),
-                        alpha_mode: AlphaMode::Blend,
-                        speed: 1.0,
-                    });
+            let mesh = create_trail_mesh(iter);
 
-                    let mesh = create_trail_mesh(iter);
-
-                    let entity = commands
-                        .spawn((
-                            TrailMesh,
-                            MaterialMeshBundle {
-                                mesh: meshes.add(mesh),
-                                material,
-                                ..default()
-                            },
-                        ))
-                        .id();
-
-                    if let Some(entities) = trail_meshes.get_mut(full_id) {
-                        entities.push(entity);
-                    } else {
-                        trail_meshes.insert(full_id.clone(), vec![entity]);
-                    }
-                }
-                info!("Trail {} loaded.", full_id);
-            }
+            commands.spawn((
+                TrailMesh,
+                MaterialMeshBundle {
+                    mesh: meshes.add(mesh),
+                    material,
+                    ..default()
+                },
+            ));
         }
+        info!("Trail {} loaded.", full_id);
+    }
+}
+
+fn hide_trails(mut commands: Commands, q_trails: Query<Entity, With<TrailMesh>>) {
+    let mut count = 0;
+    for entity in &q_trails {
+        commands.entity(entity).despawn_recursive();
+        count += 1;
+    }
+    if count > 0 {
+        info!("Unloaded {} trails.", count);
     }
 }
 
@@ -196,8 +172,10 @@ pub(super) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<TrailMeshes>();
         app.add_plugins(MaterialPlugin::<TrailMaterial>::default());
-        app.add_systems(Update, trail_event.run_if(on_event::<MarkerEvent>()));
+        app.add_systems(
+            Update,
+            (hide_trails, show_trails).run_if(resource_exists_and_changed::<MapId>),
+        );
     }
 }
