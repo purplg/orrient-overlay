@@ -29,7 +29,7 @@ impl bevy::prelude::Plugin for Plugin {
         );
         app.add_systems(
             Update,
-            (load_pois_system, unload_pois_system).run_if(on_event::<MarkerEvent>()),
+            (show_pois_system, hide_pois_system).run_if(on_event::<MarkerEvent>()),
         );
         app.add_systems(
             Update,
@@ -75,7 +75,7 @@ fn disappear_nearby_system(
 #[derive(Resource)]
 struct PoiQuad(Handle<Mesh>);
 
-fn load_pois_system(
+fn show_pois_system(
     mut commands: Commands,
     mut marker_events: EventReader<MarkerEvent>,
     packs: Res<MarkerPacks>,
@@ -169,7 +169,7 @@ fn load_pois_system(
     }
 }
 
-fn unload_pois_system(
+fn hide_pois_system(
     mut commands: Commands,
     mut marker_events: EventReader<MarkerEvent>,
     poi_query: Query<(Entity, &Poi)>,
