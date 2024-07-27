@@ -10,36 +10,6 @@ use crate::{
 
 use super::{LoadedMarkers, MarkerEvent};
 
-pub(super) struct Plugin;
-
-impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(BillboardPlugin);
-        app.init_resource::<LoadedMarkers>();
-
-        app.add_systems(Startup, setup);
-
-        app.add_systems(
-            PreUpdate,
-            load_marker.run_if(resource_exists::<MarkerPacks>.and_then(on_event::<MarkerEvent>())),
-        );
-        app.add_systems(
-            Update,
-            disappear_nearby_system.run_if(on_event::<WorldEvent>()),
-        );
-        app.add_systems(
-            Update,
-            (hide_pois_system, show_pois_system)
-                .chain()
-                .run_if(resource_exists_and_changed::<MapId>),
-        );
-        app.add_systems(
-            Update,
-            track_loaded_system.run_if(on_event::<MarkerEvent>()),
-        );
-    }
-}
-
 fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     commands.insert_resource(PoiQuad(meshes.add(Rectangle::from_size(Vec2::splat(2.0)))));
 }
@@ -185,5 +155,35 @@ fn track_loaded_system(
                 loaded_markers.clear();
             }
         }
+    }
+}
+
+pub(super) struct Plugin;
+
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins(BillboardPlugin);
+        app.init_resource::<LoadedMarkers>();
+
+        app.add_systems(Startup, setup);
+
+        app.add_systems(
+            PreUpdate,
+            load_marker.run_if(resource_exists::<MarkerPacks>.and_then(on_event::<MarkerEvent>())),
+        );
+        app.add_systems(
+            Update,
+            disappear_nearby_system.run_if(on_event::<WorldEvent>()),
+        );
+        app.add_systems(
+            Update,
+            (hide_pois_system, show_pois_system)
+                .chain()
+                .run_if(resource_exists_and_changed::<MapId>),
+        );
+        app.add_systems(
+            Update,
+            track_loaded_system.run_if(on_event::<MarkerEvent>()),
+        );
     }
 }

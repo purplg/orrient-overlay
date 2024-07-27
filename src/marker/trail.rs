@@ -13,16 +13,6 @@ use itertools::Itertools;
 use super::MarkerEvent;
 use crate::parser::prelude::*;
 
-pub(super) struct Plugin;
-
-impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<TrailMeshes>();
-        app.add_plugins(MaterialPlugin::<TrailMaterial>::default());
-        app.add_systems(Update, trail_event.run_if(on_event::<MarkerEvent>()));
-    }
-}
-
 #[derive(Resource, Deref, DerefMut, Default)]
 struct TrailMeshes(HashMap<FullMarkerId, Vec<Entity>>);
 
@@ -199,5 +189,15 @@ fn trail_event(
                 info!("Trail {} loaded.", full_id);
             }
         }
+    }
+}
+
+pub(super) struct Plugin;
+
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<TrailMeshes>();
+        app.add_plugins(MaterialPlugin::<TrailMaterial>::default());
+        app.add_systems(Update, trail_event.run_if(on_event::<MarkerEvent>()));
     }
 }
