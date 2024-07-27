@@ -162,6 +162,6 @@ pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, spawn_markers);
-        app.add_systems(Update, position_system);
+        app.add_systems(Update, position_system.run_if(resource_exists::<MapId>));
     }
 }

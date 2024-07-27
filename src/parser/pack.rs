@@ -276,6 +276,23 @@ impl MarkerPack {
         self.icons.values()
     }
 
+    pub fn get_map_markers<'a>(
+        &'a self,
+        map_id: &'a u32,
+    ) -> impl Iterator<Item = FullMarkerId> + 'a {
+        self.roots()
+            .map(|root| {
+                self.iter_recursive(&root.id)
+                    .filter(|marker| marker.map_ids.contains(map_id))
+                    .map(|marker| &marker.id)
+            })
+            .flatten()
+            .map(|marker_id| FullMarkerId {
+                pack_id: self.id.clone(),
+                marker_id: marker_id.clone(),
+            })
+    }
+
     pub fn get(&self, id: &MarkerId) -> Option<&Marker> {
         let node_id = self.indexes.get(id)?;
         self.markers.get(node_id)

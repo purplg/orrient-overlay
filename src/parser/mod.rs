@@ -132,6 +132,15 @@ impl std::fmt::Display for PackId {
 #[derive(Resource, Clone, Deref, Debug)]
 pub struct MarkerPacks(HashMap<PackId, MarkerPack>);
 
+impl MarkerPacks {
+    pub fn get_map_markers<'a>(
+        &'a self,
+        map_id: &'a u32,
+    ) -> impl Iterator<Item = FullMarkerId> + 'a {
+        self.values().map(|pack| pack.get_map_markers(map_id)).flatten()
+    }
+}
+
 #[derive(Debug)]
 enum Tag {
     OverlayData,

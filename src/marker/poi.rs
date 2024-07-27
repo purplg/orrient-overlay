@@ -29,7 +29,9 @@ impl bevy::prelude::Plugin for Plugin {
         );
         app.add_systems(
             Update,
-            (show_pois_system, hide_pois_system).run_if(on_event::<MarkerEvent>()),
+            (hide_pois_system, show_pois_system)
+                .chain()
+                .run_if(resource_exists_and_changed::<MapId>),
         );
         app.add_systems(
             Update,
@@ -77,16 +79,11 @@ struct PoiQuad(Handle<Mesh>);
 
 fn show_pois_system(
     mut commands: Commands,
-    mut marker_events: EventReader<MarkerEvent>,
     packs: Res<MarkerPacks>,
     assets: Res<PoiQuad>,
-    map_id: Option<Res<MapId>>,
+    map_id: Res<MapId>,
 ) {
-    for event in marker_events.read() {
-        let MarkerEvent::ShowMarker(full_id) = event else {
-            return;
-        };
-
+    for full_id in packs.get_map_markers(&map_id.0) {
         info!("Loading POIs from {full_id}");
 
         let Some(pack) = &packs.get(&full_id.pack_id) else {
@@ -104,16 +101,8 @@ fn show_pois_system(
             return;
         };
 
-        let pois = pois.iter().filter(|poi| {
-            if let Some(map_id) = &map_id {
-                poi.map_id == Some(***map_id)
-            } else {
-                true
-            }
-        });
-
         let mut count = 0;
-        for poi in pois {
+        for poi in pois.iter().filter(|poi| poi.map_id == Some(map_id.0)) {
             let Some(pos) = poi.position.map(|position| Vec3 {
                 x: position.x,
                 y: position.y,
@@ -169,33 +158,14 @@ fn show_pois_system(
     }
 }
 
-fn hide_pois_system(
-    mut commands: Commands,
-    mut marker_events: EventReader<MarkerEvent>,
-    poi_query: Query<(Entity, &Poi)>,
-) {
-    for event in marker_events.read() {
-        let mut count = 0;
-        match event {
-            MarkerEvent::HideMarker(marker_id) => {
-                for (entity, poi) in &poi_query {
-                    if poi.0 == *marker_id {
-                        commands.entity(entity).despawn_recursive();
-                        count += 1;
-                    }
-                }
-            }
-            MarkerEvent::HideAllMarkers => {
-                for (entity, _) in &poi_query {
-                    commands.entity(entity).despawn_recursive();
-                    count += 1;
-                }
-            }
-            _ => {}
-        }
-        if count > 0 {
-            info!("Unloaded {} POIs.", count);
-        }
+fn hide_pois_system(mut commands: Commands, poi_query: Query<Entity, With<Poi>>) {
+    let mut count = 0;
+    for entity in &poi_query {
+        commands.entity(entity).despawn_recursive();
+        count += 1;
+    }
+    if count > 0 {
+        info!("Unloaded {} POIs.", count);
     }
 }
 
