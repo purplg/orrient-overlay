@@ -286,6 +286,7 @@ fn parse_xml<R: Read + BufRead>(
                     tree.up();
                 }
                 Event::Eof => break,
+                Event::Decl(_) => {},
                 Event::Comment(_) => {}
                 unknown_event => debug!("unknown_event in {filename}: {unknown_event:?}"),
             },
