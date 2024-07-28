@@ -48,3 +48,10 @@ members = [
   "orrient_input",
   "orrient_link",
 ]
+
+[profile.dev]
+opt-level = 1
+incremental = true
+
+[profile.dev.package."*"]
+opt-level = 3
