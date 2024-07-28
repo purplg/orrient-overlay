@@ -1,11 +1,12 @@
 use anyhow::Result;
-use bevy::prelude::*;
-use bevy::utils::{HashMap, HashSet};
+use bevy::utils::HashMap;
+use bevy::{prelude::*, utils::HashSet};
 use petgraph::{
     graph::{DiGraph, NodeIndex},
     Direction,
 };
 use quick_xml::events::attributes::Attributes;
+use std::collections::BTreeSet;
 use std::{collections::VecDeque, convert::identity, ops::Deref, str::FromStr as _};
 use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
 
@@ -332,7 +333,7 @@ impl MarkerPack {
 pub struct MarkerPackBuilder {
     tree: MarkerPack,
 
-    edges: HashMap<NodeIndex, Vec<NodeIndex>>,
+    edges: HashMap<NodeIndex, BTreeSet<NodeIndex>>,
 
     trail_tags: HashMap<MarkerId, Vec<TrailXml>>,
     trail_data: HashMap<String, TrailData>,
@@ -369,9 +370,11 @@ impl MarkerPackBuilder {
         let node_id = self.get_or_create_index(marker.id.clone());
         if let Some(parent_id) = self.parent_id.front() {
             if let Some(children) = self.edges.get_mut(parent_id) {
-                children.push(node_id);
+                children.insert(node_id);
             } else {
-                self.edges.insert(*parent_id, vec![node_id]);
+                let mut set = BTreeSet::default();
+                set.insert(node_id);
+                self.edges.insert(*parent_id, set);
             }
             let parent_marker = self.tree.markers.get(parent_id).unwrap();
             marker.copy_from_parent(parent_marker);
@@ -433,7 +436,6 @@ impl MarkerPackBuilder {
                 i
             });
             self.tree.indexes.insert(marker_id, node_id);
-            self.tree.graph.add_node(node_id);
             node_id
         })
     }
@@ -447,11 +449,14 @@ impl MarkerPackBuilder {
     }
 
     pub fn build(mut self) -> MarkerPack {
-        for (parent, mut children) in self.edges.drain() {
+        for node_id in self.tree.markers.keys() {
+            self.tree.graph.add_node(*node_id);
+        }
+
+        for (parent, children) in self.edges.drain() {
             // Reverse the list of child nodes to ensure they're order
             // is maintained from the marker pack.
-            children.reverse();
-            for child in children {
+            for child in children.into_iter().rev() {
                 self.tree.graph.add_edge(parent, child, ());
             }
         }
