@@ -366,9 +366,7 @@ impl MarkerPackBuilder {
     }
 
     pub fn add_marker(&mut self, mut marker: Marker) -> &mut Self {
-        let node_id = self.get_or_create_index(&marker.id);
-        self.tree.graph.add_node(node_id);
-
+        let node_id = self.get_or_create_index(marker.id.clone());
         if let Some(parent_id) = self.parent_id.front() {
             if let Some(children) = self.edges.get_mut(parent_id) {
                 children.push(node_id);
@@ -427,13 +425,16 @@ impl MarkerPackBuilder {
         }
     }
 
-    fn get_or_create_index(&mut self, marker_id: &MarkerId) -> NodeIndex {
+    fn get_or_create_index(&mut self, marker_id: MarkerId) -> NodeIndex {
         self.tree.index_of(&marker_id).unwrap_or_else(|| {
-            NodeIndex::new({
+            let node_id = NodeIndex::new({
                 let i = self.count;
                 self.count += 1;
                 i
-            })
+            });
+            self.tree.indexes.insert(marker_id, node_id);
+            self.tree.graph.add_node(node_id);
+            node_id
         })
     }
 
