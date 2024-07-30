@@ -1,5 +1,5 @@
-mod poi;
-mod trail;
+pub mod poi;
+pub mod trail;
 
 use bevy::{prelude::*, utils::HashSet};
 

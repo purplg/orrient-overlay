@@ -12,7 +12,7 @@ use itertools::Itertools;
 use crate::{link::MapId, parser::prelude::*};
 
 #[derive(Component)]
-struct TrailMesh;
+pub struct TrailMesh;
 
 const TRAIL_WIDTH: f32 = 0.5;
 
@@ -23,7 +23,7 @@ struct OrientedPoint {
     distance: f32,
 }
 
-fn create_trail_mesh(path: impl Iterator<Item = Vec3>) -> Mesh {
+pub fn create_trail_mesh(path: impl Iterator<Item = Vec3>) -> Mesh {
     let mut indices: Vec<u32> = vec![];
     let mut positions: Vec<Vec3> = vec![];
     let mut uvs: Vec<Vec2> = vec![];
@@ -80,15 +80,15 @@ fn create_trail_mesh(path: impl Iterator<Item = Vec3>) -> Mesh {
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-struct TrailMaterial {
+pub struct TrailMaterial {
     #[uniform(0)]
-    color: LinearRgba,
+    pub color: LinearRgba,
     #[texture(1)]
     #[sampler(2)]
-    color_texture: Option<Handle<Image>>,
-    alpha_mode: AlphaMode,
+    pub color_texture: Option<Handle<Image>>,
+    pub alpha_mode: AlphaMode,
     #[uniform(3)]
-    speed: f32,
+    pub speed: f32,
 }
 
 impl Material for TrailMaterial {
@@ -136,7 +136,7 @@ fn show_trails(
             debug!("Trail texture: {:?}", trail.texture_file);
 
             let material = trail_materials.add(TrailMaterial {
-                color: palettes::tailwind::ZINC_500.into(),
+                color: palettes::basic::WHITE.into(),
                 color_texture: Some(texture),
                 alpha_mode: AlphaMode::Blend,
                 speed: 1.0,

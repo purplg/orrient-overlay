@@ -25,10 +25,10 @@ fn load_marker(mut events: EventReader<MarkerEvent>, mut loaded_markers: ResMut<
 }
 
 #[derive(Component)]
-struct Poi(FullMarkerId);
+pub struct Poi(pub FullMarkerId);
 
 #[derive(Component)]
-struct DisappearNearby;
+pub struct DisappearNearby;
 
 fn disappear_nearby_system(
     mut commands: Commands,
@@ -47,31 +47,38 @@ fn disappear_nearby_system(
 #[derive(Resource)]
 struct PoiQuad(Handle<Mesh>);
 
-fn show_pois_system(
+#[derive(Event, Clone, Debug)]
+pub enum PoiEvent {
+    Show(FullMarkerId),
+}
+
+fn show_poi_system(
     mut commands: Commands,
-    packs: Res<MarkerPacks>,
+    mut events: EventReader<PoiEvent>,
     assets: Res<PoiQuad>,
+    packs: Res<MarkerPacks>,
     map_id: Res<MapId>,
 ) {
-    for full_id in packs.get_map_markers(&map_id.0) {
+    let mut count = 0;
+    for event in events.read() {
+        let PoiEvent::Show(full_id) = event;
+
         info!("Loading POIs from {full_id}");
 
         let Some(pack) = &packs.get(&full_id.pack_id) else {
             warn!("Pack ID not found: {}", &full_id.pack_id);
-            return;
-        };
-
-        let Some(marker) = &pack.get(&full_id.marker_id) else {
-            warn!("Marker {full_id} not found in {}", full_id.pack_id);
-            return;
+            continue;
         };
 
         let Some(pois) = pack.get_pois(&full_id.marker_id) else {
             info!("No POIs found for {}", full_id);
-            return;
+            continue;
         };
 
-        let mut count = 0;
+        let Some(marker) = &pack.get(&full_id.marker_id) else {
+            warn!("Marker {full_id} not found in {}", full_id.pack_id);
+            continue;
+        };
         for poi in pois.iter().filter(|poi| poi.map_id == Some(map_id.0)) {
             let Some(pos) = poi.position.map(|position| Vec3 {
                 x: position.x,
@@ -120,11 +127,22 @@ fn show_pois_system(
             } else if let Some(Behavior::DisappearOnUse) = marker.behavior {
                 builder.insert(DisappearNearby);
             }
-
-            count += 1;
         }
+        count += 1;
+    }
 
+    if count > 0 {
         info!("Loaded {} POIs.", count);
+    }
+}
+
+fn update_pois_system(
+    packs: Res<MarkerPacks>,
+    map_id: Res<MapId>,
+    mut events: EventWriter<PoiEvent>,
+) {
+    for full_id in packs.get_map_markers(&map_id.0) {
+        events.send(PoiEvent::Show(full_id.clone()));
     }
 }
 
@@ -163,6 +181,7 @@ pub(super) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(BillboardPlugin);
+        app.add_event::<PoiEvent>();
         app.init_resource::<LoadedMarkers>();
 
         app.add_systems(Startup, setup);
@@ -177,7 +196,7 @@ impl bevy::prelude::Plugin for Plugin {
         );
         app.add_systems(
             Update,
-            (hide_pois_system, show_pois_system)
+            (hide_pois_system, update_pois_system, show_poi_system)
                 .chain()
                 .run_if(resource_exists_and_changed::<MapId>),
         );

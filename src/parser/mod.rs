@@ -6,9 +6,11 @@ pub mod prelude {
     pub use super::pack::Behavior;
     pub use super::pack::FullMarkerId;
     pub use super::pack::Marker;
+    pub use super::pack::MarkerId;
     pub use super::pack::MarkerKind;
     pub use super::pack::MarkerPack;
     pub use super::MarkerPacks;
+    pub use super::PackId;
 }
 
 use anyhow::{Context, Result};
@@ -137,7 +139,9 @@ impl MarkerPacks {
         &'a self,
         map_id: &'a u32,
     ) -> impl Iterator<Item = FullMarkerId> + 'a {
-        self.values().map(|pack| pack.get_map_markers(map_id)).flatten()
+        self.values()
+            .map(|pack| pack.get_map_markers(map_id))
+            .flatten()
     }
 }
 
@@ -286,7 +290,7 @@ fn parse_xml<R: Read + BufRead>(
                     tree.up();
                 }
                 Event::Eof => break,
-                Event::Decl(_) => {},
+                Event::Decl(_) => {}
                 Event::Comment(_) => {}
                 unknown_event => debug!("unknown_event in {filename}: {unknown_event:?}"),
             },

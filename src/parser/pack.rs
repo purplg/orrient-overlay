@@ -284,7 +284,7 @@ impl MarkerPack {
         self.roots()
             .map(|root| {
                 self.iter_recursive(&root.id)
-                    .filter(|marker| marker.map_ids.contains(map_id))
+                    .filter(|marker| self.contains_map_id(&marker.id, *map_id))
                     .map(|marker| &marker.id)
             })
             .flatten()

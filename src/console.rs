@@ -1,10 +1,15 @@
-use bevy::prelude::*;
+use bevy::{color::palettes, prelude::*};
 use bevy_console::{clap::Parser, AddConsoleCommand, ConsoleCommand, ConsolePlugin};
 use clap::{Subcommand, ValueEnum};
 
 use crate::{
     link::MapId,
-    marker::MarkerEvent,
+    marker::{
+        poi::PoiEvent,
+        trail::{create_trail_mesh, TrailMaterial, TrailMesh},
+        MarkerEvent,
+    },
+    parser::prelude::*,
     ui::compass::marker::{CompassMarker, ShowOnCompass},
     MarkerPacks, UiEvent,
 };
@@ -20,6 +25,8 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_console_command::<SetupCommand, _>(setup_command);
         app.add_console_command::<AddCommand, _>(add_command);
         app.add_console_command::<DeleteCommand, _>(delete_command);
+        app.add_console_command::<PoiCommand, _>(poi_command);
+        app.add_console_command::<TrailCommand, _>(trail_command);
     }
 }
 
@@ -159,6 +166,109 @@ fn delete_command(
                         log.reply("Could not find associated compass marker.");
                     }
                 }
+            }
+        }
+        log.ok();
+    }
+}
+
+#[derive(Parser, ConsoleCommand)]
+#[command(name = "poi")]
+struct PoiCommand {
+    #[command(subcommand)]
+    kind: Poi,
+}
+#[derive(Subcommand, Clone)]
+enum Poi {
+    Load { pack_id: String, marker_id: String },
+}
+
+fn poi_command(mut log: ConsoleCommand<PoiCommand>, mut events: EventWriter<PoiEvent>) {
+    if let Some(Ok(PoiCommand { kind })) = log.take() {
+        match kind {
+            Poi::Load { pack_id, marker_id } => {
+                let full_id = FullMarkerId {
+                    pack_id: PackId(pack_id),
+                    marker_id: MarkerId(marker_id),
+                };
+                events.send(PoiEvent::Show(full_id));
+                log.ok();
+            }
+        }
+    }
+}
+
+#[derive(Parser, ConsoleCommand)]
+#[command(name = "trail")]
+struct TrailCommand {
+    #[command(subcommand)]
+    kind: Trail,
+}
+#[derive(Subcommand, Clone)]
+enum Trail {
+    Load { pack_id: String, marker_id: String },
+}
+
+fn trail_command(
+    mut log: ConsoleCommand<TrailCommand>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut trail_materials: ResMut<Assets<TrailMaterial>>,
+    packs: Res<MarkerPacks>,
+    map_id: Res<MapId>,
+) {
+    if let Some(Ok(TrailCommand { kind })) = log.take() {
+        match kind {
+            Trail::Load { pack_id, marker_id } => {
+                let full_id = FullMarkerId {
+                    pack_id: PackId(pack_id),
+                    marker_id: MarkerId(marker_id),
+                };
+                let Some(pack) = packs.get(&full_id.pack_id) else {
+                    log.reply_failed("Pack not found");
+                    return;
+                };
+
+                let Some(trails) = pack.get_trails(&full_id.marker_id) else {
+                    log.reply_failed("Trail not found for marker_id: {full_id}");
+                    return;
+                };
+
+                debug!("Loading trails for {}...", full_id);
+
+                for trail in trails.iter().filter(|trail| trail.map_id == map_id.0) {
+                    let iter = trail.path.iter().rev().map(|path| Vec3 {
+                        x: path.x,
+                        y: path.y,
+                        z: -path.z,
+                    });
+
+                    let Some(texture) = pack.get_image(&trail.texture_file) else {
+                        warn!("Could not find texture {}", trail.texture_file);
+                        continue;
+                    };
+
+                    debug!("Trail texture: {:?}", trail.texture_file);
+
+                    let material = trail_materials.add(TrailMaterial {
+                        color: palettes::basic::WHITE.into(),
+                        color_texture: Some(texture),
+                        alpha_mode: AlphaMode::Blend,
+                        speed: 1.0,
+                    });
+
+                    let mesh = create_trail_mesh(iter);
+
+                    commands.spawn((
+                        TrailMesh,
+                        MaterialMeshBundle {
+                            mesh: meshes.add(mesh),
+                            material,
+                            ..default()
+                        },
+                    ));
+                }
+                info!("Trail {} loaded.", full_id);
             }
         }
         log.ok();
