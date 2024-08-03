@@ -76,7 +76,7 @@ fn link(tx: crossbeam_channel::Sender<SocketMessage>) {
             };
             // ... and decrease the tickrate.
             if tick_rate > 0 {
-                tick_rate -= 1;
+                tick_rate /= 2;
             }
             // ... reset the error count
             fast_count = 0;
