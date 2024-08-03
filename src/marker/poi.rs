@@ -63,15 +63,13 @@ fn show_poi_system(
     for event in events.read() {
         let PoiEvent::Show(full_id) = event;
 
-        info!("Loading POIs from {full_id}");
-
         let Some(pack) = &packs.get(&full_id.pack_id) else {
             warn!("Pack ID not found: {}", &full_id.pack_id);
             continue;
         };
 
         let Some(pois) = pack.get_pois(&full_id.marker_id) else {
-            info!("No POIs found for {}", full_id);
+            debug!("No POIs found for {}", full_id);
             continue;
         };
 
@@ -79,6 +77,9 @@ fn show_poi_system(
             warn!("Marker {full_id} not found in {}", full_id.pack_id);
             continue;
         };
+
+        info!("Loading POIs from {full_id}");
+
         for poi in pois.iter().filter(|poi| poi.map_id == Some(map_id.0)) {
             let Some(pos) = poi.position.map(|position| Vec3 {
                 x: position.x,

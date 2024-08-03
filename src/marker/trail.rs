@@ -115,11 +115,11 @@ fn show_trails(
         };
 
         let Some(trails) = pack.get_trails(&full_id.marker_id) else {
-            warn!("Trail not found for marker_id: {full_id}");
+            debug!("Trail not found for marker_id: {full_id}");
             continue;
         };
 
-        debug!("Loading trails for {}...", full_id);
+        info!("Loading trails for {}...", full_id);
 
         for trail in trails.iter().filter(|trail| trail.map_id == map_id.0) {
             let iter = trail.path.iter().rev().map(|path| Vec3 {
