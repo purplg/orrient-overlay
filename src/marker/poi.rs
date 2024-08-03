@@ -112,9 +112,9 @@ fn show_poi_system(
                 warn!("No icon for {}", full_id);
                 builder.insert(BillboardTextBundle {
                     text: Text::from_section(
-                        "Unknown icon",
+                        poi.id.clone(),
                         TextStyle {
-                            font_size: 64.,
+                            font_size: 32.,
                             ..default()
                         },
                     ),
