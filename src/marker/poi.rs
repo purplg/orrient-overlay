@@ -128,8 +128,8 @@ fn show_poi_system(
             } else if let Some(Behavior::DisappearOnUse) = marker.behavior {
                 builder.insert(DisappearNearby);
             }
+            count += 1;
         }
-        count += 1;
     }
 
     if count > 0 {
