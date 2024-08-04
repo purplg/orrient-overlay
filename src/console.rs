@@ -5,7 +5,6 @@ use clap::{Subcommand, ValueEnum};
 use crate::{
     link::MapId,
     marker::{
-        poi::PoiEvent,
         trail::{create_trail_mesh, TrailMaterial, TrailMesh},
         MarkerEvent,
     },
@@ -25,7 +24,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_console_command::<SetupCommand, _>(setup_command);
         app.add_console_command::<AddCommand, _>(add_command);
         app.add_console_command::<DeleteCommand, _>(delete_command);
-        app.add_console_command::<PoiCommand, _>(poi_command);
+        app.add_console_command::<MarkerCommand, _>(marker_command);
         app.add_console_command::<TrailCommand, _>(trail_command);
     }
 }
@@ -173,25 +172,25 @@ fn delete_command(
 }
 
 #[derive(Parser, ConsoleCommand)]
-#[command(name = "poi")]
-struct PoiCommand {
+#[command(name = "marker")]
+struct MarkerCommand {
     #[command(subcommand)]
-    kind: Poi,
+    subcommand: MarkerSubcommand,
 }
 #[derive(Subcommand, Clone)]
-enum Poi {
+enum MarkerSubcommand {
     Load { pack_id: String, marker_id: String },
 }
 
-fn poi_command(mut log: ConsoleCommand<PoiCommand>, mut events: EventWriter<PoiEvent>) {
-    if let Some(Ok(PoiCommand { kind })) = log.take() {
+fn marker_command(mut log: ConsoleCommand<MarkerCommand>, mut events: EventWriter<MarkerEvent>) {
+    if let Some(Ok(MarkerCommand { subcommand: kind })) = log.take() {
         match kind {
-            Poi::Load { pack_id, marker_id } => {
+            MarkerSubcommand::Load { pack_id, marker_id } => {
                 let full_id = FullMarkerId {
                     pack_id: PackId(pack_id),
                     marker_id: MarkerId(marker_id),
                 };
-                events.send(PoiEvent::Show(full_id));
+                events.send(MarkerEvent::ShowMarker(full_id));
                 log.ok();
             }
         }
