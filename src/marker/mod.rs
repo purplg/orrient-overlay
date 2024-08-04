@@ -20,7 +20,7 @@ pub struct LoadedMarkers(pub HashSet<FullMarkerId>);
 
 #[derive(Event, Clone, Debug)]
 pub enum MarkerEvent {
-    ShowMarker(FullMarkerId),
-    HideMarker(FullMarkerId),
-    HideAllMarkers,
+    Show(FullMarkerId),
+    Hide(FullMarkerId),
+    HideAll,
 }

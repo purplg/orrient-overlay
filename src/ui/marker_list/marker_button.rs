@@ -274,9 +274,9 @@ fn checkbox_action(
                     .map(|marker| full_id.with_marker_id(marker.id.clone()));
 
                 if checkbox.checked {
-                    events.send_batch(markers.map(MarkerEvent::HideMarker));
+                    events.send_batch(markers.map(MarkerEvent::Hide));
                 } else {
-                    events.send_batch(markers.map(MarkerEvent::ShowMarker));
+                    events.send_batch(markers.map(MarkerEvent::Show));
                 }
             }
         }
@@ -289,7 +289,7 @@ fn checkbox_follow(
 ) {
     for event in events.read() {
         match event {
-            MarkerEvent::ShowMarker(id_to_load) => {
+            MarkerEvent::Show(id_to_load) => {
                 for (mut checkbox, this_id) in &mut query {
                     if checkbox.checked {
                         continue;
@@ -299,7 +299,7 @@ fn checkbox_follow(
                     }
                 }
             }
-            MarkerEvent::HideMarker(id_to_unload) => {
+            MarkerEvent::Hide(id_to_unload) => {
                 for (mut checkbox, this_id) in &mut query {
                     if !checkbox.checked {
                         continue;
@@ -309,7 +309,7 @@ fn checkbox_follow(
                     }
                 }
             }
-            MarkerEvent::HideAllMarkers => {
+            MarkerEvent::HideAll => {
                 for (mut checkbox, _) in &mut query {
                     if !checkbox.checked {
                         continue;
@@ -374,13 +374,13 @@ fn checkbox(
         };
 
         if checkbox.checked {
-            events.send(MarkerEvent::ShowMarker(item.id.clone()));
+            events.send(MarkerEvent::Show(item.id.clone()));
             checkbox_events
                 .send_batch(pack.iter(&item.id.marker_id).map(|marker| {
                     CheckboxEvent::Enable(item.id.with_marker_id(marker.id.clone()))
                 }));
         } else {
-            events.send(MarkerEvent::HideMarker(item.id.clone()));
+            events.send(MarkerEvent::Hide(item.id.clone()));
             checkbox_events.send_batch(
                 pack.iter(&item.id.marker_id).map(|marker| {
                     CheckboxEvent::Disable(item.id.with_marker_id(marker.id.clone()))

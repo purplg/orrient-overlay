@@ -16,7 +16,7 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
 fn load_marker(mut events: EventReader<MarkerEvent>, mut loaded_markers: ResMut<LoadedMarkers>) {
     for event in events.read() {
-        let MarkerEvent::ShowMarker(full_id) = event else {
+        let MarkerEvent::Show(full_id) = event else {
             continue;
         };
 
@@ -164,13 +164,13 @@ fn track_loaded_system(
 ) {
     for event in marker_events.read() {
         match event {
-            MarkerEvent::ShowMarker(full_id) => {
+            MarkerEvent::Show(full_id) => {
                 loaded_markers.insert(full_id.clone());
             }
-            MarkerEvent::HideMarker(full_id) => {
+            MarkerEvent::Hide(full_id) => {
                 loaded_markers.remove(full_id);
             }
-            MarkerEvent::HideAllMarkers => {
+            MarkerEvent::HideAll => {
                 loaded_markers.clear();
             }
         }

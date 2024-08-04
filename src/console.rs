@@ -39,7 +39,7 @@ fn unload_all_command(
     mut events: EventWriter<MarkerEvent>,
 ) {
     if let Some(Ok(UnloadAllCommand)) = log.take() {
-        events.send(MarkerEvent::HideAllMarkers);
+        events.send(MarkerEvent::HideAll);
         log.reply_ok("Unloaded all markers");
     }
 }
@@ -190,7 +190,7 @@ fn marker_command(mut log: ConsoleCommand<MarkerCommand>, mut events: EventWrite
                     pack_id: PackId(pack_id),
                     marker_id: MarkerId(marker_id),
                 };
-                events.send(MarkerEvent::ShowMarker(full_id));
+                events.send(MarkerEvent::Show(full_id));
                 log.ok();
             }
         }

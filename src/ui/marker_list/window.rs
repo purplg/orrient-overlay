@@ -85,7 +85,7 @@ impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
                                     name: "Hide all markers".into(),
                                     ..default()
                                 })
-                                .insert(OrrientMenuItem(MarkerEvent::HideAllMarkers));
+                                .insert(OrrientMenuItem(MarkerEvent::HideAll));
                         },
                     );
                 });
