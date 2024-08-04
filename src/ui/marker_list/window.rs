@@ -82,7 +82,7 @@ impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
                         |parent| {
                             parent
                                 .menu_item(MenuItemConfig {
-                                    name: "Unload all markers".into(),
+                                    name: "Hide all markers".into(),
                                     ..default()
                                 })
                                 .insert(OrrientMenuItem(MarkerEvent::HideAllMarkers));
