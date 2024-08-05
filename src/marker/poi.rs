@@ -69,7 +69,6 @@ fn show_poi_system(
         };
 
         let Some(pois) = pack.get_pois(&full_id.marker_id) else {
-            debug!("No POIs found for {}", full_id);
             continue;
         };
 
