@@ -15,6 +15,8 @@ use bevy::window::{CompositeAlphaMode, WindowResolution};
 
 pub mod prelude {
     pub use crate::events::*;
+    pub use crate::state::AppState;
+    pub use crate::state::GameState;
     pub use crate::link::MapId;
     pub use crate::parser::pack::Behavior;
     pub use crate::parser::pack::FullMarkerId;

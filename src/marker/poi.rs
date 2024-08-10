@@ -143,7 +143,7 @@ fn update_pois_system(
     }
 }
 
-fn hide_pois_system(mut commands: Commands, poi_query: Query<Entity, With<Poi>>) {
+fn despawn_pois_system(mut commands: Commands, poi_query: Query<Entity, With<Poi>>) {
     let mut count = 0;
     for entity in &poi_query {
         commands.entity(entity).despawn_recursive();
@@ -182,23 +182,23 @@ impl bevy::prelude::Plugin for Plugin {
 
         app.add_systems(Startup, setup);
 
-        app.add_systems(
-            PreUpdate,
-            load_marker.run_if(resource_exists::<MarkerPacks>.and_then(on_event::<MarkerEvent>())),
-        );
-        app.add_systems(
-            Update,
-            disappear_nearby_system.run_if(on_event::<WorldEvent>()),
-        );
+        // TODO app.add_systems(OnExit(GameState::InGame), hide_markers);
+        // TODO app.add_systems(OnEnter(GameState::InGame), unhide_markers);
+
         app.add_systems(
             Update,
-            (hide_pois_system, update_pois_system, show_poi_system)
-                .chain()
-                .run_if(resource_exists_and_changed::<MapId>),
-        );
-        app.add_systems(
-            Update,
-            track_loaded_system.run_if(on_event::<MarkerEvent>()),
+            (
+                disappear_nearby_system.run_if(on_event::<WorldEvent>()),
+                track_loaded_system,
+                (
+                    load_marker.run_if(on_event::<MarkerEvent>()),
+                    (despawn_pois_system, update_pois_system, show_poi_system)
+                        .chain()
+                        .run_if(resource_exists_and_changed::<MapId>),
+                )
+                    .chain(),
+            )
+                .run_if(in_state(GameState::InGame)),
         );
     }
 }

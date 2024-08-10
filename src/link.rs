@@ -3,7 +3,7 @@ use bevy::input::ButtonState;
 use bincode::Options as _;
 use crossbeam_channel::Receiver;
 use orrient_input::{Action, ActionEvent};
-use orrient_link::SocketMessage;
+use orrient_link::{MumbleLinkDataDef, SocketMessage};
 use std::net::UdpSocket;
 use std::ops::Deref;
 
@@ -42,71 +42,96 @@ impl Deref for MapId {
 #[derive(Resource, Deref)]
 struct MumbleLinkMessageReceiver(pub Receiver<SocketMessage>);
 
+fn start_socket_system(mut commands: Commands) {
+    let (tx, rx) = crossbeam_channel::unbounded::<SocketMessage>();
+    commands.insert_resource(MumbleLinkMessageReceiver(rx));
+    std::thread::spawn(|| run(tx));
+    debug!("Waiting for link...");
+}
+
+#[derive(Resource, Deref, DerefMut)]
+struct PrevMumblelinkState(MumbleLinkDataDef);
+
+fn monitor_system(
+    mut commands: Commands,
+    rx: Res<MumbleLinkMessageReceiver>,
+    mut state: ResMut<NextState<AppState>>,
+) {
+    if let Ok(SocketMessage::MumbleLinkData(data)) = rx.try_recv() {
+        if data.ui_tick > 0 {
+            commands.insert_resource(MapId(data.identity.map_id));
+            commands.insert_resource(PrevMumblelinkState(*data));
+            state.set(AppState::Running);
+            info!("Link connected.");
+        }
+    }
+}
+
 fn socket_system(
     mut commands: Commands,
     rx: Res<MumbleLinkMessageReceiver>,
     mut world_events: EventWriter<WorldEvent>,
     mut ui_events: EventWriter<UiEvent>,
-    mut prev_compass_size: Local<UVec2>,
-    mut prev_mapid: Local<u32>,
-    mut prev_mapopen: Local<bool>,
+    mut previous: ResMut<PrevMumblelinkState>,
 ) {
     while let Ok(message) = rx.try_recv() {
         match message {
-            SocketMessage::MumbleLinkData(data) => {
+            SocketMessage::MumbleLinkData(current) => {
                 let facing = Vec3::new(
-                    data.camera.front[0],
-                    data.camera.front[1],
-                    data.camera.front[2],
+                    current.camera.front[0],
+                    current.camera.front[1],
+                    current.camera.front[2],
                 );
 
                 world_events.send(WorldEvent::CameraUpdate {
                     position: Vec3::new(
-                        data.camera.position[0],
-                        data.camera.position[1],
-                        -data.camera.position[2],
+                        current.camera.position[0],
+                        current.camera.position[1],
+                        -current.camera.position[2],
                     ),
                     facing,
-                    fov: data.identity.fov,
+                    fov: current.identity.fov,
                 });
 
                 world_events.send(WorldEvent::PlayerPositon(Vec3 {
-                    x: data.avatar.position[0],
-                    y: data.avatar.position[1],
-                    z: -data.avatar.position[2],
+                    x: current.avatar.position[0],
+                    y: current.avatar.position[1],
+                    z: -current.avatar.position[2],
                 }));
 
-                let compass_size = UVec2 {
-                    x: data.context.compass_width as u32,
-                    y: data.context.compass_height as u32,
-                };
-                if *prev_compass_size != compass_size {
-                    ui_events.send(UiEvent::CompassSize(compass_size));
-                    *prev_compass_size = compass_size;
+                if previous.context.compass_width != current.context.compass_width {
+                    ui_events.send(UiEvent::CompassSize(UVec2 {
+                        x: current.context.compass_width as u32,
+                        y: current.context.compass_height as u32,
+                    }));
+                } else if previous.context.compass_height != current.context.compass_height {
+                    ui_events.send(UiEvent::CompassSize(UVec2 {
+                        x: current.context.compass_width as u32,
+                        y: current.context.compass_height as u32,
+                    }));
                 }
 
                 ui_events.send(UiEvent::MapPosition(Vec2 {
-                    x: data.context.map_center_x,
-                    y: data.context.map_center_y,
+                    x: current.context.map_center_x,
+                    y: current.context.map_center_y,
                 }));
 
                 ui_events.send(UiEvent::PlayerPosition(Vec2 {
-                    x: data.context.player_x,
-                    y: data.context.player_y,
+                    x: current.context.player_x,
+                    y: current.context.player_y,
                 }));
 
-                ui_events.send(UiEvent::MapScale(data.context.map_scale));
+                ui_events.send(UiEvent::MapScale(current.context.map_scale));
 
-                let mapopen = data.context.ui_state & 1 == 1;
-                if mapopen != *prev_mapopen {
-                    ui_events.send(UiEvent::MapOpen(mapopen));
-                    *prev_mapopen = mapopen;
+                if previous.context.map_open() != current.context.map_open() {
+                    ui_events.send(UiEvent::MapOpen(current.context.map_open()));
                 }
 
-                if *prev_mapid != data.identity.map_id {
-                    commands.insert_resource(MapId(data.identity.map_id));
-                    *prev_mapid = data.identity.map_id;
+                if previous.context.map_id != current.identity.map_id {
+                    commands.insert_resource(MapId(current.identity.map_id));
                 }
+
+                previous.0 = *current;
             }
             SocketMessage::Action(action) => match action {
                 ActionEvent {
@@ -130,11 +155,11 @@ fn socket_system(
 pub struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        let (tx, rx) = crossbeam_channel::unbounded::<SocketMessage>();
-
-        std::thread::spawn(|| run(tx));
-
-        app.insert_resource(MumbleLinkMessageReceiver(rx));
-        app.add_systems(Update, socket_system);
+        app.add_systems(OnEnter(AppState::WaitingForMumbleLink), start_socket_system);
+        app.add_systems(
+            Update,
+            monitor_system.run_if(in_state(AppState::WaitingForMumbleLink)),
+        );
+        app.add_systems(Update, socket_system.run_if(in_state(AppState::Running)));
     }
 }

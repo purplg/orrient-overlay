@@ -1,9 +1,8 @@
-use std::{io::Seek, net::Ipv4Addr};
-
 use byteorder::{LittleEndian, ReadBytesExt};
 use mumblelink_reader::mumble_link::{MumbleLinkData, Position, Vector3D};
 use orrient_input::ActionEvent;
 use serde::{Deserialize, Serialize};
+use std::{io::Seek, net::Ipv4Addr};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum SocketMessage {
@@ -64,6 +63,34 @@ impl GW2Context {
             process_id: cursor.read_u32::<LittleEndian>()?,
             mount_index: cursor.read_u8()?,
         })
+    }
+
+    pub fn map_open(&self) -> bool {
+        self.ui_state & 0b00000001 != 0
+    }
+
+    pub fn compass_top_right(&self) -> bool {
+        self.ui_state & 0b00000010 != 0
+    }
+
+    pub fn compass_rotation_enabled(&self) -> bool {
+        self.ui_state & 0b00000100 != 0
+    }
+
+    pub fn game_focused(&self) -> bool {
+        self.ui_state & 0b00001000 != 0
+    }
+
+    pub fn in_competitive_gamemode(&self) -> bool {
+        self.ui_state & 0b00010000 != 0
+    }
+
+    pub fn textbox_focused(&self) -> bool {
+        self.ui_state & 0b00100000 != 0
+    }
+
+    pub fn in_combat(&self) -> bool {
+        self.ui_state & 0b01000000 != 0
     }
 }
 

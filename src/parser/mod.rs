@@ -57,13 +57,12 @@ fn load_system(
     match load(config_dir.as_path(), &mut images) {
         Ok(pack) => {
             commands.insert_resource(MarkerPacks(pack));
-            state.set(AppState::LoadingMarkerPacks);
         }
         Err(err) => {
             warn!("Error loading marker packs {err:?}");
-            state.set(AppState::Running);
         }
     }
+    state.set(AppState::WaitingForMumbleLink);
 }
 
 fn load(path: &Path, images: &mut Assets<Image>) -> Result<HashMap<PackId, MarkerPack>> {

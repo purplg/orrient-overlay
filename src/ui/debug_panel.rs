@@ -1,21 +1,5 @@
-use bevy::prelude::*;
+use crate::prelude::*;
 use sickle_ui::{ui_builder::UiBuilder, ui_style::generated::*, widgets::prelude::*};
-
-use crate::{link::MapId, WorldEvent};
-
-pub(crate) struct Plugin;
-
-impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                update_player_position,
-                update_map_id.run_if(resource_exists_and_changed::<MapId>),
-            ),
-        );
-    }
-}
 
 #[derive(Component)]
 struct DebugPanel;
@@ -30,6 +14,12 @@ enum DebugText {
 #[derive(Component)]
 struct MapIdText;
 
+#[derive(Component)]
+struct AppStateText;
+
+#[derive(Component)]
+struct GameStateText;
+
 pub trait UiDebugPanelExt {
     fn debug_panel(&mut self);
 }
@@ -42,11 +32,12 @@ impl UiDebugPanelExt for UiBuilder<'_, Entity> {
                 ..default()
             },
             FloatingPanelLayout {
-                size: (300., 100.).into(),
-                position: Some((2000., 100.).into()),
+                size: (270., 140.).into(),
+                position: Some((2010., 0.).into()),
                 ..default()
             },
             |parent| {
+                // Player
                 parent.row(|parent| {
                     parent.label(LabelConfig::from("Player"));
                 });
@@ -92,6 +83,7 @@ impl UiDebugPanelExt for UiBuilder<'_, Entity> {
                     .style()
                     .justify_content(JustifyContent::SpaceEvenly);
 
+                // MapId
                 parent.row(|parent| {
                     parent.label(LabelConfig::from("Map Id"));
                 });
@@ -109,11 +101,47 @@ impl UiDebugPanelExt for UiBuilder<'_, Entity> {
                         ));
                     });
                 });
+
+                // AppState
+                parent.row(|parent| {
+                    parent.label(LabelConfig::from("AppState"));
+                });
+                parent.row(|parent| {
+                    parent.column(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "".to_string(),
+                                TextStyle {
+                                    font_size: 14.,
+                                    ..default()
+                                },
+                            ),
+                            AppStateText,
+                        ));
+                    });
+                });
+
+                // GameState
+                parent.row(|parent| {
+                    parent.label(LabelConfig::from("GameState"));
+                });
+                parent.row(|parent| {
+                    parent.column(|parent| {
+                        parent.spawn((
+                            TextBundle::from_section(
+                                "".to_string(),
+                                TextStyle {
+                                    font_size: 14.,
+                                    ..default()
+                                },
+                            ),
+                            GameStateText,
+                        ));
+                    });
+                });
             },
         )
-        .insert(DebugPanel)
-        .style()
-        .width(Val::Percent(100.));
+        .insert(DebugPanel);
     }
 }
 
@@ -137,4 +165,32 @@ fn update_player_position(
 fn update_map_id(mut query: Query<&mut Text, With<MapIdText>>, map_id: Res<MapId>) {
     let mut text = query.single_mut();
     text.sections[0].value = format!("{}", **map_id);
+}
+
+fn update_app_state(mut query: Query<&mut Text, With<AppStateText>>, state: Res<State<AppState>>) {
+    let mut text = query.single_mut();
+    text.sections[0].value = format!("{:?}", **state);
+}
+
+fn update_game_state(
+    mut query: Query<&mut Text, With<GameStateText>>,
+    state: Res<State<GameState>>,
+) {
+    let mut text = query.single_mut();
+    text.sections[0].value = format!("{:?}", **state);
+}
+
+pub(crate) struct Plugin;
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (
+                update_player_position,
+                update_map_id.run_if(resource_exists_and_changed::<MapId>),
+                update_app_state.run_if(state_changed::<AppState>),
+                update_game_state.run_if(state_changed::<GameState>),
+            ),
+        );
+    }
 }
