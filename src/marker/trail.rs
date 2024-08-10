@@ -1,15 +1,11 @@
-use bevy::{
-    color::palettes,
-    prelude::*,
-    render::{
-        mesh::{Indices, PrimitiveTopology},
-        render_asset::RenderAssetUsages,
-        render_resource::{AsBindGroup, ShaderRef},
-    },
-};
+use crate::prelude::*;
+use bevy::color::palettes;
+use bevy::render::mesh::Indices;
+use bevy::render::mesh::PrimitiveTopology;
+use bevy::render::render_asset::RenderAssetUsages;
+use bevy::render::render_resource::AsBindGroup;
+use bevy::render::render_resource::ShaderRef;
 use itertools::Itertools;
-
-use crate::{link::MapId, parser::prelude::*};
 
 #[derive(Component)]
 pub struct TrailMesh;
@@ -164,7 +160,6 @@ fn hide_trails(mut commands: Commands, q_trails: Query<Entity, With<TrailMesh>>)
 }
 
 pub(super) struct Plugin;
-
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(MaterialPlugin::<TrailMaterial>::default());

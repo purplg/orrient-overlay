@@ -1,40 +1,35 @@
 pub(crate) mod api;
 mod camera;
 mod console;
+mod events;
 mod input;
 mod link;
 mod marker;
 mod parser;
 mod player;
+mod state;
 mod ui;
 
+use bevy::window::WindowLevel;
 use bevy::window::{CompositeAlphaMode, WindowResolution};
-use bevy::{prelude::*, window::WindowLevel};
-use link::MapId;
-use marker::MarkerEvent;
-use parser::prelude::*;
 
-#[derive(Event, Clone, Debug)]
-pub enum WorldEvent {
-    CameraUpdate {
-        position: Vec3,
-        facing: Vec3,
-        fov: f32,
-    },
-    PlayerPositon(Vec3),
-    SavePosition,
+pub mod prelude {
+    pub use crate::events::*;
+    pub use crate::link::MapId;
+    pub use crate::parser::pack::Behavior;
+    pub use crate::parser::pack::FullMarkerId;
+    pub use crate::parser::pack::Marker;
+    pub use crate::parser::pack::MarkerId;
+    pub use crate::parser::pack::MarkerKind;
+    pub use crate::parser::pack::MarkerPack;
+    pub use crate::parser::MarkerPacks;
+    pub use crate::parser::PackId;
+    pub use crate::state::*;
+    pub use crate::ui::compass::marker::ShowOnCompass;
+    pub use bevy::prelude::*;
 }
 
-#[derive(Event, Clone, Debug)]
-pub enum UiEvent {
-    OpenUi,
-    CloseUi,
-    CompassSize(UVec2),
-    PlayerPosition(Vec2),
-    MapPosition(Vec2),
-    MapScale(f32),
-    MapOpen(bool),
-}
+use crate::prelude::*;
 
 fn main() {
     let mut app = App::new();
@@ -51,24 +46,19 @@ fn main() {
         ..default()
     }));
 
-    // app.add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin);
-    // use bevy_inspector_egui::quick::WorldInspectorPlugin;
-    // app.add_plugins(WorldInspectorPlugin::new());
-
-    app.add_event::<WorldEvent>();
-    app.add_event::<UiEvent>();
-
     app.insert_resource(ClearColor(Color::NONE));
 
     app.add_plugins(api::Plugin);
     app.add_plugins(camera::Plugin);
+    app.add_plugins(console::Plugin);
+    app.add_plugins(events::Plugin);
     app.add_plugins(input::Plugin);
     app.add_plugins(link::Plugin);
-    app.add_plugins(player::Plugin);
-    app.add_plugins(ui::Plugin);
     app.add_plugins(marker::Plugin);
-    app.add_plugins(console::Plugin);
     app.add_plugins(parser::Plugin);
+    app.add_plugins(player::Plugin);
+    app.add_plugins(state::Plugin);
+    app.add_plugins(ui::Plugin);
 
     app.run();
 }

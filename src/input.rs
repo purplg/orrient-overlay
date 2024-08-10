@@ -1,14 +1,14 @@
-use bevy::{input::ButtonState, prelude::*};
-use orrient_input::{Action, ActionEvent};
-
-use crate::UiEvent;
+use crate::prelude::*;
+use bevy::input::ButtonState;
+use orrient_input::Action;
+use orrient_input::ActionEvent;
 
 pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(orrient_input::Plugin);
-        app.add_systems(Update, update);
+        app.add_systems(Update, update.run_if(in_state(AppState::Running)));
     }
 }
 

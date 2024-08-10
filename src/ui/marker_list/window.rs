@@ -1,20 +1,16 @@
-use bevy::{prelude::*, window::PrimaryWindow};
-use sickle_ui::{
-    ui_builder::{UiBuilder, UiBuilderExt as _},
-    ui_style::generated::*,
-    widgets::prelude::*,
-};
-
-use crate::{
-    marker::{LoadedMarkers, MarkerEvent},
-    parser::prelude::*,
-    ui::OrrientMenuItem,
-    UiEvent,
-};
-
-use super::{
-    marker_button::UiMarkerButtonExt, separator::UiMarkerSeparatorExt, tooltip::UiToolTipExt as _,
-};
+use super::marker_button::UiMarkerButtonExt as _;
+use super::separator::UiMarkerSeparatorExt as _;
+use super::tooltip::UiToolTipExt as _;
+use crate::marker::LoadedMarkers;
+use crate::prelude::*;
+use crate::ui::OrrientMenuItem;
+use crate::UiEvent;
+use bevy::window::PrimaryWindow;
+use sickle_ui::ui_builder::UiBuilder;
+use sickle_ui::ui_builder::UiBuilderExt as _;
+use sickle_ui::ui_style::generated::SetHeightExt as _;
+use sickle_ui::ui_style::generated::SetWidthExt as _;
+use sickle_ui::widgets::prelude::*;
 
 pub(crate) struct Plugin;
 

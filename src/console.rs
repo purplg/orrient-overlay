@@ -1,17 +1,19 @@
-use bevy::{color::palettes, prelude::*};
-use bevy_console::{clap::Parser, AddConsoleCommand, ConsoleCommand, ConsolePlugin};
-use clap::{Subcommand, ValueEnum};
-
-use crate::{
-    link::MapId,
-    marker::{
-        trail::{create_trail_mesh, TrailMaterial, TrailMesh},
-        MarkerEvent,
-    },
-    parser::prelude::*,
-    ui::compass::marker::{CompassMarker, ShowOnCompass},
-    MarkerPacks, UiEvent,
-};
+use crate::link::MapId;
+use crate::marker::trail::create_trail_mesh;
+use crate::marker::trail::TrailMaterial;
+use crate::marker::trail::TrailMesh;
+use crate::prelude::*;
+use crate::ui::compass::marker::CompassMarker;
+use crate::ui::compass::marker::ShowOnCompass;
+use crate::MarkerPacks;
+use crate::UiEvent;
+use bevy::color::palettes;
+use bevy_console::clap::Parser;
+use bevy_console::AddConsoleCommand;
+use bevy_console::ConsoleCommand;
+use bevy_console::ConsolePlugin;
+use clap::Subcommand;
+use clap::ValueEnum;
 
 pub(crate) struct Plugin;
 

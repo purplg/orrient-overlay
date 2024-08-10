@@ -1,12 +1,10 @@
-use bevy::prelude::*;
-
-use crate::WorldEvent;
+use crate::prelude::*;
 
 pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, camera_system);
+        app.add_systems(Update, camera_system.run_if(in_state(AppState::Running)));
     }
 }
 

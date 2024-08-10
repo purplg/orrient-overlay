@@ -73,19 +73,12 @@ fn request_task_system(
     }
 }
 
-fn event_system(mut events: EventReader<RequestComplete>) {
-    for event in events.read() {
-        println!("event: {:?}", event);
-    }
-}
-
 pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<RequestComplete>();
         app.add_systems(Update, request_task_system);
-        // app.add_systems(Update, event_system);
         app.init_resource::<RequestQueue>();
     }
 }

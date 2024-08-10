@@ -1,12 +1,11 @@
-use bevy::{input::ButtonState, prelude::*};
+use crate::prelude::*;
+use bevy::input::ButtonState;
 use bincode::Options as _;
 use crossbeam_channel::Receiver;
 use orrient_input::{Action, ActionEvent};
-use std::{net::UdpSocket, ops::Deref};
-
 use orrient_link::SocketMessage;
-
-use crate::{UiEvent, WorldEvent};
+use std::net::UdpSocket;
+use std::ops::Deref;
 
 fn run(tx: crossbeam_channel::Sender<SocketMessage>) {
     let socket = UdpSocket::bind("127.0.0.1:5001").unwrap();
@@ -26,19 +25,6 @@ fn run(tx: crossbeam_channel::Sender<SocketMessage>) {
         if let Err(e) = tx.send(message) {
             println!("e: {:?}", e);
         }
-    }
-}
-
-pub struct Plugin;
-
-impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) {
-        let (tx, rx) = crossbeam_channel::unbounded::<SocketMessage>();
-
-        std::thread::spawn(|| run(tx));
-
-        app.insert_resource(MumbleLinkMessageReceiver(rx));
-        app.add_systems(Update, socket_system);
     }
 }
 
@@ -138,5 +124,17 @@ fn socket_system(
                 _ => {}
             },
         }
+    }
+}
+
+pub struct Plugin;
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        let (tx, rx) = crossbeam_channel::unbounded::<SocketMessage>();
+
+        std::thread::spawn(|| run(tx));
+
+        app.insert_resource(MumbleLinkMessageReceiver(rx));
+        app.add_systems(Update, socket_system);
     }
 }

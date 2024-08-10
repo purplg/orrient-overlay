@@ -1,28 +1,27 @@
 mod model;
-mod pack;
+pub mod pack;
 mod trail;
 
-pub mod prelude {
-    pub use super::pack::Behavior;
-    pub use super::pack::FullMarkerId;
-    pub use super::pack::Marker;
-    pub use super::pack::MarkerId;
-    pub use super::pack::MarkerKind;
-    pub use super::pack::MarkerPack;
-    pub use super::MarkerPacks;
-    pub use super::PackId;
-}
-
-use anyhow::{Context, Result};
-use bevy::log::{debug, warn};
+use crate::prelude::*;
+use anyhow::Context;
+use anyhow::Result;
+use bevy::log::debug;
+use bevy::log::warn;
 use bevy::prelude::*;
 use bevy::render::render_asset::RenderAssetUsages;
-use bevy::render::texture::{
-    CompressedImageFormats, ImageAddressMode, ImageSampler, ImageSamplerDescriptor, ImageType,
-};
+use bevy::render::texture::CompressedImageFormats;
+use bevy::render::texture::ImageAddressMode;
+use bevy::render::texture::ImageSampler;
+use bevy::render::texture::ImageSamplerDescriptor;
+use bevy::render::texture::ImageType;
 use bevy::utils::HashMap;
-use pack::{FullMarkerId, Marker, MarkerId, MarkerPack, MarkerPackBuilder};
-use quick_xml::events::{BytesStart, Event};
+use pack::FullMarkerId;
+use pack::Marker;
+use pack::MarkerId;
+use pack::MarkerPack;
+use pack::MarkerPackBuilder;
+use quick_xml::events::BytesStart;
+use quick_xml::events::Event;
 use quick_xml::Reader;
 use std::borrow::Cow;
 use std::fs::File;
@@ -42,7 +41,7 @@ impl bevy::prelude::Plugin for Plugin {
                 .to_path_buf(),
         ));
 
-        app.add_systems(Startup, load_system);
+        app.add_systems(OnEnter(AppState::ParsingMarkerPacks), load_system);
     }
 }
 
@@ -53,13 +52,16 @@ fn load_system(
     mut commands: Commands,
     config_dir: Res<ConfigDir>,
     mut images: ResMut<Assets<Image>>,
+    mut state: ResMut<NextState<AppState>>,
 ) {
     match load(config_dir.as_path(), &mut images) {
         Ok(pack) => {
             commands.insert_resource(MarkerPacks(pack));
+            state.set(AppState::LoadingMarkerPacks);
         }
         Err(err) => {
             warn!("Error loading marker packs {err:?}");
+            state.set(AppState::Running);
         }
     }
 }

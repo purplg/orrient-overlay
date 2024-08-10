@@ -1,8 +1,9 @@
-use bevy::{color::palettes, prelude::*};
-use sickle_ui::{prelude::*, ui_builder::UiBuilder};
+use crate::prelude::*;
+use bevy::color::palettes;
+use sickle_ui::prelude::*;
+use sickle_ui::ui_builder::UiBuilder;
 
 use super::window::{MarkerItem, MarkerWindowEvent};
-use crate::{link::MapId, marker::MarkerEvent, parser::prelude::*};
 
 pub(crate) struct Plugin;
 

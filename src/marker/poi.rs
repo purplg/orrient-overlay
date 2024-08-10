@@ -1,14 +1,11 @@
-use bevy::prelude::*;
-use bevy_mod_billboard::{
-    plugin::BillboardPlugin, BillboardMeshHandle, BillboardTextBundle, BillboardTextureBundle,
-    BillboardTextureHandle,
-};
-
-use crate::{
-    link::MapId, parser::prelude::*, player::Player, ui::compass::marker::ShowOnCompass, WorldEvent,
-};
-
-use super::{LoadedMarkers, MarkerEvent};
+use super::LoadedMarkers;
+use crate::player::Player;
+use crate::prelude::*;
+use bevy_mod_billboard::plugin::BillboardPlugin;
+use bevy_mod_billboard::BillboardMeshHandle;
+use bevy_mod_billboard::BillboardTextBundle;
+use bevy_mod_billboard::BillboardTextureBundle;
+use bevy_mod_billboard::BillboardTextureHandle;
 
 fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     commands.insert_resource(PoiQuad(meshes.add(Rectangle::from_size(Vec2::splat(2.0)))));
@@ -177,7 +174,6 @@ fn track_loaded_system(
 }
 
 pub(super) struct Plugin;
-
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(BillboardPlugin);

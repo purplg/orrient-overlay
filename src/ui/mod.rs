@@ -2,29 +2,23 @@ pub mod compass;
 mod debug_panel;
 mod marker_list;
 
-use bevy::prelude::*;
-
+use crate::prelude::*;
 use compass::UiCompassWindowExt as _;
 use debug_panel::UiDebugPanelExt as _;
 use marker_list::window::UiMarkerWindowExt as _;
-use sickle_ui::{
-    ui_builder::{UiBuilderExt as _, UiRoot},
-    widgets::prelude::*,
-    SickleUiPlugin,
-};
-
-use crate::marker::MarkerEvent;
+use sickle_ui::ui_builder::UiBuilderExt as _;
+use sickle_ui::ui_builder::UiRoot;
+use sickle_ui::widgets::prelude::*;
+use sickle_ui::SickleUiPlugin;
 
 pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(SickleUiPlugin);
-
         app.add_plugins(compass::Plugin);
         app.add_plugins(marker_list::Plugin);
         app.add_plugins(debug_panel::Plugin);
-
         app.add_systems(Startup, setup);
     }
 }
