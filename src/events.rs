@@ -30,7 +30,6 @@ pub enum MarkerEvent {
 }
 
 pub(crate) struct Plugin;
-
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<WorldEvent>();

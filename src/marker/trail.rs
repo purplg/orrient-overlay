@@ -12,6 +12,9 @@ pub struct TrailMesh;
 
 const TRAIL_WIDTH: f32 = 0.5;
 
+#[derive(Event, Clone, Debug)]
+pub(super) struct LoadTrailEvent(pub FullMarkerId);
+
 #[derive(Clone, Copy)]
 struct OrientedPoint {
     position: Vec3,
@@ -99,12 +102,15 @@ impl Material for TrailMaterial {
 
 fn show_trails(
     mut commands: Commands,
+    mut events: EventReader<LoadTrailEvent>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut trail_materials: ResMut<Assets<TrailMaterial>>,
     packs: Res<MarkerPacks>,
     map_id: Res<MapId>,
 ) {
-    for full_id in packs.get_map_markers(&map_id.0) {
+    for event in events.read() {
+        let LoadTrailEvent(full_id) = event;
+
         let Some(pack) = &packs.get(&full_id.pack_id) else {
             warn!("Pack ID not found: {}", full_id.pack_id);
             continue;
@@ -162,10 +168,11 @@ fn hide_trails(mut commands: Commands, q_trails: Query<Entity, With<TrailMesh>>)
 pub(super) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
+        app.add_event::<LoadTrailEvent>();
         app.add_plugins(MaterialPlugin::<TrailMaterial>::default());
         app.add_systems(
             Update,
-            (hide_trails, show_trails).run_if(resource_exists_and_changed::<MapId>),
+            (hide_trails, show_trails).run_if(on_event::<LoadTrailEvent>()),
         );
     }
 }
