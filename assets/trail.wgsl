@@ -11,7 +11,9 @@
 
 @fragment
 fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
-  return material_color * textureSample(material_color_texture,
-                                        material_color_sampler,
-                                        vec2(mesh.uv.x, mesh.uv.y + globals.time * speed));
+  return textureSample(
+           material_color_texture,
+           material_color_sampler,
+           vec2(mesh.uv.x, mesh.uv.y + globals.time * speed)
+        ) * material_color;
 }
