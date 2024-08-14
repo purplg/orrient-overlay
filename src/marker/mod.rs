@@ -31,7 +31,8 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(
             Update,
             update_markers_system
-                .run_if(in_state(GameState::InGame).and_then(resource_exists_and_changed::<MapId>)),
+                .run_if(in_state(GameState::InGame))
+                .run_if(resource_exists_and_changed::<MapId>),
         );
     }
 }

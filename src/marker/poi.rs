@@ -140,16 +140,18 @@ impl bevy::prelude::Plugin for Plugin {
         app.init_resource::<LoadedMarkers>();
 
         app.add_systems(Startup, setup);
-
         app.add_systems(
             Update,
-            (
-                disappear_nearby_system.run_if(on_event::<WorldEvent>()),
-                (despawn_pois_system, spawn_poi_system)
-                    .chain()
-                    .run_if(on_event::<LoadPoiEvent>()),
-            )
-                .run_if(in_state(GameState::InGame)),
+            disappear_nearby_system
+                .run_if(in_state(GameState::InGame))
+                .run_if(on_event::<WorldEvent>()),
+        );
+        app.add_systems(
+            Update,
+            (despawn_pois_system, spawn_poi_system)
+                .chain()
+                .run_if(in_state(GameState::InGame))
+                .run_if(on_event::<LoadPoiEvent>()),
         );
     }
 }
