@@ -48,8 +48,6 @@ fn main() {
         ..default()
     }));
 
-    app.insert_resource(ClearColor(Color::NONE));
-
     app.add_plugins(api::Plugin);
     app.add_plugins(camera::Plugin);
     app.add_plugins(console::Plugin);

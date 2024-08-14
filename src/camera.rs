@@ -4,6 +4,7 @@ pub(crate) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(ClearColor(Color::NONE));
         app.add_systems(Update, camera_system.run_if(in_state(AppState::Running)));
     }
 }
