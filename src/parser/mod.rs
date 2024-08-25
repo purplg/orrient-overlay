@@ -422,13 +422,15 @@ mod tests {
     <MarkerCategory name="2" DisplayName="Item 2.2" />
   </MarkerCategory>
   <POIs>
-    <POI MapID="15" xpos="-926.737" ypos="1.37639" zpos="701.481" type="onlyfish.fishingholes.river" GUID="930LNYB6PEu8YzkCrXgv9w=="/>
+    <POI MapID="15" xpos="100.0" ypos="100.0" zpos="-100.0" type="1" GUID="none"/>
+    <POI MapID="15" xpos="200.0" ypos="200.0" zpos="-200.0" type="1.1" GUID="none"/>
+    <POI MapID="15" xpos="300.0" ypos="300.0" zpos="-300.0" type="1.2" GUID="none"/>
   </POIs>
 </OverlayData>
 "#;
 
     #[test]
-    fn test_simple_xml() {
+    fn test_xml() {
         let mut builder = MarkerPackBuilder::new(PackId("test.xml".to_string()));
         parse_xml(
             &mut builder,
@@ -452,6 +454,31 @@ mod tests {
             let mut iter = tree.iter(&root.id);
             assert_eq!(iter.next().unwrap().id, "2.1".into());
             assert_eq!(iter.next().unwrap().id, "2.2".into());
+        }
+
+        {
+            let mut pois = tree.get_pois(&"1".into()).unwrap().iter();
+            let poi: &model::Poi = pois.next().unwrap();
+            assert_eq!(poi.map_id, Some(15));
+            assert_eq!(poi.position.unwrap().x, 100.0);
+            assert_eq!(poi.position.unwrap().y, 100.0);
+            assert_eq!(poi.position.unwrap().z, -100.0);
+        }
+        {
+            let mut pois = tree.get_pois(&"1.1".into()).unwrap().iter();
+            let poi: &model::Poi = pois.next().unwrap();
+            assert_eq!(poi.map_id, Some(15));
+            assert_eq!(poi.position.unwrap().x, 200.0);
+            assert_eq!(poi.position.unwrap().y, 200.0);
+            assert_eq!(poi.position.unwrap().z, -200.0);
+        }
+        {
+            let mut pois = tree.get_pois(&"1.2".into()).unwrap().iter();
+            let poi: &model::Poi = pois.next().unwrap();
+            assert_eq!(poi.map_id, Some(15));
+            assert_eq!(poi.position.unwrap().x, 300.0);
+            assert_eq!(poi.position.unwrap().y, 300.0);
+            assert_eq!(poi.position.unwrap().z, -300.0);
         }
     }
 }
