@@ -310,57 +310,95 @@ fn parse_xml<R: Read + BufRead>(
 
 #[cfg(test)]
 mod tests {
-    use std::cmp::Ordering;
+    use std::io::Write;
 
-    use itertools::Itertools;
+    use lazy_static::lazy_static;
     use pack::MarkerKind;
+    use tempfile::tempdir;
+    use zip::{write::SimpleFileOptions, ZipWriter};
 
     use super::*;
 
-    //     A            G
-    //    / \          / \
-    //   B   E        H   I
-    //  / \   \         / | \
-    // C   D   F       J  K  L
-    fn fake_markers() -> MarkerPack {
-        let mut markers = MarkerPackBuilder::new("TestPack");
-        markers.add_marker(Marker::new("A", "A Name", MarkerKind::Category));
-        markers.add_marker(Marker::new("B", "B Name", MarkerKind::Category));
-        markers.add_marker(Marker::new("C", "C Name", MarkerKind::Category));
-        markers.up();
-        markers.add_marker(Marker::new("D", "D Name", MarkerKind::Category));
-        markers.up();
-        markers.up();
-        markers.add_marker(Marker::new("E", "E Name", MarkerKind::Category));
-        markers.add_marker(Marker::new("F", "F Name", MarkerKind::Category));
+    lazy_static! {
+        static ref TEST_PACKS: HashMap<PackId, MarkerPack> = {
+            let dir = tempdir().unwrap().into_path();
+            let mut writer = ZipWriter::new(File::create_new(dir.join("test.taco")).unwrap());
+            let options =
+                SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
-        markers.new_root();
-        markers.add_marker(Marker::new("G", "G Name", MarkerKind::Category));
-        markers.add_marker(Marker::new("H", "H Name", MarkerKind::Category));
-        markers.up();
-        markers.add_marker(Marker::new("I", "I Name", MarkerKind::Category));
-        markers.add_marker(Marker::new("J", "J Name", MarkerKind::Category));
-        markers.up();
-        markers.add_marker(Marker::new("K", "K Name", MarkerKind::Category));
-        markers.up();
-        markers.add_marker(Marker::new("L", "L Name", MarkerKind::Category));
-        markers.build()
-    }
+            writer.start_file("test_1.xml", options).unwrap();
+            writer
+                .write(
+                    r#"
+<OverlayData>
+  <MarkerCategory name="A" DisplayName="Item A">
+    <MarkerCategory name="B" DisplayName="Item A.B">
+      <MarkerCategory name="C" DisplayName="Item A.B" />
+      <MarkerCategory name="D" DisplayName="Item A.B" />
+    </MarkerCategory>
+  </MarkerCategory>
+  <POIs>
+    <POI MapID="15" xpos="100.0" ypos="100.0" zpos="-100.0" type="A" GUID="none"/>
+    <POI MapID="15" xpos="200.0" ypos="200.0" zpos="-200.0" type="A.B" GUID="none"/>
+  </POIs>
+</OverlayData>
+"#
+                    .as_bytes(),
+                )
+                .unwrap();
 
-    #[test]
-    fn test_real_data() {
-        env_logger::init();
+            writer.start_file("test_2.xml", options).unwrap();
+            writer
+                .write(
+                    r#"
+<OverlayData>
+  <MarkerCategory name="A" DisplayName="Item A">
+    <MarkerCategory name="E" DisplayName="Item A.E">
+      <MarkerCategory name="F" DisplayName="Item A.E.F" />
+    </MarkerCategory>
+  </MarkerCategory>
+  <POIs>
+    <POI MapID="15" xpos="300.0" ypos="300.0" zpos="-300.0" type="A.E" GUID="none"/>
+    <POI MapID="15" xpos="400.0" ypos="400.0" zpos="-400.0" type="A.E" GUID="none"/>
+  </POIs>
+</OverlayData>
+"#
+                    .as_bytes(),
+                )
+                .unwrap();
 
-        load(
-            &dirs::config_dir().unwrap().join("orrient").join("markers"),
-            &mut Assets::default(),
-        )
-        .unwrap();
+            writer.start_file("test_3.xml", options).unwrap();
+            writer
+                .write(
+                    r#"
+<OverlayData>
+  <MarkerCategory name="G" DisplayName="Item G">
+    <MarkerCategory name="H" DisplayName="Item G.B" />
+    <MarkerCategory name="I" DisplayName="Item G.I">
+      <MarkerCategory name="J" DisplayName="Item G.I.J" />
+      <MarkerCategory name="K" DisplayName="Item G.I.K" />
+      <MarkerCategory name="L" DisplayName="Item G.I.L" />
+    </MarkerCategory>
+  </MarkerCategory>
+  <POIs>
+    <POI MapID="15" xpos="500.0" ypos="500.0" zpos="-500.0" type="G.K" GUID="none"/>
+    <POI MapID="15" xpos="600.0" ypos="600.0" zpos="-600.0" type="G.L" GUID="none"/>
+  </POIs>
+</OverlayData>
+"#
+                    .as_bytes(),
+                )
+                .unwrap();
+
+            writer.finish().unwrap();
+            let mut images: Assets<Image> = Assets::default();
+            load(&dir, &mut images).unwrap()
+        };
     }
 
     #[test]
     fn test_iter() {
-        let markers = fake_markers();
+        let markers = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
         let mut iter = markers.iter_recursive(&"A".into());
 
         //     A
@@ -411,53 +449,33 @@ mod tests {
         assert!(iter.next().is_none());
     }
 
-    const TEST_FILE: &'static str = r#"
-<OverlayData>
-  <MarkerCategory name="1" DisplayName="Item 1">
-    <MarkerCategory name="1" DisplayName="Item 1.1" />
-    <MarkerCategory name="2" DisplayName="Item 1.2" />
-  </MarkerCategory>
-  <MarkerCategory name="2" DisplayName="Item 2">
-    <MarkerCategory name="1" DisplayName="Item 2.1" />
-    <MarkerCategory name="2" DisplayName="Item 2.2" />
-  </MarkerCategory>
-  <POIs>
-    <POI MapID="15" xpos="100.0" ypos="100.0" zpos="-100.0" type="1" GUID="none"/>
-    <POI MapID="15" xpos="200.0" ypos="200.0" zpos="-200.0" type="1.1" GUID="none"/>
-    <POI MapID="15" xpos="300.0" ypos="300.0" zpos="-300.0" type="1.2" GUID="none"/>
-  </POIs>
-</OverlayData>
-"#;
-
     #[test]
     fn test_xml() {
-        let mut builder = MarkerPackBuilder::new(PackId("test.xml".to_string()));
-        parse_xml(
-            &mut builder,
-            "test.xml",
-            BufReader::new(TEST_FILE.as_bytes()),
-        )
-        .unwrap();
-        let tree = builder.build();
-        let mut roots = tree.roots();
+        let pack = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
+        let mut roots = pack.roots();
         let root = roots.next().unwrap();
-        assert_eq!(root.id, "1".into());
+        assert_eq!(root.id, "A".into());
         {
-            let mut iter = tree.iter(&root.id);
-            assert_eq!(iter.next().unwrap().id, "1.1".into());
-            assert_eq!(iter.next().unwrap().id, "1.2".into());
+            let mut iter = pack.iter(&root.id);
+            assert_eq!(iter.next().unwrap().id, "A.B".into());
+            assert_eq!(iter.next().unwrap().id, "A.E".into());
         }
 
         let root = roots.next().unwrap();
-        assert_eq!(root.id, "2".into());
+        assert_eq!(root.id, "G".into());
         {
-            let mut iter = tree.iter(&root.id);
-            assert_eq!(iter.next().unwrap().id, "2.1".into());
-            assert_eq!(iter.next().unwrap().id, "2.2".into());
+            let mut iter = pack.iter(&root.id);
+            assert_eq!(iter.next().unwrap().id, "G.H".into());
+            assert_eq!(iter.next().unwrap().id, "G.I".into());
         }
+    }
+
+    #[test]
+    fn test_poi() {
+        let pack = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
 
         {
-            let mut pois = tree.get_pois(&"1".into()).unwrap().iter();
+            let mut pois = pack.get_pois(&"A".into()).unwrap().iter();
             let poi: &model::Poi = pois.next().unwrap();
             assert_eq!(poi.map_id, Some(15));
             assert_eq!(poi.position.unwrap().x, 100.0);
@@ -465,7 +483,7 @@ mod tests {
             assert_eq!(poi.position.unwrap().z, -100.0);
         }
         {
-            let mut pois = tree.get_pois(&"1.1".into()).unwrap().iter();
+            let mut pois = pack.get_pois(&"A.B".into()).unwrap().iter();
             let poi: &model::Poi = pois.next().unwrap();
             assert_eq!(poi.map_id, Some(15));
             assert_eq!(poi.position.unwrap().x, 200.0);
@@ -473,12 +491,36 @@ mod tests {
             assert_eq!(poi.position.unwrap().z, -200.0);
         }
         {
-            let mut pois = tree.get_pois(&"1.2".into()).unwrap().iter();
+            let mut pois = pack.get_pois(&"A.E".into()).unwrap().iter();
             let poi: &model::Poi = pois.next().unwrap();
             assert_eq!(poi.map_id, Some(15));
             assert_eq!(poi.position.unwrap().x, 300.0);
             assert_eq!(poi.position.unwrap().y, 300.0);
             assert_eq!(poi.position.unwrap().z, -300.0);
+
+            let poi: &model::Poi = pois.next().unwrap();
+            assert_eq!(poi.map_id, Some(15));
+            assert_eq!(poi.position.unwrap().x, 400.0);
+            assert_eq!(poi.position.unwrap().y, 400.0);
+            assert_eq!(poi.position.unwrap().z, -400.0);
+        }
+
+        {
+            let mut pois = pack.get_pois(&"G.K".into()).unwrap().iter();
+            let poi: &model::Poi = pois.next().unwrap();
+            assert_eq!(poi.map_id, Some(15));
+            assert_eq!(poi.position.unwrap().x, 500.0);
+            assert_eq!(poi.position.unwrap().y, 500.0);
+            assert_eq!(poi.position.unwrap().z, -500.0);
+        }
+
+        {
+            let mut pois = pack.get_pois(&"G.L".into()).unwrap().iter();
+            let poi: &model::Poi = pois.next().unwrap();
+            assert_eq!(poi.map_id, Some(15));
+            assert_eq!(poi.position.unwrap().x, 600.0);
+            assert_eq!(poi.position.unwrap().y, 600.0);
+            assert_eq!(poi.position.unwrap().z, -600.0);
         }
     }
 }
