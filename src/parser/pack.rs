@@ -210,7 +210,7 @@ pub struct MarkerPack {
     roots: HashSet<NodeIndex>,
 
     /// Lookup an index by it's string ID
-    indexes: HashMap<MarkerId, NodeIndex>,
+    indices: HashMap<MarkerId, NodeIndex>,
 
     /// Lookup a marker by its index
     markers: HashMap<NodeIndex, Marker>,
@@ -232,7 +232,7 @@ impl MarkerPack {
         Self {
             id,
             roots: Default::default(),
-            indexes: Default::default(),
+            indices: Default::default(),
             markers: Default::default(),
             graph: Default::default(),
             pois: Default::default(),
@@ -249,7 +249,7 @@ impl MarkerPack {
     }
 
     fn index_of(&self, id: &MarkerId) -> Option<NodeIndex> {
-        self.indexes.get(id).cloned()
+        self.indices.get(id).cloned()
     }
 
     pub fn contains_map_id(&self, id: &MarkerId, map_id: u32) -> bool {
@@ -295,12 +295,12 @@ impl MarkerPack {
     }
 
     pub fn get(&self, id: &MarkerId) -> Option<&Marker> {
-        let node_id = self.indexes.get(id)?;
+        let node_id = self.indices.get(id)?;
         self.markers.get(node_id)
     }
 
     pub fn get_mut(&mut self, id: &MarkerId) -> Option<&mut Marker> {
-        if let Some(node_id) = self.indexes.get(id) {
+        if let Some(node_id) = self.indices.get(id) {
             self.markers.get_mut(node_id)
         } else {
             None
@@ -384,7 +384,7 @@ impl MarkerPackBuilder {
 
         self.parent_id.push_front(node_id);
         self.tree.markers.insert(node_id, marker.clone());
-        self.tree.indexes.insert(marker.id, node_id);
+        self.tree.indices.insert(marker.id, node_id);
         self
     }
 
@@ -435,7 +435,7 @@ impl MarkerPackBuilder {
                 self.count += 1;
                 i
             });
-            self.tree.indexes.insert(marker_id, node_id);
+            self.tree.indices.insert(marker_id, node_id);
             node_id
         })
     }
