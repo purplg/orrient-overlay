@@ -310,6 +310,9 @@ fn parse_xml<R: Read + BufRead>(
 
 #[cfg(test)]
 mod tests {
+    use std::cmp::Ordering;
+
+    use itertools::Itertools;
     use pack::MarkerKind;
 
     use super::*;
@@ -406,5 +409,49 @@ mod tests {
         let mut iter = markers.iter_recursive(&"A.B.C".into());
         assert_eq!(iter.next().unwrap().id.0, "A.B.C");
         assert!(iter.next().is_none());
+    }
+
+    const TEST_FILE: &'static str = r#"
+<OverlayData>
+  <MarkerCategory name="1" DisplayName="Item 1">
+    <MarkerCategory name="1" DisplayName="Item 1.1" />
+    <MarkerCategory name="2" DisplayName="Item 1.2" />
+  </MarkerCategory>
+  <MarkerCategory name="2" DisplayName="Item 2">
+    <MarkerCategory name="1" DisplayName="Item 2.1" />
+    <MarkerCategory name="2" DisplayName="Item 2.2" />
+  </MarkerCategory>
+  <POIs>
+    <POI MapID="15" xpos="-926.737" ypos="1.37639" zpos="701.481" type="onlyfish.fishingholes.river" GUID="930LNYB6PEu8YzkCrXgv9w=="/>
+  </POIs>
+</OverlayData>
+"#;
+
+    #[test]
+    fn test_simple_xml() {
+        let mut builder = MarkerPackBuilder::new(PackId("test.xml".to_string()));
+        parse_xml(
+            &mut builder,
+            "test.xml",
+            BufReader::new(TEST_FILE.as_bytes()),
+        )
+        .unwrap();
+        let tree = builder.build();
+        let mut roots = tree.roots();
+        let root = roots.next().unwrap();
+        assert_eq!(root.id, "1".into());
+        {
+            let mut iter = tree.iter(&root.id);
+            assert_eq!(iter.next().unwrap().id, "1.1".into());
+            assert_eq!(iter.next().unwrap().id, "1.2".into());
+        }
+
+        let root = roots.next().unwrap();
+        assert_eq!(root.id, "2".into());
+        {
+            let mut iter = tree.iter(&root.id);
+            assert_eq!(iter.next().unwrap().id, "2.1".into());
+            assert_eq!(iter.next().unwrap().id, "2.2".into());
+        }
     }
 }

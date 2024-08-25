@@ -207,10 +207,10 @@ pub struct MarkerPack {
 
     /// Nodes without any parents. Useful for iterating through all
     /// content in the graph.
-    roots: HashSet<NodeIndex>,
+    pub roots: BTreeSet<NodeIndex>,
 
     /// Lookup an index by it's string ID
-    indices: HashMap<MarkerId, NodeIndex>,
+    pub indices: HashMap<MarkerId, NodeIndex>,
 
     /// Lookup a marker by its index
     markers: HashMap<NodeIndex, Marker>,
@@ -367,24 +367,26 @@ impl MarkerPackBuilder {
     }
 
     pub fn add_marker(&mut self, mut marker: Marker) -> &mut Self {
-        let node_id = self.get_or_create_index(marker.id.clone());
-        if let Some(parent_id) = self.parent_id.front() {
-            if let Some(children) = self.edges.get_mut(parent_id) {
+        let node_id = if let Some(parent_id) = self.parent_id.front().copied() {
+            let parent_marker = self.tree.markers.get(&parent_id).unwrap();
+            marker.copy_from_parent(parent_marker);
+            let node_id = self.get_or_create_index(marker.id.clone());
+            if let Some(children) = self.edges.get_mut(&parent_id) {
                 children.insert(node_id);
             } else {
                 let mut set = BTreeSet::default();
                 set.insert(node_id);
-                self.edges.insert(*parent_id, set);
+                self.edges.insert(parent_id, set);
             }
-            let parent_marker = self.tree.markers.get(parent_id).unwrap();
-            marker.copy_from_parent(parent_marker);
+            node_id
         } else {
+            let node_id = self.get_or_create_index(marker.id.clone());
             self.tree.roots.insert(node_id);
-        }
+            node_id
+        };
 
         self.parent_id.push_front(node_id);
         self.tree.markers.insert(node_id, marker.clone());
-        self.tree.indices.insert(marker.id, node_id);
         self
     }
 
