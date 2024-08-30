@@ -1,4 +1,3 @@
-pub(crate) mod api;
 mod camera;
 mod console;
 mod events;
@@ -48,7 +47,7 @@ fn main() {
         ..default()
     }));
 
-    app.add_plugins(api::Plugin);
+    app.add_plugins(orrient_api::Plugin);
     app.add_plugins(camera::Plugin);
     app.add_plugins(console::Plugin);
     app.add_plugins(events::Plugin);

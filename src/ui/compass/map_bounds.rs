@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::api::{Request, RequestComplete, RequestQueue, Response};
+use orrient_api::{Request, RequestComplete, RequestQueue, Response};
 use crate::link::MapId;
 
 #[derive(Resource, Clone)]

@@ -2960,7 +2960,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bevy",
- "bevy_async_task",
  "bevy_console",
  "bevy_mod_billboard",
  "bincode",
@@ -2968,10 +2967,10 @@ dependencies = [
  "crossbeam-channel",
  "dirs",
  "env_logger",
- "gw2lib",
  "itertools 0.13.0",
  "lazy_static",
  "mumblelink_reader",
+ "orrient_api",
  "orrient_input",
  "orrient_link",
  "petgraph",
@@ -4165,6 +4164,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52f0d54bde9774d3a51dcf281a5def240c71996bc6ca05d2c847ec8b2b216166"
 dependencies = [
  "libredox 0.0.2",
+]
+
+[[package]]
+name = "orrient_api"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_async_task",
+ "gw2lib",
 ]
 
 [[package]]

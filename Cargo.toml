@@ -8,6 +8,8 @@ env_logger = "0.11.3"
 itertools = "0.13.0"
 anyhow = "1.0.86"
 
+orrient_api = { path = "orrient_api" }
+
 # A workspace for sharing inputs between the Linux overlay and Windows
 # link applications.
 orrient_input = { path = "orrient_input" }
@@ -38,13 +40,9 @@ bevy_console = { git = "https://github.com/msklosak/bevy-console", branch = "bev
 # https://github.com/clap-rs/clap
 clap = { version = "4.5.10", features = ["derive"] }
 
-### API ########################################################################
-gw2lib = "3.0.0"
-bevy_async_task = "0.2.0"
-
 [workspace]
 resolver = "2"
-members = [
+members = [ "orrient_api",
   "orrient_input",
   "orrient_link",
 ]
