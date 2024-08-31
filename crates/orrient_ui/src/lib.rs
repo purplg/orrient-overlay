@@ -61,10 +61,8 @@ fn ui_state_system(mut ui_events: EventReader<UiEvent>, mut state: ResMut<NextSt
         if let UiEvent::MapOpen(map_open) = event {
             if *map_open {
                 state.set(GameState::WorldMap);
-                println!("worldmap");
             } else {
                 state.set(GameState::InGame);
-                println!("ingame");
             }
         }
     }
