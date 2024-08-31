@@ -2,6 +2,7 @@ use bevy::color::palettes;
 use bevy::prelude::*;
 
 use orrient_core::prelude::*;
+use orrient_pathing::marker::poi::PoiMarker;
 use orrient_pathing::marker::trail::create_trail_mesh;
 use orrient_pathing::marker::trail::TrailMaterial;
 use orrient_pathing::marker::trail::TrailMesh;
@@ -15,7 +16,6 @@ use clap::Subcommand;
 use clap::ValueEnum;
 
 use crate::compass::marker::CompassMarker;
-use crate::compass::marker::ShowOnCompass;
 use crate::UiEvent;
 
 /// List all the markers available
@@ -113,7 +113,8 @@ fn add_command(
                 commands.spawn((
                     CreatedByConsole,
                     Transform::from_translation(Vec3::new(x, 0.0, y)), //
-                    ShowOnCompass(icon.clone()),
+                    icon.clone(),
+                    PoiMarker,
                 ));
             }
         }
@@ -143,7 +144,7 @@ fn delete_command(
         match kind {
             Delete::Markers => {
                 for item in &q_items
-                    .transmute_lens_filtered::<Entity, With<ShowOnCompass>>()
+                    .transmute_lens_filtered::<Entity, With<PoiMarker>>()
                     .query()
                 {
                     commands.entity(item).despawn_recursive();

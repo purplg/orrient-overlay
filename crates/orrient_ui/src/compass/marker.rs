@@ -1,6 +1,8 @@
 use bevy::color::palettes;
 use bevy::prelude::*;
+use bevy_mod_billboard::BillboardTextureHandle;
 use orrient_core::prelude::MapId;
+use orrient_pathing::marker::poi::PoiMarker;
 use sickle_ui::prelude::UiContainerExt as _;
 use sickle_ui::ui_builder::UiBuilder;
 use sickle_ui::ui_builder::UiBuilderExt;
@@ -27,9 +29,6 @@ impl CompassMarker {
     }
 }
 
-#[derive(Component)]
-pub struct ShowOnCompass(pub Handle<Image>);
-
 pub trait UiCompassMarkerExt {
     fn compass_marker(&mut self, entity: Entity, image: Handle<Image>);
 }
@@ -52,19 +51,22 @@ impl UiCompassMarkerExt for UiBuilder<'_, Entity> {
 }
 
 fn spawn_marker(
-    trigger: Trigger<OnAdd, ShowOnCompass>,
+    trigger: Trigger<OnAdd, PoiMarker>,
     mut commands: Commands,
-    q_compass_markers: Query<&ShowOnCompass>,
+    q_images: Query<&BillboardTextureHandle>,
     q_compass: Query<Entity, With<CompassWindow>>,
 ) {
-    commands.ui_builder(q_compass.single()).compass_marker(
-        trigger.entity(),
-        q_compass_markers.get(trigger.entity()).unwrap().0.clone(),
-    );
+    if let Ok(billboard) = q_images.get(trigger.entity()) {
+        commands
+            .ui_builder(q_compass.single())
+            .compass_marker(trigger.entity(), billboard.0.clone());
+    } else {
+        warn!("No icon for compass marker found.")
+    }
 }
 
 fn despawn_marker(
-    trigger: Trigger<OnRemove, ShowOnCompass>,
+    trigger: Trigger<OnRemove, PoiMarker>,
     mut commands: Commands,
     q_compass_markers: Query<(Entity, &CompassMarker)>,
 ) {
@@ -80,14 +82,14 @@ const METERS_TO_INCHES: f32 = 39.3700787;
 
 fn position_system(
     mut commands: Commands,
-    q_world_markers: Query<&Transform, With<ShowOnCompass>>,
+    q_poi_markers: Query<&Transform, With<PoiMarker>>,
     mut q_compass_markers: Query<(Entity, &CompassMarker)>,
     q_compass: Query<&CompassWindow>,
     bounds: Res<MapBounds>,
 ) {
     let compass_window = q_compass.single();
     for (entity, marker) in &mut q_compass_markers {
-        let Ok(transform) = q_world_markers.get(marker.0) else {
+        let Ok(transform) = q_poi_markers.get(marker.0) else {
             warn!("World marker not found.");
             continue;
         };

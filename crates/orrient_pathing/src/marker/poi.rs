@@ -17,7 +17,7 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 }
 
 #[derive(Component)]
-pub struct Poi;
+pub struct PoiMarker;
 
 #[derive(Component)]
 pub struct DisappearNearby;
@@ -85,9 +85,8 @@ fn spawn_poi_system(
                 .map(|icon_path| icon_path.into_string())
                 .and_then(|path| pack.get_image(&path));
 
-            let mut builder = commands.spawn(Poi);
+            let mut builder = commands.spawn_empty();
             if let Some(icon) = icon {
-                // TODO builder.insert(ShowOnCompass(icon.clone()));
                 builder.insert(BillboardTextureBundle {
                     mesh: BillboardMeshHandle(assets.0.clone()),
                     texture: BillboardTextureHandle(icon),
@@ -114,6 +113,9 @@ fn spawn_poi_system(
             } else if let Some(Behavior::DisappearOnUse) = marker.behavior {
                 builder.insert(DisappearNearby);
             }
+
+            builder.insert(PoiMarker);
+
             count += 1;
         }
     }
@@ -123,7 +125,7 @@ fn spawn_poi_system(
     }
 }
 
-fn despawn_pois_system(mut commands: Commands, poi_query: Query<Entity, With<Poi>>) {
+fn despawn_pois_system(mut commands: Commands, poi_query: Query<Entity, With<PoiMarker>>) {
     let mut count = 0;
     for entity in &poi_query {
         commands.entity(entity).despawn_recursive();

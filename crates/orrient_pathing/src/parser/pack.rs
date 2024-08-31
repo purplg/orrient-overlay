@@ -51,7 +51,7 @@ impl std::fmt::Display for MarkerId {
     }
 }
 
-#[derive(Hash, Clone, Default, Debug, PartialEq, Eq)]
+#[derive(Component, Hash, Clone, Default, Debug, PartialEq, Eq)]
 pub struct FullMarkerId {
     pub pack_id: PackId,
     pub marker_id: MarkerId,
