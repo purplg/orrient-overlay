@@ -8,12 +8,12 @@ env_logger = "0.11.3"
 itertools = "0.13.0"
 anyhow = "1.0.86"
 
-orrient_api = { path = "orrient_api" }
-orrient_core = { path = "orrient_core" }
-orrient_input = { path = "orrient_input" }
-orrient_link = { path = "orrient_link" }
-orrient_pathing = { path = "orrient_pathing" }
-orrient_ui = { path = "orrient_ui" }
+orrient_api = { path = "crates/orrient_api" }
+orrient_core = { path = "crates/orrient_core" }
+orrient_input = { path = "crates/orrient_input" }
+orrient_link = { path = "crates/orrient_link" }
+orrient_pathing = { path = "crates/orrient_pathing" }
+orrient_ui = { path = "crates/orrient_ui" }
 
 ### Mumblelink Connectivity ####################################################
 mumblelink_reader = "0.3.5"
@@ -26,12 +26,12 @@ bevy = { version = "0.14.1", features = ["wayland", "file_watcher"] }
 [workspace]
 resolver = "2"
 members = [
-  "orrient_api",
-  "orrient_core",
-  "orrient_input",
-  "orrient_link",
-  "orrient_pathing",
-  "orrient_ui",
+  "crates/orrient_api",
+  "crates/orrient_core",
+  "crates/orrient_input",
+  "crates/orrient_link",
+  "crates/orrient_pathing",
+  "crates/orrient_ui",
 ]
 
 [profile.dev]
