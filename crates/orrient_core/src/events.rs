@@ -11,7 +11,7 @@ pub enum WorldEvent {
     SavePosition,
 }
 
-pub struct Plugin;
+pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<WorldEvent>();

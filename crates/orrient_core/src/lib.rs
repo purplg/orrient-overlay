@@ -4,9 +4,10 @@ mod state;
 mod structs;
 
 pub mod prelude {
-    pub use super::events::*;
+    pub use super::events::WorldEvent;
     pub use super::player::*;
-    pub use super::state::*;
+    pub use super::state::AppState;
+    pub use super::state::GameState;
     pub use super::structs::*;
 }
 
