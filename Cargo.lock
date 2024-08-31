@@ -2964,7 +2964,6 @@ dependencies = [
  "crossbeam-channel",
  "env_logger",
  "itertools 0.13.0",
- "mumblelink_reader",
  "orrient_api",
  "orrient_core",
  "orrient_input",

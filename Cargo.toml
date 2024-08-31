@@ -16,7 +16,6 @@ orrient_pathing = { path = "crates/orrient_pathing" }
 orrient_ui = { path = "crates/orrient_ui" }
 
 ### Mumblelink Connectivity ####################################################
-mumblelink_reader = "0.3.5"
 bincode = "1.3.3"
 crossbeam-channel = "0.5.13"
 
