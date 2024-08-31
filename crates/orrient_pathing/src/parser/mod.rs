@@ -42,6 +42,7 @@ fn load_system(
     mut images: ResMut<Assets<Image>>,
     mut state: ResMut<NextState<AppState>>,
 ) {
+    info!("Loading marker packs...");
     match load(config_dir.as_path(), &mut images) {
         Ok(pack) => {
             commands.insert_resource(MarkerPacks(pack));
@@ -86,7 +87,7 @@ fn load(path: &Path, images: &mut Assets<Image>) -> Result<HashMap<PackId, Marke
             }
         }
     }
-    info!("Loaded {} packs.", packs.len());
+    info!("Finished loading {} pack(s).", packs.len());
     Ok(packs)
 }
 
@@ -233,7 +234,7 @@ fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<Marke
             _ => (),
         }
     }
-    info!("Finished reading pack: {pack_filename}");
+    debug!("Finished parsing pack: {pack_filename}");
     Ok(builder.build())
 }
 
@@ -301,7 +302,6 @@ mod tests {
     use std::io::Write;
 
     use lazy_static::lazy_static;
-    use pack::MarkerKind;
     use tempfile::tempdir;
     use zip::{write::SimpleFileOptions, ZipWriter};
 
