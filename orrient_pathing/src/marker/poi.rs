@@ -1,6 +1,10 @@
-use crate::prelude::*;
+use bevy::prelude::*;
+use orrient_core::prelude::*;
 
 use super::LoadedMarkers;
+use crate::events::LoadPoiEvent;
+use crate::parser::pack::Behavior;
+use crate::parser::MarkerPacks;
 
 use bevy_mod_billboard::plugin::BillboardPlugin;
 use bevy_mod_billboard::BillboardMeshHandle;
@@ -34,9 +38,6 @@ fn disappear_nearby_system(
 
 #[derive(Resource)]
 struct PoiQuad(Handle<Mesh>);
-
-#[derive(Event, Clone, Debug)]
-pub(super) struct LoadPoiEvent(pub FullMarkerId);
 
 fn spawn_poi_system(
     mut commands: Commands,
@@ -86,7 +87,7 @@ fn spawn_poi_system(
 
             let mut builder = commands.spawn(Poi);
             if let Some(icon) = icon {
-                builder.insert(ShowOnCompass(icon.clone()));
+                // TODO builder.insert(ShowOnCompass(icon.clone()));
                 builder.insert(BillboardTextureBundle {
                     mesh: BillboardMeshHandle(assets.0.clone()),
                     texture: BillboardTextureHandle(icon),
@@ -137,7 +138,6 @@ pub(super) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(BillboardPlugin);
-        app.add_event::<LoadPoiEvent>();
         app.init_resource::<LoadedMarkers>();
 
         app.add_systems(Startup, setup);

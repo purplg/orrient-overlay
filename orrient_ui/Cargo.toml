@@ -1,0 +1,22 @@
+[package]
+name = "orrient_ui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+orrient_api = { path = "../orrient_api" }
+orrient_core = { path = "../orrient_core" }
+orrient_pathing = { path = "../orrient_pathing" }
+
+bevy = "0.14.1"
+
+# https://github.com/UmbraLuminosa/sickle_ui
+sickle_ui = { rev = "34005a18ae600f09a0f300034e3fc6fd608929ef", git = "https://github.com/UmbraLuminosa/sickle_ui" }
+# https://github.com/kulkalkul/bevy_mod_billboard
+bevy_mod_billboard = "0.7.0"
+
+### Console ####################################################################
+# https://github.com/RichoDemus/bevy-console/
+bevy_console = { git = "https://github.com/msklosak/bevy-console", branch = "bevy_014" }
+# https://github.com/clap-rs/clap
+clap = { version = "4.5.10", features = ["derive"] }

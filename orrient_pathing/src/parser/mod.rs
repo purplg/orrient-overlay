@@ -2,7 +2,14 @@ mod model;
 pub mod pack;
 mod trail;
 
-use crate::prelude::*;
+use orrient_core::prelude::AppState;
+
+use pack::FullMarkerId;
+use pack::Marker;
+use pack::MarkerId;
+use pack::MarkerPack;
+use pack::MarkerPackBuilder;
+
 use anyhow::Context;
 use anyhow::Result;
 use bevy::log::debug;
@@ -15,35 +22,16 @@ use bevy::render::texture::ImageSampler;
 use bevy::render::texture::ImageSamplerDescriptor;
 use bevy::render::texture::ImageType;
 use bevy::utils::HashMap;
-use pack::FullMarkerId;
-use pack::Marker;
-use pack::MarkerId;
-use pack::MarkerPack;
-use pack::MarkerPackBuilder;
 use quick_xml::events::BytesStart;
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use std::borrow::Cow;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read};
+use std::io::BufRead;
+use std::io::BufReader;
+use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
-
-pub(crate) struct Plugin;
-
-impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(ConfigDir(
-            dirs::config_dir()
-                .unwrap()
-                .join("orrient")
-                .join("markers")
-                .to_path_buf(),
-        ));
-
-        app.add_systems(OnEnter(AppState::ParsingMarkerPacks), load_system);
-    }
-}
 
 #[derive(Resource, Deref)]
 struct ConfigDir(PathBuf);
@@ -522,5 +510,20 @@ mod tests {
             assert_eq!(poi.position.unwrap().y, 600.0);
             assert_eq!(poi.position.unwrap().z, -600.0);
         }
+    }
+}
+
+pub(crate) struct Plugin;
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(ConfigDir(
+            dirs::config_dir()
+                .unwrap()
+                .join("orrient")
+                .join("markers")
+                .to_path_buf(),
+        ));
+
+        app.add_systems(OnEnter(AppState::ParsingMarkerPacks), load_system);
     }
 }

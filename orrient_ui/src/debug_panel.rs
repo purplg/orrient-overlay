@@ -1,5 +1,10 @@
-use crate::prelude::*;
-use sickle_ui::{ui_builder::UiBuilder, ui_style::generated::*, widgets::prelude::*};
+use bevy::prelude::*;
+
+use orrient_core::prelude::*;
+
+use sickle_ui::ui_builder::UiBuilder;
+use sickle_ui::ui_style::generated::*;
+use sickle_ui::widgets::prelude::*;
 
 #[derive(Component)]
 struct DebugPanel;

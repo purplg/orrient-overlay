@@ -4,8 +4,8 @@ use bincode::Options as _;
 use crossbeam_channel::Receiver;
 use orrient_input::{Action, ActionEvent};
 use orrient_link::{MumbleLinkDataDef, SocketMessage};
+use orrient_ui::UiEvent;
 use std::net::UdpSocket;
-use std::ops::Deref;
 
 fn run(tx: crossbeam_channel::Sender<SocketMessage>) {
     let socket = UdpSocket::bind("127.0.0.1:5001").unwrap();
@@ -25,17 +25,6 @@ fn run(tx: crossbeam_channel::Sender<SocketMessage>) {
         if let Err(e) = tx.send(message) {
             println!("e: {:?}", e);
         }
-    }
-}
-
-#[derive(Resource, Clone, Copy, Debug)]
-pub struct MapId(pub u32);
-
-impl Deref for MapId {
-    type Target = u32;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }
 

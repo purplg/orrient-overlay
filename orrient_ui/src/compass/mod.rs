@@ -2,11 +2,11 @@ mod map_bounds;
 pub mod marker;
 pub mod window;
 
-use crate::UiEvent;
-
 pub use window::UiCompassWindowExt;
 
 use bevy::prelude::*;
+
+use crate::UiEvent;
 
 #[derive(Resource, Default)]
 struct MapOrientation {

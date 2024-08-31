@@ -1,10 +1,12 @@
+use bevy::prelude::*;
+
+use orrient_pathing::marker::LoadedMarkers;
+use orrient_pathing::prelude::*;
+
 use super::marker_button::UiMarkerButtonExt as _;
 use super::separator::UiMarkerSeparatorExt as _;
 use super::tooltip::UiToolTipExt as _;
-use crate::marker::LoadedMarkers;
-use crate::marker::MarkerEvent;
-use crate::prelude::*;
-use crate::ui::OrrientMenuItem;
+use crate::OrrientMenuItem;
 use crate::UiEvent;
 use bevy::window::PrimaryWindow;
 use sickle_ui::ui_builder::UiBuilder;

@@ -1,10 +1,13 @@
+mod console;
 pub mod compass;
 mod debug_panel;
 mod marker_list;
 
-use crate::prelude::*;
+use bevy::prelude::*;
 
-use crate::marker::MarkerEvent;
+use orrient_core::prelude::*;
+use orrient_pathing::prelude::*;
+
 use compass::UiCompassWindowExt as _;
 use debug_panel::UiDebugPanelExt as _;
 use marker_list::window::UiMarkerWindowExt as _;
@@ -16,6 +19,16 @@ use sickle_ui::SickleUiPlugin;
 #[derive(Component)]
 struct OrrientMenuItem(pub MarkerEvent);
 
+#[derive(Event, Clone, Debug)]
+pub enum UiEvent {
+    OpenUi,
+    CloseUi,
+    CompassSize(UVec2),
+    PlayerPosition(Vec2),
+    MapPosition(Vec2),
+    MapScale(f32),
+    MapOpen(bool),
+}
 fn setup(mut commands: Commands) {
     let camera = commands
         .spawn(Camera3dBundle {
@@ -57,9 +70,12 @@ fn ui_state_system(mut ui_events: EventReader<UiEvent>, mut state: ResMut<NextSt
     }
 }
 
-pub(crate) struct Plugin;
+pub struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
+        app.add_event::<UiEvent>();
+
+        app.add_plugins(console::Plugin);
         app.add_plugins(SickleUiPlugin);
         app.add_plugins(compass::Plugin);
         app.add_plugins(marker_list::Plugin);

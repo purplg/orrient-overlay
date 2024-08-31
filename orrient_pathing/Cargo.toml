@@ -1,0 +1,23 @@
+[package]
+name = "orrient_pathing"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+orrient_core = { path = "../orrient_core" }
+
+bevy = "0.14.1"
+# https://github.com/kulkalkul/bevy_mod_billboard
+bevy_mod_billboard = "0.7.0"
+
+itertools = "0.13.0"
+anyhow = "1.0.86"
+petgraph = "0.6.5"
+dirs = "5.0.1"
+quick-xml = { version = "0.32.0", features = ["overlapped-lists"] }
+typed-path = "0.9.0"
+zip = "2.1.3"
+
+[dev-dependencies]
+lazy_static = "1.5.0"
+tempfile = "3.12.0"

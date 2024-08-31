@@ -1,12 +1,17 @@
-use std::marker::PhantomData;
-
 use bevy::prelude::*;
 
 use bevy_async_task::{AsyncTaskRunner, AsyncTaskStatus};
 use gw2lib::{
-    model::{items::Item, maps::Map, EndpointWithId},
+    model::{items::Item, maps::Map},
     Client, EndpointError, Requester,
 };
+
+pub mod prelude {
+    pub use super::Request;
+    pub use super::RequestComplete;
+    pub use super::RequestQueue;
+    pub use super::Response;
+}
 
 #[derive(Clone, Copy, Debug)]
 pub enum Request {

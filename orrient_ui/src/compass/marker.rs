@@ -1,11 +1,10 @@
 use bevy::color::palettes;
 use bevy::prelude::*;
+use orrient_core::prelude::MapId;
 use sickle_ui::prelude::UiContainerExt as _;
 use sickle_ui::ui_builder::UiBuilder;
 use sickle_ui::ui_builder::UiBuilderExt;
 use sickle_ui::ui_style::manual::SetAbsolutePositionExt;
-
-use crate::link::MapId;
 
 use super::map_bounds::MapBounds;
 use super::window::CompassWindow;

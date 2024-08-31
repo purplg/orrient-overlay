@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 
+use orrient_core::prelude::*;
+
 use orrient_api::{Request, RequestComplete, RequestQueue, Response};
-use crate::link::MapId;
 
 #[derive(Resource, Clone)]
 pub(super) struct MapBounds {

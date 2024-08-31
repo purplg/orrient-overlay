@@ -11,21 +11,9 @@ pub enum WorldEvent {
     SavePosition,
 }
 
-#[derive(Event, Clone, Debug)]
-pub enum UiEvent {
-    OpenUi,
-    CloseUi,
-    CompassSize(UVec2),
-    PlayerPosition(Vec2),
-    MapPosition(Vec2),
-    MapScale(f32),
-    MapOpen(bool),
-}
-
 pub struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<WorldEvent>();
-        app.add_event::<UiEvent>();
     }
 }

@@ -1,18 +1,22 @@
-use crate::prelude::*;
+use orrient_core::prelude::*;
+
+use bevy::prelude::*;
 use bevy::render::mesh::Indices;
 use bevy::render::mesh::PrimitiveTopology;
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::render_resource::AsBindGroup;
 use bevy::render::render_resource::ShaderRef;
+
 use itertools::Itertools;
+
+use crate::events::LoadTrailEvent;
+use crate::parser::MarkerPacks;
 
 #[derive(Component)]
 pub struct TrailMesh;
 
 const TRAIL_WIDTH: f32 = 0.5;
 
-#[derive(Event, Clone, Debug)]
-pub(super) struct LoadTrailEvent(pub FullMarkerId);
 
 #[derive(Clone, Copy)]
 struct OrientedPoint {

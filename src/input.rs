@@ -2,6 +2,7 @@ use crate::prelude::*;
 use bevy::input::ButtonState;
 use orrient_input::Action;
 use orrient_input::ActionEvent;
+use orrient_ui::UiEvent;
 
 pub(crate) struct Plugin;
 

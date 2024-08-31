@@ -1,6 +1,14 @@
-pub mod events;
-pub mod player;
-pub mod state;
+mod events;
+mod player;
+mod state;
+mod structs;
+
+pub mod prelude {
+    pub use super::events::*;
+    pub use super::player::*;
+    pub use super::state::*;
+    pub use super::structs::*;
+}
 
 use bevy::prelude::*;
 

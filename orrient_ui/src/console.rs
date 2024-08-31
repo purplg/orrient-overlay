@@ -1,21 +1,22 @@
-use crate::prelude::*;
-
-use crate::link::MapId;
-use crate::marker::trail::create_trail_mesh;
-use crate::marker::trail::TrailMaterial;
-use crate::marker::trail::TrailMesh;
-use crate::marker::MarkerEvent;
-use crate::ui::compass::marker::CompassMarker;
-use crate::ui::compass::marker::ShowOnCompass;
-use crate::MarkerPacks;
-use crate::UiEvent;
 use bevy::color::palettes;
+use bevy::prelude::*;
+
+use orrient_core::prelude::*;
+use orrient_pathing::marker::trail::create_trail_mesh;
+use orrient_pathing::marker::trail::TrailMaterial;
+use orrient_pathing::marker::trail::TrailMesh;
+use orrient_pathing::prelude::*;
+
 use bevy_console::clap::Parser;
 use bevy_console::AddConsoleCommand;
 use bevy_console::ConsoleCommand;
 use bevy_console::ConsolePlugin;
 use clap::Subcommand;
 use clap::ValueEnum;
+
+use crate::compass::marker::CompassMarker;
+use crate::compass::marker::ShowOnCompass;
+use crate::UiEvent;
 
 /// List all the markers available
 #[derive(Parser, ConsoleCommand)]
