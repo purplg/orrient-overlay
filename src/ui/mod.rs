@@ -3,6 +3,8 @@ mod debug_panel;
 mod marker_list;
 
 use crate::prelude::*;
+
+use crate::marker::MarkerEvent;
 use compass::UiCompassWindowExt as _;
 use debug_panel::UiDebugPanelExt as _;
 use marker_list::window::UiMarkerWindowExt as _;

@@ -1,8 +1,10 @@
+use crate::prelude::*;
+
 use crate::link::MapId;
 use crate::marker::trail::create_trail_mesh;
 use crate::marker::trail::TrailMaterial;
 use crate::marker::trail::TrailMesh;
-use crate::prelude::*;
+use crate::marker::MarkerEvent;
 use crate::ui::compass::marker::CompassMarker;
 use crate::ui::compass::marker::ShowOnCompass;
 use crate::MarkerPacks;
@@ -14,22 +16,6 @@ use bevy_console::ConsoleCommand;
 use bevy_console::ConsolePlugin;
 use clap::Subcommand;
 use clap::ValueEnum;
-
-pub(crate) struct Plugin;
-
-impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(ConsolePlugin);
-        app.add_console_command::<UnloadAllCommand, _>(unload_all_command);
-        app.add_console_command::<MapIdCommand, _>(mapid_command);
-        app.add_console_command::<PacksCommand, _>(packs_command);
-        app.add_console_command::<SetupCommand, _>(setup_command);
-        app.add_console_command::<AddCommand, _>(add_command);
-        app.add_console_command::<DeleteCommand, _>(delete_command);
-        app.add_console_command::<MarkerCommand, _>(marker_command);
-        app.add_console_command::<TrailCommand, _>(trail_command);
-    }
-}
 
 /// List all the markers available
 #[derive(Parser, ConsoleCommand)]
@@ -273,5 +259,20 @@ fn trail_command(
             }
         }
         log.ok();
+    }
+}
+
+pub(crate) struct Plugin;
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins(ConsolePlugin);
+        app.add_console_command::<UnloadAllCommand, _>(unload_all_command);
+        app.add_console_command::<MapIdCommand, _>(mapid_command);
+        app.add_console_command::<PacksCommand, _>(packs_command);
+        app.add_console_command::<SetupCommand, _>(setup_command);
+        app.add_console_command::<AddCommand, _>(add_command);
+        app.add_console_command::<DeleteCommand, _>(delete_command);
+        app.add_console_command::<MarkerCommand, _>(marker_command);
+        app.add_console_command::<TrailCommand, _>(trail_command);
     }
 }

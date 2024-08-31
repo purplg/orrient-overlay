@@ -1,6 +1,7 @@
-use super::LoadedMarkers;
-use crate::player::Player;
 use crate::prelude::*;
+
+use super::LoadedMarkers;
+
 use bevy_mod_billboard::plugin::BillboardPlugin;
 use bevy_mod_billboard::BillboardMeshHandle;
 use bevy_mod_billboard::BillboardTextBundle;

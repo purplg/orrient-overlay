@@ -1,32 +1,9 @@
-use crate::prelude::*;
+use crate::{marker::MarkerEvent, prelude::*};
 use bevy::color::palettes;
 use sickle_ui::prelude::*;
 use sickle_ui::ui_builder::UiBuilder;
 
 use super::window::{MarkerItem, MarkerWindowEvent};
-
-pub(crate) struct Plugin;
-
-impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(ComponentThemePlugin::<MarkerButton>::default());
-        app.add_systems(Update, button_interaction);
-        app.add_systems(Update, checkbox_action);
-        app.add_systems(Update, button_state);
-        app.add_systems(Update, button_track_state);
-
-        app.add_event::<CheckboxEvent>();
-        app.add_systems(Update, checkbox);
-        app.add_systems(Update, checkbox_events);
-
-        app.add_systems(
-            Update,
-            button_mapid_disable.run_if(resource_exists_and_changed::<MapId>),
-        );
-        app.add_systems(Update, checkbox_follow.run_if(on_event::<MarkerEvent>()));
-        app.add_systems(Update, button_init.run_if(resource_exists::<MapId>));
-    }
-}
 
 pub trait UiMarkerButtonExt {
     fn marker_button(
@@ -405,5 +382,27 @@ fn checkbox_events(
         }) {
             checkbox.checked = event.enabled();
         }
+    }
+}
+
+pub(crate) struct Plugin;
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins(ComponentThemePlugin::<MarkerButton>::default());
+        app.add_systems(Update, button_interaction);
+        app.add_systems(Update, checkbox_action);
+        app.add_systems(Update, button_state);
+        app.add_systems(Update, button_track_state);
+
+        app.add_event::<CheckboxEvent>();
+        app.add_systems(Update, checkbox);
+        app.add_systems(Update, checkbox_events);
+
+        app.add_systems(
+            Update,
+            button_mapid_disable.run_if(resource_exists_and_changed::<MapId>),
+        );
+        app.add_systems(Update, checkbox_follow.run_if(on_event::<MarkerEvent>()));
+        app.add_systems(Update, button_init.run_if(resource_exists::<MapId>));
     }
 }

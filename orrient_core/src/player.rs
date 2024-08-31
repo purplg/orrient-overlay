@@ -1,20 +1,6 @@
 use bevy::prelude::*;
 
-use crate::WorldEvent;
-
-pub(crate) struct Plugin;
-
-impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup);
-        app.add_systems(
-            Update,
-            update_position_system.run_if(on_event::<WorldEvent>()),
-        );
-        // app.add_systems(Update, position);
-        app.add_systems(Update, save_pos_system);
-    }
-}
+use crate::events::WorldEvent;
 
 #[derive(Component)]
 pub struct Player;
@@ -57,5 +43,18 @@ fn save_pos_system(
                 info!("new position saved");
             }
         }
+    }
+}
+
+pub(crate) struct Plugin;
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Startup, setup);
+        app.add_systems(
+            Update,
+            update_position_system.run_if(on_event::<WorldEvent>()),
+        );
+        // app.add_systems(Update, position);
+        app.add_systems(Update, save_pos_system);
     }
 }

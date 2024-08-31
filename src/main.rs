@@ -1,21 +1,20 @@
 mod camera;
 mod console;
-mod events;
 mod input;
 mod link;
 mod marker;
 mod parser;
-mod player;
-mod state;
 mod ui;
 
 use bevy::window::WindowLevel;
 use bevy::window::{CompositeAlphaMode, WindowResolution};
 
 pub mod prelude {
-    pub use crate::events::*;
-    pub use crate::state::AppState;
-    pub use crate::state::GameState;
+    pub use orrient_core::state::*;
+    pub use orrient_core::events::*;
+    pub use orrient_core::player::*;
+    pub use orrient_core::state::AppState;
+    pub use orrient_core::state::GameState;
     pub use crate::link::MapId;
     pub use crate::parser::pack::Behavior;
     pub use crate::parser::pack::FullMarkerId;
@@ -25,7 +24,6 @@ pub mod prelude {
     pub use crate::parser::pack::MarkerPack;
     pub use crate::parser::MarkerPacks;
     pub use crate::parser::PackId;
-    pub use crate::state::*;
     pub use crate::ui::compass::marker::ShowOnCompass;
     pub use bevy::prelude::*;
 }
@@ -48,15 +46,14 @@ fn main() {
     }));
 
     app.add_plugins(orrient_api::Plugin);
+    app.add_plugins(orrient_core::Plugin);
+
     app.add_plugins(camera::Plugin);
     app.add_plugins(console::Plugin);
-    app.add_plugins(events::Plugin);
     app.add_plugins(input::Plugin);
     app.add_plugins(link::Plugin);
     app.add_plugins(marker::Plugin);
     app.add_plugins(parser::Plugin);
-    app.add_plugins(player::Plugin);
-    app.add_plugins(state::Plugin);
     app.add_plugins(ui::Plugin);
 
     app.run();

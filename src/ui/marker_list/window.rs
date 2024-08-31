@@ -2,6 +2,7 @@ use super::marker_button::UiMarkerButtonExt as _;
 use super::separator::UiMarkerSeparatorExt as _;
 use super::tooltip::UiToolTipExt as _;
 use crate::marker::LoadedMarkers;
+use crate::marker::MarkerEvent;
 use crate::prelude::*;
 use crate::ui::OrrientMenuItem;
 use crate::UiEvent;
@@ -11,23 +12,6 @@ use sickle_ui::ui_builder::UiBuilderExt as _;
 use sickle_ui::ui_style::generated::SetHeightExt as _;
 use sickle_ui::ui_style::generated::SetWidthExt as _;
 use sickle_ui::widgets::prelude::*;
-
-pub(crate) struct Plugin;
-
-impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) {
-        app.add_event::<MarkerWindowEvent>();
-        app.add_systems(Update, menu_interaction);
-        app.add_systems(Update, set_column);
-        app.add_systems(Update, toggle_show_ui);
-        app.add_systems(
-            Update,
-            (remove_window, setup_window)
-                .chain()
-                .run_if(resource_exists_and_changed::<MarkerPacks>),
-        );
-    }
-}
 
 #[derive(Event)]
 pub(super) enum MarkerWindowEvent {
@@ -242,5 +226,21 @@ fn menu_interaction(
         if menu_item.interacted() {
             events.send(orrient_menu_item.0.clone());
         }
+    }
+}
+
+pub(crate) struct Plugin;
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.add_event::<MarkerWindowEvent>();
+        app.add_systems(Update, menu_interaction);
+        app.add_systems(Update, set_column);
+        app.add_systems(Update, toggle_show_ui);
+        app.add_systems(
+            Update,
+            (remove_window, setup_window)
+                .chain()
+                .run_if(resource_exists_and_changed::<MarkerPacks>),
+        );
     }
 }

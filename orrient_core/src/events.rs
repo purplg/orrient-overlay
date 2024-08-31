@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use bevy::prelude::*;
 
 #[derive(Event, Clone, Debug)]
 pub enum WorldEvent {
@@ -22,18 +22,10 @@ pub enum UiEvent {
     MapOpen(bool),
 }
 
-#[derive(Event, Clone, Debug)]
-pub enum MarkerEvent {
-    Show(FullMarkerId),
-    Hide(FullMarkerId),
-    HideAll,
-}
-
-pub(crate) struct Plugin;
+pub struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<WorldEvent>();
         app.add_event::<UiEvent>();
-        app.add_event::<MarkerEvent>();
     }
 }

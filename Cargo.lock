@@ -2971,6 +2971,7 @@ dependencies = [
  "lazy_static",
  "mumblelink_reader",
  "orrient_api",
+ "orrient_core",
  "orrient_input",
  "orrient_link",
  "petgraph",
@@ -4173,6 +4174,13 @@ dependencies = [
  "bevy",
  "bevy_async_task",
  "gw2lib",
+]
+
+[[package]]
+name = "orrient_core"
+version = "0.1.0"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]

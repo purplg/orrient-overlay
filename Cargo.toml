@@ -9,9 +9,7 @@ itertools = "0.13.0"
 anyhow = "1.0.86"
 
 orrient_api = { path = "orrient_api" }
-
-# A workspace for sharing inputs between the Linux overlay and Windows
-# link applications.
+orrient_core = { path = "orrient_core" }
 orrient_input = { path = "orrient_input" }
 
 ### Mumblelink Connectivity ####################################################
@@ -42,7 +40,9 @@ clap = { version = "4.5.10", features = ["derive"] }
 
 [workspace]
 resolver = "2"
-members = [ "orrient_api",
+members = [
+  "orrient_api",
+  "orrient_core",
   "orrient_input",
   "orrient_link",
 ]
