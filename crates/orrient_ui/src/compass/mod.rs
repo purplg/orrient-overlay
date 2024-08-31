@@ -29,7 +29,6 @@ fn map_system(mut ui_events: EventReader<UiEvent>, mut orientation: ResMut<MapOr
 }
 
 pub(crate) struct Plugin;
-
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MapOrientation>();

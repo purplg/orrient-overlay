@@ -97,7 +97,6 @@ fn setup(mut commands: Commands) {
 }
 
 pub(crate) struct Plugin;
-
 impl bevy_app::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup);

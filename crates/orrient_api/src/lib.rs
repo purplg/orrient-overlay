@@ -79,7 +79,6 @@ fn request_task_system(
 }
 
 pub struct Plugin;
-
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<RequestComplete>();

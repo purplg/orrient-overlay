@@ -61,7 +61,6 @@ pub enum Action {
 }
 
 pub struct Plugin;
-
 impl bevy_app::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<ActionEvent>();
