@@ -1,4 +1,5 @@
 use crate::{ChannelRx, ChannelTx};
+use log::{error, info};
 use orrient_link::{MumbleLinkDataDef, SocketMessage};
 
 use bevy_app::prelude::*;
@@ -13,7 +14,7 @@ use mumblelink_reader::mumble_link_handler::MumbleLinkHandler;
 fn link(tx: crossbeam_channel::Sender<SocketMessage>) {
     let handler = MumbleLinkHandler::new().unwrap();
 
-    println!("Waiting for MumbleLink...");
+    info!("Connecting to MumbleLink...");
 
     loop {
         match handler.read() {
@@ -29,13 +30,13 @@ fn link(tx: crossbeam_channel::Sender<SocketMessage>) {
                 }
             }
             Err(error) => {
-                println!("Could not read data... weird: {:?}", error);
+                error!("Could not read data... weird: {:?}", error);
                 sleep(Duration::from_secs(1));
             }
         }
     }
 
-    println!("Connected!");
+    info!("Connected!");
     let mut last_ui_tick: i64 = 0;
 
     // The amount of millis to sleep until the next time we try to
@@ -54,7 +55,7 @@ fn link(tx: crossbeam_channel::Sender<SocketMessage>) {
         let data = match handler.read() {
             Ok(data) => data,
             Err(error) => {
-                println!("Could not read data... weird: {:?}", error);
+                error!("Could not read data... weird: {:?}", error);
                 continue;
             }
         };
@@ -62,7 +63,7 @@ fn link(tx: crossbeam_channel::Sender<SocketMessage>) {
         let def = match MumbleLinkDataDef::from_data(data) {
             Ok(def) => def,
             Err(error) => {
-                println!("Error deserializing data: {:?}", error);
+                error!("Error deserializing data: {:?}", error);
                 continue;
             }
         };
@@ -72,7 +73,7 @@ fn link(tx: crossbeam_channel::Sender<SocketMessage>) {
             // one.
             last_ui_tick = def.ui_tick;
             if let Err(e) = tx.send(SocketMessage::MumbleLinkData(Box::new(def))) {
-                println!("error: {:?}", e);
+                error!("{:?}", e);
             };
             // ... and decrease the tickrate.
             if tick_rate > 0 {

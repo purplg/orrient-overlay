@@ -8,6 +8,8 @@ use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 
 fn main() {
+    env_logger::init();
+
     App::new()
         .add_plugins(bevy_app::ScheduleRunnerPlugin::default())
         .add_plugins(input::Plugin)

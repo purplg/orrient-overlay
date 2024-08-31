@@ -4194,6 +4194,8 @@ dependencies = [
  "bincode",
  "byteorder",
  "crossbeam-channel",
+ "env_logger",
+ "log",
  "mumblelink_reader",
  "orrient_input",
  "rdev",
