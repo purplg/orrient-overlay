@@ -4,15 +4,6 @@ use orrient_input::Action;
 use orrient_input::ActionEvent;
 use orrient_ui::UiEvent;
 
-pub(crate) struct Plugin;
-
-impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(orrient_input::Plugin);
-        app.add_systems(Update, update.run_if(in_state(AppState::Running)));
-    }
-}
-
 fn update(mut events: EventReader<ActionEvent>, mut mumble_link_event: EventWriter<UiEvent>) {
     for event in events.read() {
         match event {
@@ -31,5 +22,13 @@ fn update(mut events: EventReader<ActionEvent>, mut mumble_link_event: EventWrit
             },
             _ => {}
         }
+    }
+}
+
+pub(crate) struct Plugin;
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins(orrient_input::Plugin);
+        app.add_systems(Update, update.run_if(in_state(AppState::Running)));
     }
 }

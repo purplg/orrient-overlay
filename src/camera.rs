@@ -1,15 +1,6 @@
 use crate::prelude::*;
 use orrient_core::prelude::*;
 
-pub(crate) struct Plugin;
-
-impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(ClearColor(Color::NONE));
-        app.add_systems(Update, camera_system.run_if(in_state(AppState::Running)));
-    }
-}
-
 fn camera_system(
     mut events: EventReader<WorldEvent>,
     mut camera: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
@@ -32,5 +23,13 @@ fn camera_system(
                 perspective.fov = *fov;
             }
         }
+    }
+}
+
+pub(crate) struct Plugin;
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(ClearColor(Color::NONE));
+        app.add_systems(Update, camera_system.run_if(in_state(AppState::Running)));
     }
 }
