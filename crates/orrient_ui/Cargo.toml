@@ -11,7 +11,7 @@ orrient_pathing = { path = "../orrient_pathing" }
 bevy = "0.14.1"
 
 # https://github.com/UmbraLuminosa/sickle_ui
-sickle_ui = { rev = "34005a18ae600f09a0f300034e3fc6fd608929ef", git = "https://github.com/UmbraLuminosa/sickle_ui" }
+sickle_ui = { git = "https://github.com/UmbraLuminosa/sickle_ui", rev = "b39bffa35b8c6ef2f081ef0b7f577825f5fcd87a" }
 # https://github.com/kulkalkul/bevy_mod_billboard
 bevy_mod_billboard = "0.7.0"
 
