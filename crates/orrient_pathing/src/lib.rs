@@ -5,6 +5,7 @@ pub mod parser;
 use bevy::prelude::*;
 
 pub mod prelude {
+    pub use crate::events::MarkerEvent;
     pub use crate::parser::pack::Behavior;
     pub use crate::parser::pack::FullMarkerId;
     pub use crate::parser::pack::Marker;
@@ -13,9 +14,6 @@ pub mod prelude {
     pub use crate::parser::pack::MarkerPack;
     pub use crate::parser::MarkerPacks;
     pub use crate::parser::PackId;
-    pub use crate::events::LoadPoiEvent;
-    pub use crate::events::LoadTrailEvent;
-    pub use crate::events::MarkerEvent;
 }
 
 pub struct Plugin;

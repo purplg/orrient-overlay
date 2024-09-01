@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use orrient_core::prelude::*;
 
 use super::LoadedMarkers;
-use crate::events::LoadPoiEvent;
+use crate::events::MarkerEvent;
 use crate::parser::pack::Behavior;
 use crate::parser::MarkerPacks;
 
@@ -41,14 +41,16 @@ struct PoiQuad(Handle<Mesh>);
 
 fn spawn_poi_system(
     mut commands: Commands,
-    mut events: EventReader<LoadPoiEvent>,
+    mut events: EventReader<MarkerEvent>,
     assets: Res<PoiQuad>,
     packs: Res<MarkerPacks>,
     map_id: Res<MapId>,
 ) {
     let mut count = 0;
     for event in events.read() {
-        let LoadPoiEvent(full_id) = event;
+        let MarkerEvent::Show(full_id) = event else {
+            continue;
+        };
 
         let Some(pack) = &packs.get(&full_id.pack_id) else {
             warn!("Pack ID not found: {}", &full_id.pack_id);
@@ -115,6 +117,7 @@ fn spawn_poi_system(
             }
 
             builder.insert(PoiMarker);
+            builder.insert(super::Marker(full_id.clone()));
 
             count += 1;
         }
@@ -125,14 +128,37 @@ fn spawn_poi_system(
     }
 }
 
-fn despawn_pois_system(mut commands: Commands, poi_query: Query<Entity, With<PoiMarker>>) {
-    let mut count = 0;
-    for entity in &poi_query {
-        commands.entity(entity).despawn_recursive();
-        count += 1;
-    }
-    if count > 0 {
-        info!("Unloaded {} POIs.", count);
+fn despawn_pois_system(
+    mut commands: Commands,
+    poi_query: Query<(Entity, &super::Marker), With<PoiMarker>>,
+    mut events: EventReader<MarkerEvent>,
+) {
+    for event in events.read() {
+        match event {
+            MarkerEvent::Hide(full_id) => {
+                let mut count = 0;
+                for (entity, marker) in &poi_query {
+                    if &marker.0 == full_id {
+                        commands.entity(entity).despawn_recursive();
+                        count += 1;
+                    }
+                }
+                if count > 0 {
+                    info!("Unloaded {} POIs.", count);
+                }
+            }
+            MarkerEvent::HideAll => {
+                let mut count = 0;
+                for (entity, _marker) in &poi_query {
+                    commands.entity(entity).despawn_recursive();
+                    count += 1;
+                }
+                if count > 0 {
+                    info!("Unloaded {} POIs.", count);
+                }
+            }
+            MarkerEvent::Show(_) => {}
+        }
     }
 }
 
@@ -151,10 +177,10 @@ impl bevy::prelude::Plugin for Plugin {
         );
         app.add_systems(
             Update,
-            (despawn_pois_system, spawn_poi_system)
+            (spawn_poi_system, despawn_pois_system)
                 .chain()
                 .run_if(in_state(GameState::InGame))
-                .run_if(on_event::<LoadPoiEvent>()),
+                .run_if(on_event::<MarkerEvent>()),
         );
     }
 }
