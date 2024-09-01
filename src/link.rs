@@ -46,9 +46,11 @@ fn monitor_system(
     rx: Res<MumbleLinkMessageReceiver>,
     mut state: ResMut<NextState<AppState>>,
 ) {
-    if let Ok(SocketMessage::MumbleLinkData(data)) = rx.try_recv() {
+    if let Ok(SocketMessage::MumbleLinkData(mut data)) = rx.try_recv() {
         if data.ui_tick > 0 {
             commands.insert_resource(MapId(data.identity.map_id));
+            data.context.compass_width = 0;
+            data.context.compass_height = 0;
             commands.insert_resource(PrevMumblelinkState(*data));
             state.set(AppState::Running);
             info!("Link connected.");
