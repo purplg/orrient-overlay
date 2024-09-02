@@ -50,7 +50,7 @@ impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
                 ..default()
             },
             FloatingPanelLayout {
-                size: (1920., 1080.).into(),
+                size: (1000., 1080.).into(),
                 position: Some((100., 100.).into()),
                 ..default()
             },
