@@ -129,7 +129,7 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
                             },
                         ));
                         parent.spawn(TextBundle::from_section(
-                            &full_id.marker_id.0,
+                            &full_id.marker_id.to_string(),
                             TextStyle {
                                 color: palettes::tailwind::GRAY_500.into(),
                                 font_size: 10.,

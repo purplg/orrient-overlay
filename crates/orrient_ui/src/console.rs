@@ -178,7 +178,7 @@ fn marker_command(mut log: ConsoleCommand<MarkerCommand>, mut events: EventWrite
             MarkerSubcommand::Load { pack_id, marker_id } => {
                 let full_id = FullMarkerId {
                     pack_id: PackId(pack_id),
-                    marker_id: MarkerId(marker_id),
+                    marker_id: MarkerId(marker_id.into()),
                 };
                 events.send(MarkerEvent::Show(full_id));
                 log.ok();
@@ -211,7 +211,7 @@ fn trail_command(
             Trail::Load { pack_id, marker_id } => {
                 let full_id = FullMarkerId {
                     pack_id: PackId(pack_id),
-                    marker_id: MarkerId(marker_id),
+                    marker_id: MarkerId(marker_id.into()),
                 };
                 let Some(pack) = packs.get(&full_id.pack_id) else {
                     log.reply_failed("Pack not found");

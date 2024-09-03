@@ -6,6 +6,7 @@ use petgraph::{
     Direction,
 };
 use quick_xml::events::attributes::Attributes;
+use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::{collections::VecDeque, convert::identity, ops::Deref, str::FromStr as _};
 use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
@@ -17,31 +18,17 @@ use super::{
 };
 
 #[derive(Hash, Clone, Default, Debug, PartialEq, Eq)]
-pub struct MarkerId(pub String);
+pub struct MarkerId(pub Cow<'static, str>);
 
 impl MarkerId {
     /// Returns true when `other` is a child of this `MarkerId`.
     pub fn contains(&self, other: &MarkerId) -> bool {
-        self != other && other.0.starts_with(&self.0)
+        self != other && other.0.starts_with(&*self.0)
     }
 
     /// Returns true when `other` is a parent of this `MarkerId`.
     pub fn within(&self, other: &MarkerId) -> bool {
-        self != other && self.0.starts_with(&other.0)
-    }
-}
-
-impl Deref for MarkerId {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl From<&str> for MarkerId {
-    fn from(value: &str) -> Self {
-        Self(value.into())
+        self != other && self.0.starts_with(&*other.0)
     }
 }
 
@@ -141,7 +128,11 @@ pub struct Marker {
 }
 
 impl Marker {
-    pub(super) fn new(id: impl Into<String>, label: impl Into<String>, kind: MarkerKind) -> Self {
+    pub(super) fn new(
+        id: impl Into<Cow<'static, str>>,
+        label: impl Into<String>,
+        kind: MarkerKind,
+    ) -> Self {
         Self {
             id: MarkerId(id.into()),
             label: label.into(),
@@ -151,7 +142,7 @@ impl Marker {
     }
 
     fn copy_from_parent(&mut self, parent: &Marker) {
-        self.id = MarkerId(format!("{}.{}", parent.id, self.id));
+        self.id = MarkerId(format!("{}.{}", parent.id, self.id).into());
         self.depth = parent.depth + 1;
         self.behavior = self.behavior.or(parent.behavior);
         if self.icon_file.is_none() {
@@ -174,7 +165,7 @@ impl Marker {
             };
 
             match key.to_lowercase().as_str() {
-                "name" => this.id = MarkerId(value),
+                "name" => this.id = MarkerId(value.into()),
                 "displayname" => this.label = value,
                 "isseparator" => match value.to_lowercase().as_str() {
                     "true" | "1" => this.kind = MarkerKind::Separator,
@@ -391,12 +382,10 @@ impl MarkerPackBuilder {
     }
 
     pub fn add_poi(&mut self, poi: Poi) {
-        let id: MarkerId = MarkerId(poi.id.clone());
-
-        if let Some(pois) = self.tree.pois.get_mut(&id) {
+        if let Some(pois) = self.tree.pois.get_mut(&poi.id) {
             pois.push(poi);
         } else {
-            self.tree.pois.insert(id, vec![poi]);
+            self.tree.pois.insert(poi.id.clone(), vec![poi]);
         }
     }
 
@@ -424,8 +413,8 @@ impl MarkerPackBuilder {
         self.tree.icons.insert(file_path, handle);
     }
 
-    pub fn add_map_id(&mut self, id: impl Into<String>, map_id: u32) {
-        if let Some(marker) = self.tree.get_mut(&MarkerId(id.into())) {
+    pub fn add_map_id(&mut self, id: &MarkerId, map_id: u32) {
+        if let Some(marker) = self.tree.get_mut(id) {
             marker.map_ids.insert(map_id);
         }
     }

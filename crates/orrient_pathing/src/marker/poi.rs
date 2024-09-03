@@ -99,7 +99,7 @@ fn spawn_poi_system(
                 warn!("No icon for {}", full_id);
                 builder.insert(BillboardTextBundle {
                     text: Text::from_section(
-                        poi.id.clone(),
+                        poi.id.0.to_string(),
                         TextStyle {
                             font_size: 32.,
                             ..default()

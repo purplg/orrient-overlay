@@ -1,9 +1,11 @@
-use std::{convert::identity, str::FromStr};
+use std::{borrow::Cow, convert::identity, str::FromStr};
 
 use anyhow::{anyhow, Result};
 use bevy::{log::warn, math::Vec3};
 use quick_xml::events::attributes::Attributes;
 use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
+
+use super::pack::MarkerId;
 
 #[derive(Clone, Debug, Default)]
 pub(super) struct MarkerCategory {
@@ -66,7 +68,7 @@ pub(super) struct MarkerCategory {
 #[derive(Clone, Debug)]
 pub struct Poi {
     // type
-    pub id: String,
+    pub id: MarkerId,
     // MapID
     pub map_id: Option<u32>,
     // xpos, ypos, zpos
@@ -141,7 +143,7 @@ impl Poi {
         };
 
         Ok(Poi {
-            id: id.ok_or(anyhow!("POI missing field `poi.type`."))?,
+            id: MarkerId(id.ok_or(anyhow!("POI missing field `poi.type`."))?.into()),
             map_id,
             position,
             icon_file,
@@ -152,7 +154,7 @@ impl Poi {
 #[derive(Clone, Debug)]
 pub(super) struct TrailXml {
     // type
-    pub id: String,
+    pub id: Cow<'static, str>,
     // trailData
     pub trail_file: String,
     // texture
@@ -191,7 +193,7 @@ impl TrailXml {
         }
 
         Ok(Self {
-            id: id.ok_or(anyhow!("Trail missing field `type`."))?,
+            id: id.ok_or(anyhow!("Trail missing field `type`."))?.into(),
             trail_file: trail_file.ok_or(anyhow!("Trail missing field `trailData`."))?,
             texture_file: texture_file.ok_or(anyhow!("Trail missing field `texture`."))?,
         })

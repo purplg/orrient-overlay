@@ -103,18 +103,6 @@ impl PackId {
     }
 }
 
-impl From<PackId> for String {
-    fn from(value: PackId) -> Self {
-        value.0
-    }
-}
-
-impl From<&str> for PackId {
-    fn from(value: &str) -> Self {
-        Self(value.into())
-    }
-}
-
 impl std::fmt::Display for PackId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
@@ -387,7 +375,7 @@ mod tests {
     #[test]
     fn test_iter() {
         let markers = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
-        let mut iter = markers.iter_recursive(&"A".into());
+        let mut iter = markers.iter_recursive(&MarkerId("A".into()));
 
         //     A
         //    / \
@@ -407,7 +395,7 @@ mod tests {
         // H   I
         //   / | \
         //  J  K  L
-        let mut iter = markers.iter_recursive(&"G".into());
+        let mut iter = markers.iter_recursive(&MarkerId("G".into()));
         assert_eq!(iter.next().unwrap().id.0, "G");
         assert_eq!(iter.next().unwrap().id.0, "G.H");
         assert_eq!(iter.next().unwrap().id.0, "G.I");
@@ -421,7 +409,7 @@ mod tests {
         //   B   E
         //  / \   \
         // C   D   F
-        let mut iter = markers.iter_recursive(&"A.B".into());
+        let mut iter = markers.iter_recursive(&MarkerId("A.B".into()));
         assert_eq!(iter.next().unwrap().id.0, "A.B");
         assert_eq!(iter.next().unwrap().id.0, "A.B.C");
         assert_eq!(iter.next().unwrap().id.0, "A.B.D");
@@ -432,7 +420,7 @@ mod tests {
         //   B   E
         //  / \   \
         // C   D   F
-        let mut iter = markers.iter_recursive(&"A.B.C".into());
+        let mut iter = markers.iter_recursive(&MarkerId("A.B.C".into()));
         assert_eq!(iter.next().unwrap().id.0, "A.B.C");
         assert!(iter.next().is_none());
     }
@@ -442,19 +430,19 @@ mod tests {
         let pack = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
         let mut roots = pack.roots();
         let root = roots.next().unwrap();
-        assert_eq!(root.id, "A".into());
+        assert_eq!(root.id, MarkerId("A".into()));
         {
             let mut iter = pack.iter(&root.id);
-            assert_eq!(iter.next().unwrap().id, "A.B".into());
-            assert_eq!(iter.next().unwrap().id, "A.E".into());
+            assert_eq!(iter.next().unwrap().id, MarkerId("A.B".into()));
+            assert_eq!(iter.next().unwrap().id, MarkerId("A.E".into()));
         }
 
         let root = roots.next().unwrap();
-        assert_eq!(root.id, "G".into());
+        assert_eq!(root.id, MarkerId("G".into()));
         {
             let mut iter = pack.iter(&root.id);
-            assert_eq!(iter.next().unwrap().id, "G.H".into());
-            assert_eq!(iter.next().unwrap().id, "G.I".into());
+            assert_eq!(iter.next().unwrap().id, MarkerId("G.H".into()));
+            assert_eq!(iter.next().unwrap().id, MarkerId("G.I".into()));
         }
     }
 
@@ -463,7 +451,7 @@ mod tests {
         let pack = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
 
         {
-            let mut pois = pack.get_pois(&"A".into()).unwrap().iter();
+            let mut pois = pack.get_pois(&MarkerId("A".into())).unwrap().iter();
             let poi: &model::Poi = pois.next().unwrap();
             assert_eq!(poi.map_id, Some(15));
             assert_eq!(poi.position.unwrap().x, 100.0);
@@ -471,7 +459,7 @@ mod tests {
             assert_eq!(poi.position.unwrap().z, -100.0);
         }
         {
-            let mut pois = pack.get_pois(&"A.B".into()).unwrap().iter();
+            let mut pois = pack.get_pois(&MarkerId("A.B".into())).unwrap().iter();
             let poi: &model::Poi = pois.next().unwrap();
             assert_eq!(poi.map_id, Some(15));
             assert_eq!(poi.position.unwrap().x, 200.0);
@@ -479,7 +467,7 @@ mod tests {
             assert_eq!(poi.position.unwrap().z, -200.0);
         }
         {
-            let mut pois = pack.get_pois(&"A.E".into()).unwrap().iter();
+            let mut pois = pack.get_pois(&MarkerId("A.E".into())).unwrap().iter();
             let poi: &model::Poi = pois.next().unwrap();
             assert_eq!(poi.map_id, Some(15));
             assert_eq!(poi.position.unwrap().x, 300.0);
@@ -494,7 +482,7 @@ mod tests {
         }
 
         {
-            let mut pois = pack.get_pois(&"G.K".into()).unwrap().iter();
+            let mut pois = pack.get_pois(&MarkerId("G.K".into())).unwrap().iter();
             let poi: &model::Poi = pois.next().unwrap();
             assert_eq!(poi.map_id, Some(15));
             assert_eq!(poi.position.unwrap().x, 500.0);
@@ -503,7 +491,7 @@ mod tests {
         }
 
         {
-            let mut pois = pack.get_pois(&"G.L".into()).unwrap().iter();
+            let mut pois = pack.get_pois(&MarkerId("G.L".into())).unwrap().iter();
             let poi: &model::Poi = pois.next().unwrap();
             assert_eq!(poi.map_id, Some(15));
             assert_eq!(poi.position.unwrap().x, 600.0);
