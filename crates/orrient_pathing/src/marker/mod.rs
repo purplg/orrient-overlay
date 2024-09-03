@@ -16,7 +16,8 @@ pub struct LoadedMarkers(pub HashSet<FullMarkerId>);
 #[derive(Component)]
 struct Marker(FullMarkerId);
 
-fn update_markers_system(
+/// Show which markers are valid for the current map
+fn active_markers_system(
     packs: Res<MarkerPacks>,
     map_id: Res<MapId>,
     mut events: EventWriter<MarkerEvent>,
@@ -42,7 +43,7 @@ impl bevy::prelude::Plugin for Plugin {
 
         app.add_systems(
             Update,
-            update_markers_system
+            active_markers_system
                 .run_if(in_state(GameState::InGame))
                 .run_if(resource_exists_and_changed::<MapId>),
         );
