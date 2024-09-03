@@ -21,7 +21,7 @@ struct OrrientMenuItem(pub MarkerEvent);
 
 #[derive(Event, Clone, Debug)]
 pub enum UiEvent {
-    OpenUi,
+    ToggleUI,
     CloseUi,
     CompassSize(UVec2),
     PlayerPosition(Vec2),

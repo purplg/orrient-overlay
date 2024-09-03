@@ -197,7 +197,7 @@ fn toggle_show_ui(
 ) {
     for event in events.read() {
         match event {
-            UiEvent::OpenUi => {
+            UiEvent::ToggleUI => {
                 let mut window = window.single_mut();
                 if window.cursor.hit_test {
                     window.cursor.hit_test = false;

@@ -130,7 +130,7 @@ fn socket_system(
                     state: ButtonState::Pressed,
                 } => match action {
                     Action::Menu => {
-                        ui_events.send(UiEvent::OpenUi);
+                        ui_events.send(UiEvent::ToggleUI);
                     }
                     Action::Close => {
                         ui_events.send(UiEvent::CloseUi);

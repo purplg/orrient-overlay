@@ -13,7 +13,7 @@ fn update(mut events: EventReader<ActionEvent>, mut mumble_link_event: EventWrit
             } => match action {
                 Action::Modifier => {}
                 Action::Menu => {
-                    mumble_link_event.send(UiEvent::OpenUi);
+                    mumble_link_event.send(UiEvent::ToggleUI);
                 }
                 Action::Close => {
                     mumble_link_event.send(UiEvent::CloseUi);
