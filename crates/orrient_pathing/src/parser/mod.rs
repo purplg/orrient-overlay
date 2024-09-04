@@ -10,11 +10,10 @@ use pack::MarkerId;
 use pack::MarkerPack;
 use pack::MarkerPackBuilder;
 
-use anyhow::Context;
-use anyhow::Result;
+use bevy::prelude::*;
+
 use bevy::log::debug;
 use bevy::log::warn;
-use bevy::prelude::*;
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::texture::CompressedImageFormats;
 use bevy::render::texture::ImageAddressMode;

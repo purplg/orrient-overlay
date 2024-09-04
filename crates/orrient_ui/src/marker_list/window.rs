@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
-use orrient_pathing::marker::LoadedMarkers;
+use orrient_pathing::marker::ActiveMarkers;
+use orrient_pathing::marker::VisibleMarkers;
 use orrient_pathing::prelude::*;
 
 use super::marker_button::UiMarkerButtonExt as _;
@@ -114,7 +115,7 @@ fn set_column(
     packs: Res<MarkerPacks>,
     columns: Query<(Entity, &Column)>,
     marker_view: Query<Entity, With<MarkerView>>,
-    loaded: Res<LoadedMarkers>,
+    visible_markers: Res<VisibleMarkers>,
 ) {
     let Ok(marker_view) = marker_view.get_single() else {
         return;
@@ -173,7 +174,7 @@ fn set_column(
                                     parent.marker_separator(&marker.label);
                                 } else {
                                     let full_id = full_id.with_marker_id(marker.id.clone());
-                                    let checked = loaded.contains(&full_id);
+                                    let checked = visible_markers.contains(&full_id);
                                     parent.marker_button(pack, marker, next_column_id, checked);
                                 }
                             }

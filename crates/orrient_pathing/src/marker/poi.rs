@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use orrient_core::prelude::*;
 
-use super::LoadedMarkers;
+use super::ActiveMarkers;
 use crate::events::MarkerEvent;
 use crate::parser::pack::Behavior;
 use crate::parser::MarkerPacks;
@@ -166,7 +166,6 @@ pub(super) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(BillboardPlugin);
-        app.init_resource::<LoadedMarkers>();
 
         app.add_systems(Startup, setup);
         app.add_systems(
