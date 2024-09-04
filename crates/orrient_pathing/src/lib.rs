@@ -3,6 +3,9 @@ pub mod marker;
 pub mod parser;
 
 use bevy::prelude::*;
+use events::MarkerEvent;
+use parser::PackId;
+use prelude::{FullMarkerId, MarkerId};
 
 pub mod prelude {
     pub use crate::events::MarkerEvent;

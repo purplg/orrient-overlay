@@ -5,6 +5,7 @@ use super::ActiveMarkers;
 use crate::events::MarkerEvent;
 use crate::parser::pack::Behavior;
 use crate::parser::MarkerPacks;
+use crate::prelude::MarkerId;
 
 use bevy_mod_billboard::plugin::BillboardPlugin;
 use bevy_mod_billboard::BillboardMeshHandle;
@@ -12,9 +13,13 @@ use bevy_mod_billboard::BillboardTextBundle;
 use bevy_mod_billboard::BillboardTextureBundle;
 use bevy_mod_billboard::BillboardTextureHandle;
 
-fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, asset_server: Res<AssetServer>) {
     commands.insert_resource(PoiQuad(meshes.add(Rectangle::from_size(Vec2::splat(2.0)))));
+    commands.insert_resource(MissingIcon(asset_server.load("missing.png")));
 }
+
+#[derive(Resource)]
+struct MissingIcon(Handle<Image>);
 
 #[derive(Component)]
 pub struct PoiMarker;
@@ -45,6 +50,7 @@ fn spawn_poi_system(
     assets: Res<PoiQuad>,
     packs: Res<MarkerPacks>,
     map_id: Res<MapId>,
+    missing_icon: Res<MissingIcon>,
 ) {
     let mut count = 0;
     for event in events.read() {
@@ -87,26 +93,44 @@ fn spawn_poi_system(
                 .map(|icon_path| icon_path.into_string())
                 .and_then(|path| pack.get_image(&path));
 
-            let mut builder = commands.spawn_empty();
+            let mut builder = commands.spawn(TransformBundle::from_transform(
+                Transform::from_translation(pos),
+            ));
+
             if let Some(icon) = icon {
-                builder.insert(BillboardTextureBundle {
-                    mesh: BillboardMeshHandle(assets.0.clone()),
-                    texture: BillboardTextureHandle(icon),
-                    transform: Transform::from_translation(pos),
-                    ..default()
+                builder.with_children(|parent| {
+                    parent.spawn(BillboardTextureBundle {
+                        mesh: BillboardMeshHandle(assets.0.clone()),
+                        texture: BillboardTextureHandle(icon),
+                        ..default()
+                    });
                 });
             } else {
                 warn!("No icon for {}", full_id);
-                builder.insert(BillboardTextBundle {
-                    text: Text::from_section(
-                        poi.id.0.to_string(),
-                        TextStyle {
-                            font_size: 32.,
-                            ..default()
-                        },
-                    ),
-                    transform: Transform::from_translation(pos).with_scale(Vec3::splat(0.01)),
-                    ..default()
+                builder.with_children(|parent| {
+                    parent.spawn(BillboardTextureBundle {
+                        mesh: BillboardMeshHandle(assets.0.clone()),
+                        texture: BillboardTextureHandle(missing_icon.0.clone()),
+                        transform: Transform::from_scale(Vec3::splat(0.25)),
+                        ..default()
+                    });
+
+                    let display_name = pack
+                        .get(&MarkerId(poi.id.0.clone()))
+                        .map(|marker| marker.label.to_string())
+                        .unwrap_or_else(|| poi.id.0.to_string());
+                    parent.spawn(BillboardTextBundle {
+                        text: Text::from_section(
+                            display_name,
+                            TextStyle {
+                                font_size: 32.,
+                                ..default()
+                            },
+                        ),
+                        transform: Transform::from_scale(Vec3::splat(0.01))
+                            .with_translation(Vec3::Y * -0.5),
+                        ..default()
+                    });
                 });
             }
 
