@@ -398,7 +398,7 @@ impl MarkerPackBuilder {
     }
 
     pub fn add_trail_data(&mut self, file_path: String, data: TrailData) {
-        debug!(
+        trace!(
             "Found trail data: {pack_id}/{file_path}",
             pack_id = self.tree.id
         );
