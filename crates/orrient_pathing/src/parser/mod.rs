@@ -22,6 +22,9 @@ use bevy::render::texture::ImageSampler;
 use bevy::render::texture::ImageSamplerDescriptor;
 use bevy::render::texture::ImageType;
 use bevy::utils::HashMap;
+
+use anyhow::Context;
+use anyhow::Result;
 use quick_xml::events::BytesStart;
 use quick_xml::events::Event;
 use quick_xml::Reader;
@@ -137,16 +140,15 @@ enum Tag {
 
 impl Tag {
     fn from_element(element: &BytesStart) -> Result<Tag> {
-        let tag = match element.name().0 {
-            b"OverlayData" => Tag::OverlayData,
-            b"MarkerCategory" => Tag::Marker(Marker::from_attrs(element.attributes())?),
-            b"POIs" => Tag::POIs,
-            b"POI" => Tag::Poi(model::Poi::from_attrs(element.attributes())?),
-            b"Trail" => Tag::Trail(model::TrailXml::from_attrs(element.attributes())?),
-            field => Tag::UnknownField(String::from_utf8_lossy(field).to_string()),
-        };
-
-        Ok(tag)
+        let tag = core::str::from_utf8(element.name().0)?;
+        Ok(match tag.to_lowercase().as_ref() {
+            "overlaydata" => Tag::OverlayData,
+            "markercategory" => Tag::Marker(Marker::from_attrs(element.attributes())?),
+            "pois" => Tag::POIs,
+            "poi" => Tag::Poi(model::Poi::from_attrs(element.attributes())?),
+            "trail" => Tag::Trail(model::TrailXml::from_attrs(element.attributes())?),
+            field => Tag::UnknownField(field.to_string()),
+        })
     }
 
     fn apply(self, builder: &mut MarkerPackBuilder) {
