@@ -4,9 +4,9 @@ use crate::parser::pack::FullMarkerId;
 
 #[derive(Event, Clone, Debug)]
 pub enum MarkerEvent {
-    Show(FullMarkerId),
-    Hide(FullMarkerId),
-    HideAll,
+    Enabled(FullMarkerId),
+    Disable(FullMarkerId),
+    DisableAll,
 }
 
 pub(crate) struct Plugin;

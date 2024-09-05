@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use orrient_pathing::marker::ActiveMarkers;
-use orrient_pathing::marker::VisibleMarkers;
+use orrient_pathing::marker::MapMarkers;
+use orrient_pathing::marker::EnabledMarkers;
 use orrient_pathing::prelude::*;
 
 use super::marker_button::UiMarkerButtonExt as _;
@@ -68,7 +68,7 @@ impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
                                     name: "Hide all markers".into(),
                                     ..default()
                                 })
-                                .insert(OrrientMenuItem(MarkerEvent::HideAll));
+                                .insert(OrrientMenuItem(MarkerEvent::DisableAll));
                         },
                     );
                 });
@@ -115,7 +115,7 @@ fn set_column(
     packs: Res<MarkerPacks>,
     columns: Query<(Entity, &Column)>,
     marker_view: Query<Entity, With<MarkerView>>,
-    visible_markers: Res<VisibleMarkers>,
+    visible_markers: Res<EnabledMarkers>,
 ) {
     let Ok(marker_view) = marker_view.get_single() else {
         return;

@@ -111,7 +111,7 @@ fn show_trails(
     map_id: Res<MapId>,
 ) {
     for event in events.read() {
-        let MarkerEvent::Show(full_id) = event else {
+        let MarkerEvent::Enabled(full_id) = event else {
             continue;
         };
 

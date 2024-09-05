@@ -17,6 +17,7 @@ pub mod prelude {
     pub use crate::parser::pack::MarkerPack;
     pub use crate::parser::MarkerPacks;
     pub use crate::parser::PackId;
+    pub use crate::parser::model::Poi;
 }
 
 pub struct Plugin;

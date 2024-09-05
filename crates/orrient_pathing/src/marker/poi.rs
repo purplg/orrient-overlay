@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 use orrient_core::prelude::*;
 
-use super::ActiveMarkers;
+use super::EnabledMarkers;
+use super::MapMarkers;
 use crate::events::MarkerEvent;
 use crate::parser::pack::Behavior;
 use crate::parser::MarkerPacks;
+use crate::prelude::FullMarkerId;
 use crate::prelude::MarkerId;
 
 use bevy_mod_billboard::plugin::BillboardPlugin;
@@ -44,9 +46,41 @@ fn disappear_nearby_system(
 #[derive(Resource)]
 struct PoiQuad(Handle<Mesh>);
 
-fn spawn_poi_system(
+#[derive(Event, Clone, Debug)]
+struct SpawnPoiEvent(FullMarkerId);
+
+#[derive(Event, Clone, Debug)]
+struct DespawnPoiEvent(FullMarkerId);
+
+fn marker_event_system(
+    mut marker_events: EventReader<MarkerEvent>,
+    mut spawn_events: EventWriter<SpawnPoiEvent>,
+    mut despawn_events: EventWriter<DespawnPoiEvent>,
+    enabled_markers: Res<EnabledMarkers>,
+) {
+    for event in marker_events.read() {
+        match event {
+            MarkerEvent::Enabled(full_id) => {
+                spawn_events.send(SpawnPoiEvent(full_id.clone()));
+            }
+            MarkerEvent::Disable(full_id) => {
+                despawn_events.send(DespawnPoiEvent(full_id.clone()));
+            }
+            MarkerEvent::DisableAll => {
+                despawn_events.send_batch(
+                    enabled_markers
+                        .iter()
+                        .map(ToOwned::to_owned)
+                        .map(DespawnPoiEvent),
+                );
+            }
+        }
+    }
+}
+
+fn spawn_pois_system(
     mut commands: Commands,
-    mut events: EventReader<MarkerEvent>,
+    mut events: EventReader<SpawnPoiEvent>,
     assets: Res<PoiQuad>,
     packs: Res<MarkerPacks>,
     map_id: Res<MapId>,
@@ -54,9 +88,7 @@ fn spawn_poi_system(
 ) {
     let mut count = 0;
     for event in events.read() {
-        let MarkerEvent::Show(full_id) = event else {
-            continue;
-        };
+        let SpawnPoiEvent(full_id) = event;
 
         let Some(pack) = &packs.get(&full_id.pack_id) else {
             warn!("Pack ID not found: {}", &full_id.pack_id);
@@ -155,40 +187,43 @@ fn spawn_poi_system(
 fn despawn_pois_system(
     mut commands: Commands,
     poi_query: Query<(Entity, &super::Marker), With<PoiMarker>>,
-    mut events: EventReader<MarkerEvent>,
+    mut events: EventReader<DespawnPoiEvent>,
 ) {
-    for event in events.read() {
-        match event {
-            MarkerEvent::Hide(full_id) => {
-                let mut count = 0;
-                for (entity, marker) in &poi_query {
-                    if &marker.0 == full_id {
-                        commands.entity(entity).despawn_recursive();
-                        count += 1;
-                    }
-                }
-                if count > 0 {
-                    info!("Unloaded {} POIs.", count);
-                }
+    for full_id in events.read().map(|event| &event.0) {
+        let mut count = 0;
+        for (entity, marker) in &poi_query {
+            if &marker.0 == full_id {
+                commands.entity(entity).despawn_recursive();
+                count += 1;
             }
-            MarkerEvent::HideAll => {
-                let mut count = 0;
-                for (entity, _marker) in &poi_query {
-                    commands.entity(entity).despawn_recursive();
-                    count += 1;
-                }
-                if count > 0 {
-                    info!("Unloaded {} POIs.", count);
-                }
-            }
-            MarkerEvent::Show(_) => {}
+        }
+        if count > 0 {
+            info!("Unloaded {} POIs.", count);
         }
     }
+}
+
+fn map_exit_system(mut commands: Commands, poi_query: Query<Entity, With<PoiMarker>>) {
+    for entity in &poi_query {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
+fn map_enter_system(enabled_markers: Res<EnabledMarkers>, mut events: EventWriter<SpawnPoiEvent>) {
+    events.send_batch(
+        enabled_markers
+            .iter()
+            .map(ToOwned::to_owned)
+            .map(SpawnPoiEvent),
+    );
 }
 
 pub(super) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
+        app.add_event::<SpawnPoiEvent>();
+        app.add_event::<DespawnPoiEvent>();
+
         app.add_plugins(BillboardPlugin);
 
         app.add_systems(Startup, setup);
@@ -200,10 +235,26 @@ impl bevy::prelude::Plugin for Plugin {
         );
         app.add_systems(
             Update,
-            (spawn_poi_system, despawn_pois_system)
-                .chain()
+            spawn_pois_system
+                .run_if(in_state(GameState::InGame))
+                .run_if(on_event::<SpawnPoiEvent>()),
+        );
+
+        app.add_systems(
+            Update,
+            despawn_pois_system
+                .run_if(in_state(GameState::InGame))
+                .run_if(on_event::<DespawnPoiEvent>()),
+        );
+
+        app.add_systems(
+            Update,
+            marker_event_system
                 .run_if(in_state(GameState::InGame))
                 .run_if(on_event::<MarkerEvent>()),
         );
+
+        app.add_systems(OnEnter(GameState::ChangingMaps), map_exit_system);
+        app.add_systems(OnEnter(GameState::InGame), map_enter_system);
     }
 }

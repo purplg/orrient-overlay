@@ -1,4 +1,4 @@
-mod model;
+pub(crate) mod model;
 pub mod pack;
 mod trail;
 
