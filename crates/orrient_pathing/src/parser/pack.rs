@@ -172,11 +172,8 @@ impl Marker {
                     _ => {}
                 },
                 "iconfile" => {
-                    if let Ok(path) = Utf8WindowsPathBuf::from_str(&value) {
-                        this.icon_file = Some(path.with_unix_encoding().to_path_buf());
-                    } else {
-                        warn!("Icon path is corrupt: {:?}", attr)
-                    }
+                    let Ok(path) = Utf8WindowsPathBuf::from_str(&value.to_lowercase());
+                    this.icon_file = Some(path.with_unix_encoding().to_path_buf());
                 }
                 _ => {}
             }
