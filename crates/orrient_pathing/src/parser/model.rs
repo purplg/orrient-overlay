@@ -194,8 +194,12 @@ impl TrailXml {
 
         Ok(Self {
             id: id.ok_or(anyhow!("Trail missing field `type`."))?.into(),
-            trail_file: trail_file.ok_or(anyhow!("Trail missing field `trailData`."))?,
-            texture_file: texture_file.ok_or(anyhow!("Trail missing field `texture`."))?,
+            trail_file: trail_file
+                .map(|file| file.to_lowercase())
+                .ok_or(anyhow!("Trail missing field `trailData`."))?,
+            texture_file: texture_file
+                .map(|file| file.to_lowercase())
+                .ok_or(anyhow!("Trail missing field `texture`."))?,
         })
     }
 }
