@@ -17,6 +17,6 @@ bevy_mod_billboard = "0.7.0"
 
 ### Console ####################################################################
 # https://github.com/RichoDemus/bevy-console/
-bevy_console = { git = "https://github.com/msklosak/bevy-console", branch = "bevy_014" }
+bevy_console = { git = "https://github.com/RichoDemus/bevy-console/" }
 # https://github.com/clap-rs/clap
 clap = { version = "4.5.10", features = ["derive"] }

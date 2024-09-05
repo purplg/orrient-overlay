@@ -728,7 +728,7 @@ dependencies = [
 [[package]]
 name = "bevy_console"
 version = "0.12.0"
-source = "git+https://github.com/msklosak/bevy-console?branch=bevy_014#53cbb9867b253e0bb50d792752939a3a50e24d38"
+source = "git+https://github.com/RichoDemus/bevy-console/#2f36e81b548ca35947826c096752eedf192a8b19"
 dependencies = [
  "bevy",
  "bevy_console_derive",
@@ -740,7 +740,7 @@ dependencies = [
 [[package]]
 name = "bevy_console_derive"
 version = "0.5.0"
-source = "git+https://github.com/msklosak/bevy-console?branch=bevy_014#53cbb9867b253e0bb50d792752939a3a50e24d38"
+source = "git+https://github.com/RichoDemus/bevy-console/#2f36e81b548ca35947826c096752eedf192a8b19"
 dependencies = [
  "better-bae",
  "proc-macro2",
@@ -849,9 +849,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_egui"
-version = "0.28.0"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e4a90f30f2849a07d91e393b10c0cc05df09b5773c010ddde57dd8b583be230"
+checksum = "128438a8163e49528207aabf20d3ff0890fd6be0f0054626915995efac87922b"
 dependencies = [
  "arboard",
  "bevy",
@@ -866,6 +866,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "webbrowser",
+ "wgpu-types",
  "winit",
 ]
 
