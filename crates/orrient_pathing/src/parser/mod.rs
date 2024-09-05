@@ -169,8 +169,12 @@ impl Tag {
                 builder.add_trail_tag(MarkerId(trail.id.clone()), trail);
             }
             Tag::Route => {}
-            Tag::UnknownField(_) => {}
-            Tag::CorruptField(_) => todo!(),
+            Tag::UnknownField(element) => {
+                warn!("Unknown Field: {element}");
+            }
+            Tag::CorruptField(element) => {
+                warn!("Corrupt Field: {element}");
+            }
         }
     }
 }
