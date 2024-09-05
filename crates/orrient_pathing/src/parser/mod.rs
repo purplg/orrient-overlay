@@ -46,8 +46,8 @@ fn load_system(
 ) {
     info!("Loading marker packs...");
     match load(config_dir.as_path(), &mut images) {
-        Ok(pack) => {
-            commands.insert_resource(MarkerPacks(pack));
+        Ok(packs) => {
+            commands.insert_resource(MarkerPacks(packs));
         }
         Err(err) => {
             warn!("Error loading marker packs {err:?}");
