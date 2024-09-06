@@ -126,22 +126,10 @@ pub struct Marker {
     pub poi_description: Option<String>,
     pub map_ids: HashSet<u32>,
     pub icon_file: Option<Utf8PathBuf<Utf8UnixEncoding>>,
+    pub texture: Option<String>,
 }
 
 impl Marker {
-    pub(super) fn new(
-        id: impl Into<Cow<'static, str>>,
-        label: impl Into<String>,
-        kind: MarkerKind,
-    ) -> Self {
-        Self {
-            id: MarkerId(id.into()),
-            label: label.into(),
-            kind,
-            ..Default::default()
-        }
-    }
-
     fn copy_from_parent(&mut self, parent: &Marker) {
         self.id = MarkerId(format!("{}.{}", parent.id, self.id).into());
         self.depth = parent.depth + 1;
@@ -175,6 +163,9 @@ impl Marker {
                 "iconfile" => {
                     let Ok(path) = Utf8WindowsPathBuf::from_str(&value.to_lowercase());
                     this.icon_file = Some(path.with_unix_encoding().to_path_buf());
+                }
+                "texture" => {
+                    this.texture = Some(value.to_lowercase());
                 }
                 _ => {}
             }
@@ -450,18 +441,29 @@ impl MarkerPackBuilder {
             }
         }
 
-        for (id, tags) in self.trail_tags.drain() {
+        for (id, tags) in self.trail_tags.iter() {
             for tag in tags {
                 let Some(data) = self.trail_data.remove(&tag.trail_file) else {
                     warn!("TrailData not found for XML tag {id}");
                     continue;
                 };
+
+                let Some(texture) = tag
+                    .texture_file
+                    .as_ref()
+                    .or_else(|| self.get(&id).and_then(|marker| marker.texture.as_ref()))
+                else {
+                    warn!("Trail has no texture: {id}");
+                    continue;
+                };
+
                 let route = Route {
                     map_id: data.map_id,
                     path: data.path,
-                    texture_file: tag.texture_file,
+                    texture_file: texture.to_string(),
                 };
-                if let Some(routes) = self.tree.trails.get_mut(&id) {
+
+                if let Some(routes) = self.tree.trails.get_mut(id) {
                     routes.push(route);
                 } else {
                     self.tree.trails.insert(id.clone(), vec![route]);

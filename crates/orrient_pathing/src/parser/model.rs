@@ -158,7 +158,7 @@ pub(super) struct TrailXml {
     // trailData
     pub trail_file: String,
     // texture
-    pub texture_file: String,
+    pub texture_file: Option<String>,
 }
 
 impl TrailXml {
@@ -197,9 +197,7 @@ impl TrailXml {
             trail_file: trail_file
                 .map(|file| file.to_lowercase())
                 .ok_or(anyhow!("Trail missing field `trailData`."))?,
-            texture_file: texture_file
-                .map(|file| file.to_lowercase())
-                .ok_or(anyhow!("Trail missing field `texture`."))?,
+            texture_file: texture_file.map(|file| file.to_lowercase()),
         })
     }
 }
