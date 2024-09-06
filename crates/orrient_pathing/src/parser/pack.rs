@@ -6,6 +6,7 @@ use petgraph::{
     Direction,
 };
 use quick_xml::events::attributes::Attributes;
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::{collections::VecDeque, convert::identity, ops::Deref, str::FromStr as _};
@@ -17,7 +18,7 @@ use super::{
     PackId,
 };
 
-#[derive(Hash, Clone, Default, Debug, PartialEq, Eq)]
+#[derive(Hash, Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MarkerId(pub Cow<'static, str>);
 
 impl MarkerId {
@@ -38,7 +39,7 @@ impl std::fmt::Display for MarkerId {
     }
 }
 
-#[derive(Component, Hash, Clone, Default, Debug, PartialEq, Eq)]
+#[derive(Component, Hash, Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FullMarkerId {
     pub pack_id: PackId,
     pub marker_id: MarkerId,

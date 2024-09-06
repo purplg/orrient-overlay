@@ -27,6 +27,8 @@ use anyhow::Result;
 use quick_xml::events::BytesStart;
 use quick_xml::events::Event;
 use quick_xml::Reader;
+use serde::Deserialize;
+use serde::Serialize;
 use std::borrow::Cow;
 use std::fs::File;
 use std::io::BufRead;
@@ -93,7 +95,7 @@ fn load(path: &Path, images: &mut Assets<Image>) -> Result<HashMap<PackId, Marke
     Ok(packs)
 }
 
-#[derive(Hash, Clone, Default, Debug, PartialEq, Eq)]
+#[derive(Hash, Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PackId(pub String);
 
 impl PackId {

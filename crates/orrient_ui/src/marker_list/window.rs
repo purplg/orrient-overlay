@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 
-use orrient_pathing::marker::MapMarkers;
+use orrient_core::prelude::AppState;
+use orrient_core::prelude::GameState;
 use orrient_pathing::marker::EnabledMarkers;
+use orrient_pathing::marker::MapMarkers;
 use orrient_pathing::prelude::*;
 
 use super::marker_button::UiMarkerButtonExt as _;
@@ -101,7 +103,6 @@ fn setup_window(
     query: Query<Entity, With<MarkerList>>,
 ) {
     commands.ui_builder(query.single()).insert(MarkerView);
-
     events.send(MarkerWindowEvent::SetRootColumn);
 }
 
@@ -236,9 +237,9 @@ pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<MarkerWindowEvent>();
-        app.add_systems(Update, menu_interaction);
-        app.add_systems(Update, set_column);
-        app.add_systems(Update, toggle_show_ui);
+        app.add_systems(Update, menu_interaction.run_if(in_state(AppState::Running)));
+        app.add_systems(Update, set_column.run_if(in_state(AppState::Running)));
+        app.add_systems(Update, toggle_show_ui.run_if(in_state(AppState::Running)));
         app.add_systems(
             Update,
             (remove_window, setup_window)
