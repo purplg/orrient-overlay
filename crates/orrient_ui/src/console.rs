@@ -22,7 +22,6 @@ use crate::UiEvent;
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "unloadall")]
 struct UnloadAllCommand;
-
 fn unload_all_command(
     mut log: ConsoleCommand<UnloadAllCommand>,
     mut events: EventWriter<MarkerEvent>,
@@ -39,7 +38,6 @@ fn unload_all_command(
 struct MapIdCommand {
     new_id: u32,
 }
-
 fn mapid_command(mut log: ConsoleCommand<MapIdCommand>, mut commands: Commands) {
     if let Some(Ok(MapIdCommand { new_id })) = log.take() {
         commands.insert_resource(MapId(new_id));
@@ -51,7 +49,6 @@ fn mapid_command(mut log: ConsoleCommand<MapIdCommand>, mut commands: Commands) 
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "packs")]
 struct PacksCommand;
-
 fn packs_command(mut log: ConsoleCommand<PacksCommand>, packs: Res<MarkerPacks>) {
     if let Some(Ok(PacksCommand)) = log.take() {
         for id in packs.keys() {
@@ -65,14 +62,12 @@ fn packs_command(mut log: ConsoleCommand<PacksCommand>, packs: Res<MarkerPacks>)
 enum System {
     Compass,
 }
-
 /// Initialize some systems to some default value
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "setup")]
 struct SetupCommand {
     system: System,
 }
-
 fn setup_command(mut log: ConsoleCommand<SetupCommand>, mut ui_events: EventWriter<UiEvent>) {
     if let Some(Ok(SetupCommand { system })) = log.take() {
         match system {
@@ -92,14 +87,13 @@ struct AddCommand {
     kind: Add,
 }
 
+#[derive(Component)]
+struct CreatedByConsole;
+
 #[derive(Subcommand, Clone)]
 enum Add {
     Marker { x: f32, y: f32 },
 }
-
-#[derive(Component)]
-struct CreatedByConsole;
-
 fn add_command(
     mut log: ConsoleCommand<AddCommand>,
     mut commands: Commands,
@@ -133,7 +127,6 @@ struct DeleteCommand {
 enum Delete {
     Markers,
 }
-
 fn delete_command(
     mut log: ConsoleCommand<DeleteCommand>,
     mut commands: Commands,
@@ -171,7 +164,6 @@ struct MarkerCommand {
 enum MarkerSubcommand {
     Load { pack_id: String, marker_id: String },
 }
-
 fn marker_command(mut log: ConsoleCommand<MarkerCommand>, mut events: EventWriter<MarkerEvent>) {
     if let Some(Ok(MarkerCommand { subcommand: kind })) = log.take() {
         match kind {
@@ -197,7 +189,6 @@ struct TrailCommand {
 enum Trail {
     Load { pack_id: String, marker_id: String },
 }
-
 fn trail_command(
     mut log: ConsoleCommand<TrailCommand>,
     mut commands: Commands,

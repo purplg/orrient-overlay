@@ -15,11 +15,9 @@ impl bevy::prelude::Plugin for Plugin {
 
 #[derive(Component)]
 struct ToolTipWindow;
-
 pub trait UiToolTipExt {
     fn enable_tooltip(&mut self);
 }
-
 impl UiToolTipExt for UiBuilder<'_, Entity> {
     fn enable_tooltip(&mut self) {
         self.floating_panel(

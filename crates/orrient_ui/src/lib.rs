@@ -29,6 +29,7 @@ pub enum UiEvent {
     MapScale(f32),
     MapOpen(bool),
 }
+
 fn setup(mut commands: Commands) {
     let camera = commands
         .spawn(Camera3dBundle {
