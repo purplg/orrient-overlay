@@ -1,12 +1,9 @@
 [package]
 name = "orrient_input"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
-bevy_app = "0.14.1"
-bevy_ecs = "0.14.1"
-bevy_input = { version = "0.14.1", features = ["serialize"] }
-
-smol_str = { version = "0.2.2", features = ["serde"] }
-serde = "1.0.204"
+bevy = { workspace = true, features = ["serialize"] }
+smol_str.workspace = true
+serde.workspace = true

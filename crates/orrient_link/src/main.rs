@@ -4,14 +4,13 @@ mod net;
 
 use std::ops::Deref;
 
-use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 
 fn main() {
     env_logger::init();
 
     App::new()
-        .add_plugins(bevy_app::ScheduleRunnerPlugin::default())
+        .add_plugins(bevy::app::ScheduleRunnerPlugin::default())
         .add_plugins(input::Plugin)
         .add_plugins(net::Plugin)
         .add_plugins(link::Plugin)

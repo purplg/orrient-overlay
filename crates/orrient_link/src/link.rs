@@ -2,8 +2,7 @@ use crate::{ChannelRx, ChannelTx};
 use log::{error, info};
 use orrient_link::{MumbleLinkDataDef, SocketMessage};
 
-use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 
 use std::thread::sleep;
 use std::time::Duration;
@@ -98,7 +97,7 @@ fn setup(mut commands: Commands) {
 }
 
 pub(crate) struct Plugin;
-impl bevy_app::prelude::Plugin for Plugin {
+impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup);
     }

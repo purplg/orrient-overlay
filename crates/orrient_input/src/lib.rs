@@ -1,6 +1,5 @@
-use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
-use bevy_input::{prelude::*, ButtonState};
+use bevy::{input::ButtonState, prelude::*};
+
 use serde::{Deserialize, Serialize};
 
 fn input_map(value: &KeyCode) -> Option<Action> {
@@ -61,7 +60,7 @@ pub enum Action {
 }
 
 pub struct Plugin;
-impl bevy_app::prelude::Plugin for Plugin {
+impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<ActionEvent>();
         app.add_systems(Update, input_system);

@@ -1,6 +1,6 @@
-use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
-use bevy_input::{keyboard::NativeKeyCode, prelude::*, ButtonState};
+use bevy::input::keyboard::NativeKeyCode;
+use bevy::input::ButtonState;
+use bevy::prelude::*;
 
 use orrient_input::{Action, ActionEvent};
 use orrient_link::SocketMessage;
@@ -97,10 +97,9 @@ fn action_system(
 }
 
 pub(crate) struct Plugin;
-
-impl bevy_app::prelude::Plugin for Plugin {
+impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(bevy_input::InputPlugin);
+        app.add_plugins(bevy::input::InputPlugin);
         app.add_plugins(orrient_input::Plugin);
         app.add_systems(Startup, setup);
         app.add_systems(Update, input_system);

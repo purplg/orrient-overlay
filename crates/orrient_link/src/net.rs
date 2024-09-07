@@ -1,5 +1,4 @@
-use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use bincode::Options as _;
 use orrient_link::SocketMessage;
 
@@ -40,7 +39,7 @@ fn socket_system(rx: Res<ChannelRx<SocketMessage>>, socket: Res<LinkSocket>) {
 
 pub(crate) struct Plugin;
 
-impl bevy_app::prelude::Plugin for Plugin {
+impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup);
         app.add_systems(Update, socket_system);
