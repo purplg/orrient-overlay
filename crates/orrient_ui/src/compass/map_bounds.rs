@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use orrient_core::prelude::*;
 
-use orrient_api::{Request, RequestComplete, RequestQueue, Response};
+use orrient_api::prelude::*;
 
 #[derive(Resource, Clone)]
 pub(super) struct MapBounds {
@@ -10,18 +10,18 @@ pub(super) struct MapBounds {
     pub(super) continent: Rect,
 }
 
-fn update_bounds(mut commands: Commands, map_id: Res<MapId>, mut queue: ResMut<RequestQueue>) {
+fn update_bounds(mut commands: Commands, map_id: Res<MapId>, mut queue: ResMut<GW2RequestQueue>) {
     commands.remove_resource::<MapBounds>();
-    queue.fetch(Request::Map(map_id.0));
+    queue.fetch(GW2Endpoint::Map(map_id.0));
 }
 
 fn api_response_system(
     mut commands: Commands,
-    mut api_events: EventReader<RequestComplete>,
+    mut api_events: EventReader<GW2RequestComplete>,
     map_id: Res<MapId>,
 ) {
     for event in api_events.read() {
-        if let RequestComplete(Response::Map(map)) = event {
+        if let GW2RequestComplete(GW2Response::Map(map)) = event {
             if map_id.0 == map.id {
                 commands.insert_resource(MapBounds {
                     map: Rect {
@@ -54,7 +54,7 @@ impl bevy::prelude::Plugin for Plugin {
         );
         app.add_systems(
             Update,
-            api_response_system.run_if(on_event::<RequestComplete>()),
+            api_response_system.run_if(on_event::<GW2RequestComplete>()),
         );
     }
 }

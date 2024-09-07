@@ -1,8 +1,9 @@
+use orrient_core::prelude::MapId;
+use orrient_pathing::prelude::PoiMarker;
+
 use bevy::color::palettes;
 use bevy::prelude::*;
 use bevy_mod_billboard::BillboardTextureHandle;
-use orrient_core::prelude::MapId;
-use orrient_pathing::marker::poi::PoiMarker;
 use sickle_ui::prelude::UiContainerExt as _;
 use sickle_ui::ui_builder::UiBuilder;
 use sickle_ui::ui_builder::UiBuilderExt;

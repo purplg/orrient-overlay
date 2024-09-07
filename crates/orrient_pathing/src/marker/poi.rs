@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use orrient_core::prelude::*;
 
 use super::EnabledMarkers;
-use super::MapMarkers;
 use crate::events::MarkerEvent;
 use crate::parser::pack::Behavior;
 use crate::parser::MarkerPacks;

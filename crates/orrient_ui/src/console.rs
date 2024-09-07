@@ -2,10 +2,6 @@ use bevy::color::palettes;
 use bevy::prelude::*;
 
 use orrient_core::prelude::*;
-use orrient_pathing::marker::poi::PoiMarker;
-use orrient_pathing::marker::trail::create_trail_mesh;
-use orrient_pathing::marker::trail::TrailMaterial;
-use orrient_pathing::marker::trail::TrailMesh;
 use orrient_pathing::prelude::*;
 
 use bevy_console::clap::Parser;

@@ -1,9 +1,8 @@
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 
 use orrient_core::prelude::AppState;
-use orrient_pathing::marker::EnabledMarkers;
 use orrient_pathing::prelude::*;
-use sickle_ui::prelude::UiRoot;
 
 use super::downloads::DownloadsView;
 use super::marker_button::UiMarkerButtonExt as _;
@@ -11,7 +10,8 @@ use super::separator::UiMarkerSeparatorExt as _;
 use super::tooltip::UiToolTipExt as _;
 use crate::OrrientMenuItem;
 use crate::UiEvent;
-use bevy::window::PrimaryWindow;
+
+use sickle_ui::prelude::UiRoot;
 use sickle_ui::ui_builder::UiBuilderExt as _;
 use sickle_ui::ui_style::generated::SetHeightExt as _;
 use sickle_ui::ui_style::generated::SetWidthExt as _;

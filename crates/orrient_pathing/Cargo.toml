@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 orrient_core = { path = "../orrient_core" }
+orrient_api = { path = "../orrient_api" }
 
 bevy = "0.14.1"
 # https://github.com/kulkalkul/bevy_mod_billboard

@@ -27,13 +27,39 @@ impl DownloadPackMain {
             .margin(UiRect {
                 left: Val::Px(theme_spacing.gaps.medium),
                 right: Val::Px(theme_spacing.gaps.medium),
-                top: Val::Px(theme_spacing.gaps.medium),
-                bottom: Val::Px(0.0),
+                top: Val::Px(0.0),
+                bottom: Val::Px(theme_spacing.gaps.medium),
             })
             .padding(UiRect::all(Val::Px(theme_spacing.gaps.large)));
     }
 }
 impl DefaultTheme for DownloadPackMain {
+    fn default_theme() -> Option<Theme<Self>> {
+        Self::theme().into()
+    }
+}
+
+/// A button bar for the remote repo list.
+#[derive(Component, Clone, Default, Debug, UiContext)]
+pub(super) struct RepoBar;
+impl RepoBar {
+    pub(super) fn frame() -> impl Bundle {
+        (Self, NodeBundle::default())
+    }
+
+    fn theme() -> Theme<Self> {
+        let base_theme = PseudoTheme::deferred(None, Self::primary_style);
+        Theme::new(vec![base_theme])
+    }
+
+    fn primary_style(style_builder: &mut StyleBuilder, theme: &ThemeData) {
+        style_builder
+            .padding(UiRect::all(Val::Px(theme.spacing.gaps.small)))
+            .flex_direction(FlexDirection::Row)
+            .justify_content(JustifyContent::FlexEnd);
+    }
+}
+impl DefaultTheme for RepoBar {
     fn default_theme() -> Option<Theme<Self>> {
         Self::theme().into()
     }
@@ -115,7 +141,7 @@ impl RepoButton {
     fn disabled_style(style_builder: &mut StyleBuilder, _: Entity, _: &Self, world: &World) {
         let theme_data = world.resource::<ThemeData>().clone();
         let colors = theme_data.colors();
-        style_builder.background_color(colors.on(On::Error));
+        style_builder.background_color(colors.surface(Surface::SurfaceDim));
     }
 }
 impl DefaultTheme for RepoButton {
@@ -271,6 +297,7 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ComponentThemePlugin::<DownloadPackMain>::default());
         app.add_plugins(ComponentThemePlugin::<Content>::default());
+        app.add_plugins(ComponentThemePlugin::<RepoBar>::default());
         app.add_plugins(ComponentThemePlugin::<RepoButton>::default());
         app.add_plugins(ComponentThemePlugin::<Categories>::default());
         app.add_plugins(ComponentThemePlugin::<Buttons>::default());

@@ -1,20 +1,19 @@
 pub mod poi;
 pub mod trail;
 
-use std::fs::File;
-use std::io::{Read as _, Write as _};
-
-use directories::BaseDirs;
+use crate::events::MarkerEvent;
+use crate::parser::pack::FullMarkerId;
+use crate::parser::MarkerPacks;
 use orrient_core::prelude::*;
 
 use bevy::prelude::*;
 use bevy::utils::HashSet;
+
+use directories::BaseDirs;
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
-
-use crate::events::MarkerEvent;
-use crate::parser::pack::FullMarkerId;
-use crate::parser::MarkerPacks;
+use std::fs::File;
+use std::io::Write as _;
 
 #[derive(Resource, Clone, Deref, DerefMut, Debug, Default)]
 pub struct MapMarkers(pub HashSet<FullMarkerId>);
