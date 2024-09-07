@@ -1,5 +1,5 @@
-mod console;
 pub mod compass;
+mod console;
 mod debug_panel;
 mod marker_list;
 
@@ -8,12 +8,6 @@ use bevy::prelude::*;
 use orrient_core::prelude::*;
 use orrient_pathing::prelude::*;
 
-use compass::UiCompassWindowExt as _;
-use debug_panel::UiDebugPanelExt as _;
-use marker_list::window::UiMarkerWindowExt as _;
-use sickle_ui::ui_builder::UiBuilderExt as _;
-use sickle_ui::ui_builder::UiRoot;
-use sickle_ui::widgets::prelude::*;
 use sickle_ui::SickleUiPlugin;
 
 #[derive(Component)]
@@ -30,7 +24,10 @@ pub enum UiEvent {
     MapOpen(bool),
 }
 
-fn setup(mut commands: Commands) {
+#[derive(Resource)]
+struct UiCamera(Entity);
+
+fn setup_camera(mut commands: Commands) {
     let camera = commands
         .spawn(Camera3dBundle {
             camera: Camera {
@@ -40,21 +37,7 @@ fn setup(mut commands: Commands) {
             ..default()
         })
         .id();
-
-    commands.ui_builder(UiRoot).container(
-        (
-            NodeBundle {
-                background_color: Color::NONE.into(),
-                ..default()
-            },
-            TargetCamera(camera),
-        ),
-        |container| {
-            container.compass();
-            container.marker_window();
-            container.debug_panel();
-        },
-    );
+    commands.insert_resource(UiCamera(camera));
 }
 
 fn ui_state_system(mut ui_events: EventReader<UiEvent>, mut state: ResMut<NextState<GameState>>) {
@@ -79,7 +62,8 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_plugins(compass::Plugin);
         app.add_plugins(marker_list::Plugin);
         app.add_plugins(debug_panel::Plugin);
-        app.add_systems(Startup, setup);
+
+        app.add_systems(PreStartup, setup_camera);
         app.add_systems(
             Update,
             ui_state_system.run_if(in_state(AppState::Running).and_then(on_event::<UiEvent>())),

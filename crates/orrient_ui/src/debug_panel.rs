@@ -2,9 +2,10 @@ use bevy::prelude::*;
 
 use orrient_core::prelude::*;
 
+use sickle_ui::prelude::*;
 use sickle_ui::ui_builder::UiBuilder;
-use sickle_ui::ui_style::generated::*;
-use sickle_ui::widgets::prelude::*;
+
+use crate::UiCamera;
 
 #[derive(Component)]
 struct DebugPanel;
@@ -25,7 +26,7 @@ struct AppStateText;
 #[derive(Component)]
 struct GameStateText;
 
-pub trait UiDebugPanelExt {
+trait UiDebugPanelExt {
     fn debug_panel(&mut self);
 }
 
@@ -185,9 +186,20 @@ fn update_game_state(
     text.sections[0].value = format!("{:?}", **state);
 }
 
+fn spawn_ui(mut commands: Commands, ui_camera: Res<UiCamera>) {
+    commands.ui_builder(UiRoot).container(
+        (NodeBundle::default(), TargetCamera(ui_camera.0)),
+        |container| {
+            container.debug_panel();
+        },
+    );
+}
+
 pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
+        app.add_systems(Startup, spawn_ui);
+
         app.add_systems(
             Update,
             (

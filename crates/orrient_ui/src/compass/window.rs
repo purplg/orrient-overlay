@@ -103,7 +103,7 @@ impl CompassWindow {
     }
 }
 
-pub trait UiCompassWindowExt {
+pub(super) trait UiCompassWindowExt {
     fn compass(&mut self);
 }
 
