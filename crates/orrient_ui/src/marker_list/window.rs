@@ -1,10 +1,9 @@
 use bevy::prelude::*;
 
 use orrient_core::prelude::AppState;
-use orrient_core::prelude::GameState;
 use orrient_pathing::marker::EnabledMarkers;
-use orrient_pathing::marker::MapMarkers;
 use orrient_pathing::prelude::*;
+use sickle_ui::prelude::UiRoot;
 
 use super::marker_button::UiMarkerButtonExt as _;
 use super::separator::UiMarkerSeparatorExt as _;
@@ -12,7 +11,6 @@ use super::tooltip::UiToolTipExt as _;
 use crate::OrrientMenuItem;
 use crate::UiEvent;
 use bevy::window::PrimaryWindow;
-use sickle_ui::ui_builder::UiBuilder;
 use sickle_ui::ui_builder::UiBuilderExt as _;
 use sickle_ui::ui_style::generated::SetHeightExt as _;
 use sickle_ui::ui_style::generated::SetWidthExt as _;
@@ -25,7 +23,6 @@ pub(super) enum MarkerWindowEvent {
         column_id: usize,
         full_id: FullMarkerId,
     },
-    ToggleMarkers,
 }
 
 #[derive(Component)]
@@ -39,56 +36,6 @@ pub(super) struct MarkerItem {
     pub id: FullMarkerId,
     pub tip: Option<String>,
     pub description: Option<String>,
-}
-
-pub trait UiMarkerWindowExt {
-    fn marker_window(&mut self);
-}
-
-impl UiMarkerWindowExt for UiBuilder<'_, Entity> {
-    fn marker_window(&mut self) {
-        self.floating_panel(
-            FloatingPanelConfig {
-                title: Some("Markers".into()),
-                ..default()
-            },
-            FloatingPanelLayout {
-                size: (1000., 1080.).into(),
-                position: Some((100., 100.).into()),
-                ..default()
-            },
-            |parent| {
-                parent.menu_bar(|parent| {
-                    parent.menu(
-                        MenuConfig {
-                            name: "Menu".into(),
-                            ..default()
-                        },
-                        |parent| {
-                            parent
-                                .menu_item(MenuItemConfig {
-                                    name: "Hide all markers".into(),
-                                    ..default()
-                                })
-                                .insert(OrrientMenuItem(MarkerEvent::DisableAll));
-                        },
-                    );
-                });
-
-                parent
-                    .spawn((
-                        NodeBundle::default(),
-                        MarkerList, //
-                    ))
-                    .style()
-                    .width(Val::Percent(100.))
-                    .height(Val::Percent(100.));
-            },
-        )
-        .insert(MarkerWindow);
-
-        self.enable_tooltip();
-    }
 }
 
 #[derive(Component)]
@@ -185,9 +132,6 @@ fn set_column(
                     .style()
                     .width(Val::Px(200.));
             }
-            MarkerWindowEvent::ToggleMarkers => {
-                continue;
-            }
         };
     }
 }
@@ -233,6 +177,51 @@ fn menu_interaction(
     }
 }
 
+fn spawn_ui(mut commands: Commands) {
+    commands
+        .ui_builder(UiRoot)
+        .floating_panel(
+            FloatingPanelConfig {
+                title: Some("Markers".into()),
+                ..default()
+            },
+            FloatingPanelLayout {
+                size: (1000., 1080.).into(),
+                position: Some((100., 100.).into()),
+                ..default()
+            },
+            |parent| {
+                parent.menu_bar(|parent| {
+                    parent.menu(
+                        MenuConfig {
+                            name: "Menu".into(),
+                            ..default()
+                        },
+                        |parent| {
+                            parent
+                                .menu_item(MenuItemConfig {
+                                    name: "Hide all markers".into(),
+                                    ..default()
+                                })
+                                .insert(OrrientMenuItem(MarkerEvent::DisableAll));
+                        },
+                    );
+                });
+
+                parent
+                    .spawn((
+                        NodeBundle::default(),
+                        MarkerList, //
+                    ))
+                    .style()
+                    .width(Val::Percent(100.))
+                    .height(Val::Percent(100.));
+            },
+        )
+        .insert(MarkerWindow)
+        .enable_tooltip();
+}
+
 pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
@@ -246,5 +235,6 @@ impl bevy::prelude::Plugin for Plugin {
                 .chain()
                 .run_if(resource_exists_and_changed::<MarkerPacks>),
         );
+        app.add_systems(Startup, spawn_ui);
     }
 }
