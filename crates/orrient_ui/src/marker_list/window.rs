@@ -5,6 +5,7 @@ use orrient_pathing::marker::EnabledMarkers;
 use orrient_pathing::prelude::*;
 use sickle_ui::prelude::UiRoot;
 
+use super::downloads::DownloadsView;
 use super::marker_button::UiMarkerButtonExt as _;
 use super::separator::UiMarkerSeparatorExt as _;
 use super::tooltip::UiToolTipExt as _;
@@ -29,7 +30,7 @@ pub(super) enum MarkerWindowEvent {
 pub(super) struct MarkerWindow;
 
 #[derive(Component)]
-struct MarkerList;
+struct MarkerListWindow;
 
 #[derive(Component)]
 pub(super) struct MarkerItem {
@@ -47,13 +48,26 @@ struct MarkerView;
 fn setup_window(
     mut commands: Commands,
     mut events: EventWriter<MarkerWindowEvent>,
-    query: Query<Entity, With<MarkerList>>,
+    query: Query<Entity, With<MarkerListWindow>>,
 ) {
-    commands.ui_builder(query.single()).insert(MarkerView);
+    commands.ui_builder(query.single()).tab_container(|parent| {
+        parent.add_tab("Markers".into(), |parent| {
+            parent
+                .row(|parent| {
+                    parent.insert(MarkerView);
+                })
+                .style()
+                .width(Val::Percent(100.))
+                .height(Val::Percent(100.));
+        });
+        parent.add_tab("Downloads".into(), |parent| {
+            parent.insert(DownloadsView);
+        });
+    });
     events.send(MarkerWindowEvent::SetRootColumn);
 }
 
-fn remove_window(mut commands: Commands, query: Query<Entity, With<MarkerList>>) {
+fn remove_window(mut commands: Commands, query: Query<Entity, With<MarkerListWindow>>) {
     commands.entity(query.single()).despawn_descendants();
 }
 
@@ -211,7 +225,7 @@ fn spawn_ui(mut commands: Commands) {
                 parent
                     .spawn((
                         NodeBundle::default(),
-                        MarkerList, //
+                        MarkerListWindow, //
                     ))
                     .style()
                     .width(Val::Percent(100.))

@@ -1,3 +1,4 @@
+mod downloads;
 mod marker_button;
 mod separator;
 pub(super) mod tooltip;
@@ -12,5 +13,6 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_plugins(tooltip::Plugin);
         app.add_plugins(marker_button::Plugin);
         app.add_plugins(separator::Plugin);
+        app.add_plugins(downloads::Plugin);
     }
 }

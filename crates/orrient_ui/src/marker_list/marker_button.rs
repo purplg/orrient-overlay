@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use bevy::color::palettes;
+use bevy::prelude::*;
 
 use orrient_core::prelude::*;
 use orrient_pathing::prelude::*;
@@ -98,10 +98,7 @@ impl MarkerButton {
     }
 
     fn frame() -> impl Bundle {
-        ButtonBundle {
-            button: Button,
-            ..default()
-        }
+        ButtonBundle::default()
     }
 }
 
