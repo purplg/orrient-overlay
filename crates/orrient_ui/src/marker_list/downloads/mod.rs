@@ -1,7 +1,6 @@
 mod theme;
 use theme::*;
 
-use bevy::color::palettes;
 use bevy::prelude::*;
 use sickle_ui::prelude::*;
 
@@ -66,27 +65,28 @@ impl UiEntryExt for UiBuilder<'_, Entity> {
                     });
 
                     parent.container(Buttons::frame(), |parent| {
-                        parent.container(InfoButton::frame(), |parent| {
-                            parent.spawn(TextBundle::from_section(
-                                "Info",
-                                TextStyle {
-                                    font_size: 14.,
-                                    ..default()
-                                },
-                            ));
-                        });
-                        parent.container(DownloadButton::frame(), |parent| {
-                            parent.spawn(TextBundle::from_section(
-                                "Download",
-                                TextStyle {
-                                    font_size: 14.,
-                                    ..default()
-                                },
-                            ));
-                        });
+                        parent.repo_button("Info");
+                        parent.repo_button("Download");
                     });
                 });
             });
+        })
+    }
+}
+
+trait UiRepoButtonExt {
+    fn repo_button(&mut self, label: impl Into<String>) -> UiBuilder<Entity>;
+}
+impl UiRepoButtonExt for UiBuilder<'_, Entity> {
+    fn repo_button(&mut self, label: impl Into<String>) -> UiBuilder<Entity> {
+        self.container(RepoButton::frame(), |parent| {
+            parent.spawn(TextBundle::from_section(
+                label,
+                TextStyle {
+                    font_size: 14.,
+                    ..default()
+                },
+            ));
         })
     }
 }
