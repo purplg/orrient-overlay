@@ -153,7 +153,7 @@ impl bevy::prelude::Plugin for Plugin {
         );
 
         app.add_systems(
-            Update,
+            PostUpdate,
             track_markers_system
                 .run_if(in_state(GameState::InGame))
                 .run_if(on_event::<MarkerEvent>()),
