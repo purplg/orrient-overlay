@@ -3,12 +3,11 @@ use std::time::Duration;
 use bevy::prelude::*;
 
 use bevy::utils::HashMap;
-use bevy_async_task::AsyncTaskRunner;
-use bevy_async_task::AsyncTaskStatus;
 
-use reqwest::Client;
+use bevy_mod_reqwest::BevyReqwest;
+use bevy_mod_reqwest::ReqwestErrorEvent;
+use bevy_mod_reqwest::ReqwestResponseEvent;
 use serde::Deserialize;
-use thiserror::Error;
 
 const BH_URL: &'static str = "https://mp-repo.blishhud.com/repo.json";
 
@@ -68,11 +67,11 @@ pub struct RepoPack {
 }
 
 #[derive(States, Clone, Copy, Hash, PartialEq, Eq, Default, Debug)]
-enum UpdateState {
+enum RefreshState {
     #[default]
     Idle,
     Queued,
-    Updating,
+    WaitingForResponse,
 }
 
 #[derive(Component, Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -86,81 +85,70 @@ pub enum BHAPIEvent {
 
 fn event_system(
     mut er_bhupdate: EventReader<BHAPIEvent>,
-    mut state: ResMut<NextState<UpdateState>>,
+    mut state: ResMut<NextState<RefreshState>>,
 ) {
     for event in er_bhupdate.read() {
         match event {
             BHAPIEvent::Refresh => {
-                state.set(UpdateState::Queued);
+                state.set(RefreshState::Queued);
             }
             BHAPIEvent::Download(repo_pack_id) => todo!(),
         }
     }
 }
 
-#[derive(Error, Debug)]
-pub enum APIError {
-    #[error("Remote returned error")]
-    Reqwest(#[from] reqwest::Error),
-
-    #[error("Could not deserialize data")]
-    Json(#[from] serde_json::Error),
-}
-
-pub async fn fetch_repo_data() -> Result<Vec<RepoPack>, APIError> {
-    let client = Client::default();
-    let response = client.get(BH_URL).send().await.map_err(APIError::Reqwest)?;
-    let body = response.text().await.map_err(APIError::Reqwest)?;
-    let repo_pack: Vec<RepoPack> = serde_json::from_str(&body).map_err(APIError::Json)?;
-    Ok(repo_pack)
-}
-
-pub async fn fetch_test_repo_data() -> Result<Vec<RepoPack>, APIError> {
-    let repo_pack: Vec<RepoPack> = serde_json::from_str(&TEST_DATA).map_err(APIError::Json)?;
-    Ok(repo_pack)
-}
-
-fn task_system(
-    mut commands: Commands,
-    mut task_executor: AsyncTaskRunner<Result<Vec<RepoPack>, APIError>>,
-    state: Res<State<UpdateState>>,
-    mut next_state: ResMut<NextState<UpdateState>>,
-) {
-    match task_executor.poll() {
-        AsyncTaskStatus::Idle => {
-            if UpdateState::Queued == *state.get() {
-                info!("Updating repos...");
-                task_executor.start(fetch_repo_data());
-                next_state.set(UpdateState::Updating);
-            }
-        }
-        AsyncTaskStatus::Pending => {}
-        AsyncTaskStatus::Finished(result) => {
-            match result {
-                Ok(packs) => {
-                    let mut available_packs = AvailablePacks::default();
-                    for (i, pack) in packs.iter().enumerate() {
-                        available_packs.insert(RepoPackId(i), pack.clone());
-                    }
-                    debug!("Updated repos.");
-                    commands.insert_resource(available_packs);
+fn update_request(mut client: BevyReqwest, mut next_state: ResMut<NextState<RefreshState>>) {
+    let request = client.get(BH_URL).build().unwrap();
+    client
+        .send(request)
+        .on_response(
+            |trigger: Trigger<ReqwestResponseEvent>,
+             mut next_state: ResMut<NextState<RefreshState>>,
+             mut available_packs: ResMut<AvailablePacks>| {
+                next_state.set(RefreshState::Idle);
+                let response = trigger.event();
+                let status = response.status();
+                if status != 200 {
+                    warn!("HTTP error/not ok: {response:?}");
                 }
-                Err(err) => {
-                    warn!("{err:?}");
+
+                let Ok(body) = response.as_str() else {
+                    warn!("HTTPError/no body: {response:?}");
+                    return;
+                };
+
+                let Ok(packs) = serde_json::from_str::<Vec<RepoPack>>(&body) else {
+                    warn!("HTTPError/deser: {response:?}");
+                    return;
+                };
+
+                available_packs.clear();
+                for (i, pack) in packs.iter().enumerate() {
+                    available_packs.insert(RepoPackId(i), pack.clone());
                 }
-            }
-            next_state.set(UpdateState::Idle);
-        }
-    }
+            },
+        )
+        .on_error(
+            |trigger: Trigger<ReqwestErrorEvent>,
+             mut next_state: ResMut<NextState<RefreshState>>| {
+                next_state.set(RefreshState::Idle);
+                let e = &trigger.event().0;
+                warn!("Error {e:?}");
+            },
+        );
+    next_state.set(RefreshState::WaitingForResponse);
 }
 
 pub struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<BHAPIEvent>();
-        app.init_state::<UpdateState>();
+        app.init_state::<RefreshState>();
         app.init_resource::<AvailablePacks>();
+
+        app.add_plugins(bevy_mod_reqwest::ReqwestPlugin::default());
+
+        app.add_systems(OnEnter(RefreshState::Queued), update_request);
         app.add_systems(Update, event_system.run_if(on_event::<BHAPIEvent>()));
-        app.add_systems(Update, task_system);
     }
 }

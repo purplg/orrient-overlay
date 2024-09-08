@@ -10,5 +10,5 @@ thiserror.workspace = true
 
 gw2lib = "3.0.0"
 bevy_async_task = "0.2.0"
-reqwest = "0.12.7"
 serde_json = "1.0.128"
+bevy_mod_reqwest = "0.16.0"
