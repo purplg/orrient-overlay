@@ -287,10 +287,36 @@ impl Title {
     }
 
     fn primary_style(style_builder: &mut StyleBuilder, theme: &ThemeData) {
-        style_builder.font_color(theme.colors().primary);
+        style_builder
+            .font_color(theme.colors().primary)
+            .align_self(AlignSelf::FlexStart)
+            .width(Val::Percent(50.));
     }
 }
 impl DefaultTheme for Title {
+    fn default_theme() -> Option<Theme<Self>> {
+        Self::theme().into()
+    }
+}
+
+/// The timestamp of a downloadable repo pack.
+#[derive(Component, Clone, Default, Debug, UiContext)]
+pub(super) struct Timestamp;
+impl Timestamp {
+    fn theme() -> Theme<Self> {
+        let base_theme = PseudoTheme::deferred(None, Self::primary_style);
+        Theme::new(vec![base_theme])
+    }
+
+    fn primary_style(style_builder: &mut StyleBuilder, theme: &ThemeData) {
+        style_builder
+            .font_color(theme.colors().primary)
+            .align_self(AlignSelf::FlexEnd)
+            .align_content(AlignContent::FlexEnd)
+            .width(Val::Percent(50.));
+    }
+}
+impl DefaultTheme for Timestamp {
     fn default_theme() -> Option<Theme<Self>> {
         Self::theme().into()
     }
@@ -309,5 +335,6 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_plugins(ComponentThemePlugin::<Body>::default());
         app.add_plugins(ComponentThemePlugin::<Footer>::default());
         app.add_plugins(ComponentThemePlugin::<Title>::default());
+        app.add_plugins(ComponentThemePlugin::<Timestamp>::default());
     }
 }

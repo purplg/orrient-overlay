@@ -4,8 +4,8 @@ use theme::*;
 use orrient_api::prelude::*;
 
 use bevy::prelude::*;
-use sickle_ui::prelude::*;
 use itertools::Itertools;
+use sickle_ui::prelude::*;
 
 #[derive(Component, Debug)]
 enum ButtonKind {
@@ -31,6 +31,17 @@ impl UiEntryExt for UiBuilder<'_, Entity> {
                                 ..default()
                             },
                         ),
+                    ));
+                    parent.spawn((
+                        Timestamp,
+                        TextBundle::from_section(
+                            repo_pack.last_update.clone(),
+                            TextStyle {
+                                font_size: 16.,
+                                ..default()
+                            },
+                        )
+                        .with_text_justify(JustifyText::Right),
                     ));
                 });
 
