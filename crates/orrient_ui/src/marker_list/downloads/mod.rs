@@ -1,12 +1,11 @@
 mod theme;
-
-use itertools::Itertools;
 use theme::*;
 
 use orrient_api::prelude::*;
 
 use bevy::prelude::*;
 use sickle_ui::prelude::*;
+use itertools::Itertools;
 
 #[derive(Component, Debug)]
 enum ButtonKind {
