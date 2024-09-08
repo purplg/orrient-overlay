@@ -1,9 +1,11 @@
 mod theme;
+
+use itertools::Itertools;
 use theme::*;
 
 use orrient_api::prelude::*;
 
-use bevy::{color::palettes, prelude::*};
+use bevy::prelude::*;
 use sickle_ui::prelude::*;
 
 #[derive(Component, Debug)]
@@ -140,7 +142,10 @@ fn update_repos(
     };
     let mut builder = commands.ui_builder(entity);
     builder.scroll_view(Some(ScrollAxis::Vertical), |parent| {
-        for (pack_id, pack) in available_packs.iter() {
+        let sorted_packs = available_packs
+            .iter()
+            .sorted_by(|(_, pack_a), (_, pack_b)| pack_a.name.cmp(&pack_b.name));
+        for (pack_id, pack) in sorted_packs {
             parent.row(|parent| {
                 parent.entry(*pack_id, pack);
             });
