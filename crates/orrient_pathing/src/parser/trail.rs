@@ -3,7 +3,7 @@ use bevy::math::Vec3;
 use std::{fs::File, io::Read, path::Path};
 
 /// The raw trail data read directly from a file.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct TrailData {
     pub version: u32,
     pub map_id: u32,

@@ -181,9 +181,9 @@ pub struct Route {
     pub texture_file: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct MarkerPack {
-    id: PackId,
+    pub id: PackId,
 
     /// Nodes without any parents. Useful for iterating through all
     /// content in the graph.
@@ -346,6 +346,10 @@ impl MarkerPackBuilder {
         }
     }
 
+    pub fn id(&self) -> &PackId {
+        &self.tree.id
+    }
+
     pub fn add_marker(&mut self, mut marker: Marker) -> &mut Self {
         let node_id = if let Some(parent_id) = self.parent_id.front().copied() {
             let parent_marker = self.tree.markers.get(&parent_id).unwrap();
@@ -443,8 +447,8 @@ impl MarkerPackBuilder {
 
         for (id, tags) in self.trail_tags.iter() {
             for tag in tags {
-                let Some(data) = self.trail_data.remove(&tag.trail_file) else {
-                    warn!("TrailData not found for XML tag {id}");
+                let Some(data) = self.trail_data.get(&tag.trail_file) else {
+                    warn!("TrailData not found in {:?}: {}", self.id, tag.trail_file);
                     continue;
                 };
 
@@ -459,7 +463,7 @@ impl MarkerPackBuilder {
 
                 let route = Route {
                     map_id: data.map_id,
-                    path: data.path,
+                    path: data.path.clone(),
                     texture_file: texture.to_string(),
                 };
 

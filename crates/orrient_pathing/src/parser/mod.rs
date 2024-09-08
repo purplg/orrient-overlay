@@ -95,7 +95,7 @@ fn load(path: &Path, images: &mut Assets<Image>) -> Result<HashMap<PackId, Marke
             }
         }
     }
-    info!("Finished loading {} pack(s).", packs.len());
+    info!("Finished loading {} pack(s)", packs.len());
     Ok(packs)
 }
 
@@ -117,7 +117,7 @@ impl std::fmt::Display for PackId {
     }
 }
 
-#[derive(Resource, Clone, Deref, Debug)]
+#[derive(Resource, Deref, Debug)]
 pub struct MarkerPacks(HashMap<PackId, MarkerPack>);
 
 impl MarkerPacks {
@@ -192,7 +192,8 @@ fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<Marke
         .to_string_lossy()
         .to_string();
 
-    let mut builder = MarkerPackBuilder::new(PackId(pack_filename.clone()));
+    let mut builder = MarkerPackBuilder::new(PackId(pack_filename));
+    info!("Parsing: {}", builder.id());
 
     let pack = File::open(path)?;
     let mut zip = zip::ZipArchive::new(pack)?;
@@ -230,11 +231,13 @@ fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<Marke
                     warn!("Error parsing trail file: {err}: {file_path}")
                 }
             },
-            _ => (),
+            ext => debug!("Skipping unknown extension {ext}"),
         }
     }
-    debug!("Finished parsing pack: {pack_filename}");
-    Ok(builder.build())
+    info!("Building: {}", builder.id());
+    let marker_pack = builder.build();
+    info!("Finished: {}", marker_pack.id);
+    Ok(marker_pack)
 }
 
 fn parse_xml<R: Read + BufRead>(
