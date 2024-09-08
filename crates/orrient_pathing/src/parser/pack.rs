@@ -22,6 +22,8 @@ use super::{
 pub struct MarkerId(pub Cow<'static, str>);
 
 impl MarkerId {
+    // TODO doesn't account for `.` parts.
+    // e.g. some.marker matches some.marker1
     /// Returns true when `other` is a child of this `MarkerId`.
     pub fn contains(&self, other: &MarkerId) -> bool {
         self != other && other.0.starts_with(&*self.0)
