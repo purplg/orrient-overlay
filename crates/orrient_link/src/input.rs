@@ -37,7 +37,7 @@ fn read_input(tx_input: crossbeam_channel::Sender<rdev::EventType>) {
             println!("err: {:?}", err);
         }
     }) {
-        println!("e: {:?}", e);
+        println!("Error when reading input: {:?}", e);
     }
 }
 

@@ -23,7 +23,7 @@ fn run(tx: crossbeam_channel::Sender<SocketMessage>) {
             }
         };
         if let Err(e) = tx.send(message) {
-            println!("e: {:?}", e);
+            println!("Error when sending to Mumblelink: {:?}", e);
         }
     }
 }
