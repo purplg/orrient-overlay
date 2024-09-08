@@ -1,4 +1,7 @@
 mod theme;
+use std::time::SystemTime;
+
+use cyborgtime::{format_duration, FormattedDuration};
 use theme::*;
 
 use orrient_api::prelude::*;
@@ -32,10 +35,20 @@ impl UiEntryExt for UiBuilder<'_, Entity> {
                             },
                         ),
                     ));
+                    let age: String = repo_pack
+                        .last_update
+                        .parse::<cyborgtime::Timestamp>()
+                        .ok()
+                        .and_then(|timestamp| timestamp.elapsed().ok())
+                        .map(|elapsed| format_duration(elapsed))
+                        .map(|formatted_time| formatted_time.to_string())
+                        .map(|text| text.split(" ").take(2).join(" "))
+                        .map(|text| format!("{text} ago"))
+                        .unwrap_or_else(|| repo_pack.last_update.clone());
                     parent.spawn((
                         Timestamp,
                         TextBundle::from_section(
-                            repo_pack.last_update.clone(),
+                            age,
                             TextStyle {
                                 font_size: 16.,
                                 ..default()

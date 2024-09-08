@@ -21,3 +21,4 @@ bevy_console = { git = "https://github.com/RichoDemus/bevy-console/" }
 # https://github.com/clap-rs/clap
 clap = { version = "4.5.10", features = ["derive"] }
 itertools = "0.13.0"
+cyborgtime = "2.1.1"

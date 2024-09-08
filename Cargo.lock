@@ -2098,6 +2098,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96a6ac251f4a2aca6b3f91340350eab87ae57c3f127ffeb585e92bd336717991"
 
 [[package]]
+name = "cyborgtime"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "817fa642fb0ee7fe42e95783e00e0969927b96091bdd4b9b1af082acd943913b"
+
+[[package]]
 name = "d3d12"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4300,6 +4306,7 @@ dependencies = [
  "bevy_console",
  "bevy_mod_billboard",
  "clap",
+ "cyborgtime",
  "itertools 0.13.0",
  "orrient_api",
  "orrient_core",
