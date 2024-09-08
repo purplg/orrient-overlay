@@ -14,10 +14,6 @@ enum ButtonKind {
     Refresh,
 }
 
-/// The main view for the entire downloads tab area.
-#[derive(Component)]
-pub(super) struct DownloadsView;
-
 trait UiEntryExt {
     fn entry(&mut self, pack_id: RepoPackId, repo_pack: &RepoPack) -> UiBuilder<Entity>;
 }
@@ -152,6 +148,7 @@ fn update_repos(
     });
 }
 
+pub(super) use theme::DownloadsView;
 pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {

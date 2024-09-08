@@ -2,6 +2,10 @@ use bevy::color::palettes;
 use bevy::prelude::*;
 use sickle_ui::prelude::*;
 
+/// The main view for the entire downloads tab area.
+#[derive(Component)]
+pub struct DownloadsView;
+
 /// The highest container for a single entry for a downloadable repo
 /// pack.
 #[derive(Component, Clone, Default, Debug, UiContext)]
