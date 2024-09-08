@@ -49,7 +49,7 @@ const TEST_DATA: &'static str = r#"[
 ]"#;
 
 #[derive(Resource, Default, Deref, DerefMut)]
-pub struct AvailablePacks(HashMap<RepoPackId, RepoPack>);
+pub struct DownloadablePacks(HashMap<RepoPackId, RepoPack>);
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -106,7 +106,7 @@ fn update_request(mut client: BevyReqwest, mut next_state: ResMut<NextState<Refr
         .on_response(
             |trigger: Trigger<ReqwestResponseEvent>,
              mut next_state: ResMut<NextState<RefreshState>>,
-             mut available_packs: ResMut<AvailablePacks>| {
+             mut downloadable_packs: ResMut<DownloadablePacks>| {
                 next_state.set(RefreshState::Idle);
                 let response = trigger.event();
                 let status = response.status();
@@ -124,9 +124,9 @@ fn update_request(mut client: BevyReqwest, mut next_state: ResMut<NextState<Refr
                     return;
                 };
 
-                available_packs.clear();
+                downloadable_packs.clear();
                 for (i, pack) in packs.iter().enumerate() {
-                    available_packs.insert(RepoPackId(i), pack.clone());
+                    downloadable_packs.insert(RepoPackId(i), pack.clone());
                 }
             },
         )
@@ -144,14 +144,14 @@ fn update_request(mut client: BevyReqwest, mut next_state: ResMut<NextState<Refr
 fn download_request(
     mut client: BevyReqwest,
     mut er_api_event: EventReader<BHAPIEvent>,
-    available_packs: Res<AvailablePacks>,
+    downloadable_packs: Res<DownloadablePacks>,
 ) {
     for event in er_api_event.read() {
         let BHAPIEvent::Download(pack_id) = event else {
             continue;
         };
 
-        let Some(repo_pack) = available_packs.get(pack_id).cloned() else {
+        let Some(repo_pack) = downloadable_packs.get(pack_id).cloned() else {
             warn!("Repo pack not found.");
             continue;
         };
@@ -210,7 +210,7 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<BHAPIEvent>();
         app.init_state::<RefreshState>();
-        app.init_resource::<AvailablePacks>();
+        app.init_resource::<DownloadablePacks>();
 
         app.add_plugins(bevy_mod_reqwest::ReqwestPlugin::default());
 

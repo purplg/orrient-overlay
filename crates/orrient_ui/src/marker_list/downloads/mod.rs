@@ -89,7 +89,7 @@ impl UiRepoButtonExt for UiBuilder<'_, Entity> {
 fn repo_button(
     mut commands: Commands,
     q_button: Query<(Entity, Option<&RepoPackId>, &ButtonKind, &Interaction), Changed<Interaction>>,
-    available_packs: Res<AvailablePacks>,
+    downloadable_packs: Res<DownloadablePacks>,
     mut ew_bhupdate: EventWriter<BHAPIEvent>,
 ) {
     for (entity, pack_id, button_kind, interaction) in &q_button {
@@ -100,7 +100,7 @@ fn repo_button(
         match button_kind {
             ButtonKind::Info => {
                 let pack_id = pack_id.expect("Info buttons should always have a RepoPackId");
-                let Some(pack) = available_packs.get(pack_id) else {
+                let Some(pack) = downloadable_packs.get(pack_id) else {
                     continue;
                 };
 
@@ -130,14 +130,14 @@ fn setup(trigger: Trigger<OnAdd, DownloadsView>, mut commands: Commands) {
 fn update_repos(
     mut commands: Commands,
     q_downloads_view: Query<Entity, With<DownloadsView>>,
-    available_packs: Res<AvailablePacks>,
+    downloadable_packs: Res<DownloadablePacks>,
 ) {
     let Ok(entity) = q_downloads_view.get_single() else {
         return;
     };
     let mut builder = commands.ui_builder(entity);
     builder.scroll_view(Some(ScrollAxis::Vertical), |parent| {
-        let sorted_packs = available_packs
+        let sorted_packs = downloadable_packs
             .iter()
             .sorted_by(|(_, pack_a), (_, pack_b)| pack_a.name.cmp(&pack_b.name));
         for (pack_id, pack) in sorted_packs {
@@ -156,7 +156,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Update, repo_button);
         app.add_systems(
             Update,
-            update_repos.run_if(resource_exists_and_changed::<AvailablePacks>),
+            update_repos.run_if(resource_exists_and_changed::<DownloadablePacks>),
         );
         app.observe(setup);
     }

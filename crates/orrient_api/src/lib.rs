@@ -4,7 +4,7 @@ mod gw2;
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use crate::blish_hud::AvailablePacks;
+    pub use crate::blish_hud::DownloadablePacks;
     pub use crate::blish_hud::BHAPIEvent;
     pub use crate::blish_hud::RepoPack;
     pub use crate::blish_hud::RepoPackId;
