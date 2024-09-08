@@ -5,7 +5,6 @@ edition.workspace = true
 
 [dependencies]
 orrient_core.workspace = true
-orrient_api.workspace = true
 
 bevy.workspace = true
 # https://github.com/kulkalkul/bevy_mod_billboard
@@ -20,7 +19,7 @@ dirs = "5.0.1"
 quick-xml = { version = "0.32.0", features = ["overlapped-lists"] }
 typed-path = "0.9.0"
 zip = "2.1.3"
-directories = "5.0.1"
+directories.workspace = true
 ron = "0.8.1"
 
 [dev-dependencies]

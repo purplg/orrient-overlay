@@ -48,6 +48,7 @@ serde = "1.0.210"
 anyhow = "1.0.86"
 thiserror = "1.0.63"
 smol_str = { version = "0.2.2", features = ["serde"] }
+directories = "5.0.1"
 
 [profile.dev]
 opt-level = 1

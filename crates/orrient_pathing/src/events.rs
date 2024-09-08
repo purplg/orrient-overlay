@@ -9,9 +9,13 @@ pub enum MarkerEvent {
     DisableAll,
 }
 
+#[derive(Event, Clone, Debug)]
+pub struct ReloadMarkersEvent;
+
 pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
+        app.add_event::<ReloadMarkersEvent>();
         app.add_event::<MarkerEvent>();
     }
 }

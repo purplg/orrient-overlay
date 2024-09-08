@@ -37,6 +37,9 @@ use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 
+use crate::events::MarkerEvent;
+use crate::events::ReloadMarkersEvent;
+
 #[derive(Resource, Deref)]
 struct ConfigDir(PathBuf);
 
@@ -520,5 +523,6 @@ impl bevy::prelude::Plugin for Plugin {
         ));
 
         app.add_systems(OnEnter(AppState::ParsingMarkerPacks), load_system);
+        app.add_systems(Update, load_system.run_if(on_event::<ReloadMarkersEvent>()));
     }
 }

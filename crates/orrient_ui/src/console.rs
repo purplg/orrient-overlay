@@ -28,6 +28,20 @@ fn unload_all_command(
     }
 }
 
+/// Reload marker packs
+#[derive(Parser, ConsoleCommand)]
+#[command(name = "reload")]
+struct ReloadCommand;
+fn reload_command(
+    mut log: ConsoleCommand<ReloadCommand>,
+    mut events: EventWriter<ReloadMarkersEvent>,
+) {
+    if let Some(Ok(ReloadCommand)) = log.take() {
+        events.send(ReloadMarkersEvent);
+        log.reply_ok("Reloaded marker packs");
+    }
+}
+
 /// Override the current map_id
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "mapid")]
@@ -191,9 +205,13 @@ fn trail_command(
     mut meshes: ResMut<Assets<Mesh>>,
     mut trail_materials: ResMut<Assets<TrailMaterial>>,
     packs: Res<MarkerPacks>,
-    map_id: Res<MapId>,
+    map_id: Option<Res<MapId>>,
 ) {
     if let Some(Ok(TrailCommand { kind })) = log.take() {
+        let Some(map_id) = map_id else {
+            log.reply_failed("A MapId must be set to use this command.");
+            return;
+        };
         match kind {
             Trail::Load { pack_id, marker_id } => {
                 let full_id = FullMarkerId {
@@ -256,6 +274,7 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ConsolePlugin);
         app.add_console_command::<UnloadAllCommand, _>(unload_all_command);
+        app.add_console_command::<ReloadCommand, _>(reload_command);
         app.add_console_command::<MapIdCommand, _>(mapid_command);
         app.add_console_command::<PacksCommand, _>(packs_command);
         app.add_console_command::<SetupCommand, _>(setup_command);

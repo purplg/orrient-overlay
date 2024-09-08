@@ -1,4 +1,5 @@
-use std::time::Duration;
+use std::fs::File;
+use std::io::Write as _;
 
 use bevy::prelude::*;
 
@@ -7,6 +8,7 @@ use bevy::utils::HashMap;
 use bevy_mod_reqwest::BevyReqwest;
 use bevy_mod_reqwest::ReqwestErrorEvent;
 use bevy_mod_reqwest::ReqwestResponseEvent;
+use orrient_pathing::prelude::ReloadMarkersEvent;
 use serde::Deserialize;
 
 const BH_URL: &'static str = "https://mp-repo.blishhud.com/repo.json";
@@ -92,7 +94,7 @@ fn event_system(
             BHAPIEvent::Refresh => {
                 state.set(RefreshState::Queued);
             }
-            BHAPIEvent::Download(repo_pack_id) => todo!(),
+            BHAPIEvent::Download(_) => {}
         }
     }
 }
@@ -139,7 +141,71 @@ fn update_request(mut client: BevyReqwest, mut next_state: ResMut<NextState<Refr
     next_state.set(RefreshState::WaitingForResponse);
 }
 
-pub struct Plugin;
+fn download_request(
+    mut client: BevyReqwest,
+    mut er_api_event: EventReader<BHAPIEvent>,
+    available_packs: Res<AvailablePacks>,
+) {
+    for event in er_api_event.read() {
+        let BHAPIEvent::Download(pack_id) = event else {
+            continue;
+        };
+
+        let Some(repo_pack) = available_packs.get(pack_id).cloned() else {
+            warn!("Repo pack not found.");
+            continue;
+        };
+
+        let request = client.get(repo_pack.download.clone()).build().unwrap();
+        client
+            .send(request)
+            .on_response(
+                move |trigger: Trigger<ReqwestResponseEvent>,
+                      mut ew_markers: EventWriter<ReloadMarkersEvent>| {
+                    let response = trigger.event();
+                    let status = response.status();
+                    if status != 200 {
+                        warn!("Invalid HTTP response: {response:?}");
+                    }
+
+                    let Some(base_dirs) = directories::BaseDirs::new() else {
+                        error!("No base directory set");
+                        return;
+                    };
+
+                    let config_dir = base_dirs.config_dir();
+
+                    let dir = config_dir.join("orrient").join("markers");
+                    let filepath = dir.join(&repo_pack.file_name);
+
+                    if let Err(err) = std::fs::create_dir_all(dir) {
+                        error!("Error when trying to download a marker pack: {err:?}");
+                        return;
+                    };
+
+                    debug!("Downloaded new pack to: {:?}", filepath);
+                    match File::create(filepath) {
+                        Ok(mut file) => {
+                            if let Err(err) = file.write(response.body()) {
+                                error!("Error when writing downloaded marker pack: {err:?}")
+                            }
+                        }
+                        Err(err) => {
+                            error!("Error when writing downloaded marker pack: {err:?}")
+                        }
+                    }
+
+                    ew_markers.send(ReloadMarkersEvent);
+                },
+            )
+            .on_error(|trigger: Trigger<ReqwestErrorEvent>| {
+                let e = &trigger.event().0;
+                warn!("Error {e:?}");
+            });
+    }
+}
+
+pub(super) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<BHAPIEvent>();
@@ -150,5 +216,6 @@ impl bevy::prelude::Plugin for Plugin {
 
         app.add_systems(OnEnter(RefreshState::Queued), update_request);
         app.add_systems(Update, event_system.run_if(on_event::<BHAPIEvent>()));
+        app.add_systems(Update, download_request.run_if(on_event::<BHAPIEvent>()));
     }
 }

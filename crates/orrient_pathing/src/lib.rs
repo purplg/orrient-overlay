@@ -6,6 +6,7 @@ use bevy::prelude::*;
 
 pub mod prelude {
     pub use crate::events::MarkerEvent;
+    pub use crate::events::ReloadMarkersEvent;
     pub use crate::marker::poi::PoiMarker;
     pub use crate::marker::trail::create_trail_mesh;
     pub use crate::marker::trail::TrailMaterial;

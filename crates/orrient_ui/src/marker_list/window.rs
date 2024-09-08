@@ -45,7 +45,7 @@ struct Column(usize);
 #[derive(Component)]
 struct MarkerView;
 
-fn setup_window(
+fn spawn_window(
     mut commands: Commands,
     mut events: EventWriter<MarkerWindowEvent>,
     query: Query<Entity, With<MarkerListWindow>>,
@@ -69,6 +69,10 @@ fn setup_window(
 
 fn remove_window(mut commands: Commands, query: Query<Entity, With<MarkerListWindow>>) {
     commands.entity(query.single()).despawn_descendants();
+}
+
+fn refresh(_: Trigger<ReloadMarkersEvent>, mut ew_window_event: EventWriter<MarkerWindowEvent>) {
+    ew_window_event.send(MarkerWindowEvent::SetRootColumn);
 }
 
 fn set_column(
@@ -240,15 +244,16 @@ pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<MarkerWindowEvent>();
-        app.add_systems(Update, menu_interaction.run_if(in_state(AppState::Running)));
-        app.add_systems(Update, set_column.run_if(in_state(AppState::Running)));
-        app.add_systems(Update, toggle_show_ui.run_if(in_state(AppState::Running)));
+        app.add_systems(Update, menu_interaction);
+        app.add_systems(Update, set_column);
+        app.add_systems(Update, toggle_show_ui);
         app.add_systems(
             Update,
-            (remove_window, setup_window)
+            (remove_window, spawn_window)
                 .chain()
                 .run_if(resource_exists_and_changed::<MarkerPacks>),
         );
+        app.observe(refresh);
         app.add_systems(Startup, spawn_ui);
     }
 }
