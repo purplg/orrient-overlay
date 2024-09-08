@@ -1,5 +1,6 @@
 use bevy::color::palettes;
 use bevy::prelude::*;
+use bevy::ui::FocusPolicy;
 
 use orrient_core::prelude::*;
 use orrient_pathing::prelude::*;
@@ -98,7 +99,10 @@ impl MarkerButton {
     }
 
     fn frame() -> impl Bundle {
-        ButtonBundle::default()
+        ButtonBundle {
+            focus_policy: FocusPolicy::Pass,
+            ..default()
+        }
     }
 }
 
