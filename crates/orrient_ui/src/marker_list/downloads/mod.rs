@@ -139,7 +139,7 @@ fn update_repos(
         return;
     };
     let mut builder = commands.ui_builder(entity);
-    builder.column(|parent| {
+    builder.scroll_view(Some(ScrollAxis::Vertical), |parent| {
         for (pack_id, pack) in available_packs.iter() {
             parent.row(|parent| {
                 parent.entry(*pack_id, pack);
