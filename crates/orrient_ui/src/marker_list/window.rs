@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use orrient_core::prelude::AppState;
 use orrient_pathing::prelude::*;
 
 use super::downloads::DownloadsView;

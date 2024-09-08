@@ -37,7 +37,6 @@ use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 
-use crate::events::MarkerEvent;
 use crate::events::ReloadMarkersEvent;
 
 #[derive(Resource, Deref)]
@@ -47,7 +46,6 @@ fn load_system(
     mut commands: Commands,
     config_dir: Res<ConfigDir>,
     mut images: ResMut<Assets<Image>>,
-    mut state: ResMut<NextState<AppState>>,
 ) {
     info!("Loading marker packs...");
     match load(config_dir.as_path(), &mut images) {
@@ -58,7 +56,10 @@ fn load_system(
             warn!("Error loading marker packs {err:?}");
         }
     }
-    state.set(AppState::WaitingForMumbleLink);
+}
+
+fn finish_system(mut next_state: ResMut<NextState<AppState>>) {
+    next_state.set(AppState::WaitingForMumbleLink);
 }
 
 fn load(path: &Path, images: &mut Assets<Image>) -> Result<HashMap<PackId, MarkerPack>> {
@@ -522,7 +523,10 @@ impl bevy::prelude::Plugin for Plugin {
                 .to_path_buf(),
         ));
 
-        app.add_systems(OnEnter(AppState::ParsingMarkerPacks), load_system);
+        app.add_systems(
+            OnEnter(AppState::ParsingMarkerPacks),
+            (load_system, finish_system).chain(),
+        );
         app.add_systems(Update, load_system.run_if(on_event::<ReloadMarkersEvent>()));
     }
 }
