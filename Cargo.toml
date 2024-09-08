@@ -42,7 +42,7 @@ orrient_pathing = { path = "crates/orrient_pathing" }
 orrient_ui = { path = "crates/orrient_ui" }
 
 # https://github.com/bevyengine/bevy/
-bevy = { version = "0.14.1", features = ["wayland", "file_watcher"] }
+bevy = { version = "0.14.2", features = ["wayland", "file_watcher"] }
 
 serde = "1.0.210"
 anyhow = "1.0.86"
