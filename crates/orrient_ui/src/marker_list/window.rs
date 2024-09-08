@@ -91,7 +91,7 @@ fn set_column(
             MarkerWindowEvent::SetRootColumn => {
                 commands
                     .ui_builder(marker_view)
-                    .scroll_view(None, |scroll_view| {
+                    .scroll_view(Some(ScrollAxis::Vertical), |scroll_view| {
                         scroll_view.column(|parent| {
                             parent.label(LabelConfig::from("Top"));
                             for (_pack_id, pack) in packs.iter() {
@@ -131,7 +131,7 @@ fn set_column(
 
                 commands
                     .ui_builder(marker_view)
-                    .scroll_view(None, |scroll_view| {
+                    .scroll_view(Some(ScrollAxis::Vertical), |scroll_view| {
                         scroll_view.column(|parent| {
                             parent.label(LabelConfig::from(parent_marker.label.clone()));
                             for marker in &markers {
