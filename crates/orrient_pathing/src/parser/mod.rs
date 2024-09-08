@@ -296,6 +296,25 @@ fn parse_xml<R: Read + BufRead>(
     Ok(())
 }
 
+pub(crate) struct Plugin;
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(ConfigDir(
+            dirs::config_dir()
+                .unwrap()
+                .join("orrient")
+                .join("markers")
+                .to_path_buf(),
+        ));
+
+        app.add_systems(
+            OnEnter(AppState::ParsingMarkerPacks),
+            (load_system, finish_system).chain(),
+        );
+        app.add_systems(Update, load_system.run_if(on_event::<ReloadMarkersEvent>()));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Write;
@@ -509,24 +528,5 @@ mod tests {
             assert_eq!(poi.position.unwrap().y, 600.0);
             assert_eq!(poi.position.unwrap().z, -600.0);
         }
-    }
-}
-
-pub(crate) struct Plugin;
-impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(ConfigDir(
-            dirs::config_dir()
-                .unwrap()
-                .join("orrient")
-                .join("markers")
-                .to_path_buf(),
-        ));
-
-        app.add_systems(
-            OnEnter(AppState::ParsingMarkerPacks),
-            (load_system, finish_system).chain(),
-        );
-        app.add_systems(Update, load_system.run_if(on_event::<ReloadMarkersEvent>()));
     }
 }
