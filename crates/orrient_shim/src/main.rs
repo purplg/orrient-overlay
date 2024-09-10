@@ -1,3 +1,5 @@
+/// Entrypoint for the Windows -> Linux shim
+
 mod input;
 mod link;
 mod net;

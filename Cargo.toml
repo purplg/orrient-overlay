@@ -18,10 +18,6 @@ orrient_ui.workspace = true
 
 anyhow.workspace = true
 
-### Mumblelink Connectivity ####################################################
-bincode = "1.3.3"
-crossbeam-channel = "0.5.13"
-
 [workspace]
 resolver = "2"
 members = [
@@ -29,7 +25,7 @@ members = [
   "crates/orrient_core",
   "crates/orrient_input",
   "crates/orrient_link",
-  "crates/orrient_pathing",
+  "crates/orrient_pathing", "crates/orrient_shim",
   "crates/orrient_ui",
 ]
 
@@ -47,8 +43,9 @@ bevy = { version = "0.14.2", features = ["wayland", "file_watcher"] }
 serde = "1.0.210"
 anyhow = "1.0.86"
 thiserror = "1.0.63"
-smol_str = { version = "0.2.2", features = ["serde"] }
 directories = "5.0.1"
+bincode = "1.3.3"
+crossbeam-channel = "0.5.13"
 
 [profile.dev]
 opt-level = 1

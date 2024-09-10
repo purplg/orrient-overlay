@@ -5,5 +5,4 @@ edition.workspace = true
 
 [dependencies]
 bevy = { workspace = true, features = ["serialize"] }
-smol_str.workspace = true
 serde.workspace = true

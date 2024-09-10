@@ -2,7 +2,8 @@ use bevy::input::keyboard::NativeKeyCode;
 use bevy::input::ButtonState;
 use bevy::prelude::*;
 
-use orrient_input::{Action, ActionEvent};
+use orrient_input::Action;
+use orrient_input::ActionEvent;
 use orrient_link::SocketMessage;
 use rdev::{listen, Event, EventType::*, Key};
 

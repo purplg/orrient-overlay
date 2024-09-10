@@ -1,0 +1,18 @@
+[package]
+name = "orrient_shim"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "orrient_shim"
+
+[dependencies]
+bevy.workspace = true
+orrient_link.workspace = true
+orrient_input.workspace = true
+
+crossbeam-channel = "0.5.13"
+rdev = "0.5.3"
+env_logger = "0.11.3"
+mumblelink_reader = "0.3.5"
+bincode = "1.3.3"

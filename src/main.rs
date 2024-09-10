@@ -1,5 +1,3 @@
-mod link;
-
 use bevy::window::WindowLevel;
 use bevy::window::{CompositeAlphaMode, WindowResolution};
 
@@ -30,8 +28,7 @@ fn main() {
     app.add_plugins(orrient_core::Plugin);
     app.add_plugins(orrient_pathing::Plugin);
     app.add_plugins(orrient_ui::Plugin);
-
-    app.add_plugins(link::Plugin);
+    app.add_plugins(orrient_link::Plugin);
 
     app.run();
 }

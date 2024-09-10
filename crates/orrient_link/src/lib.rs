@@ -1,219 +1,162 @@
-use byteorder::{LittleEndian, ReadBytesExt};
-use mumblelink_reader::mumble_link::{MumbleLinkData, Position, Vector3D};
-use orrient_input::ActionEvent;
-use serde::{Deserialize, Serialize};
-use std::{io::Seek, net::Ipv4Addr};
+mod structs;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub enum SocketMessage {
-    MumbleLinkData(Box<MumbleLinkDataDef>),
-    Action(ActionEvent),
+pub use structs::*;
+
+use orrient_core::prelude::*;
+use orrient_input::{Action, ActionEvent};
+use orrient_ui::UiEvent;
+
+use bevy::input::ButtonState;
+use bevy::prelude::*;
+
+use bincode::Options as _;
+use crossbeam_channel::Receiver;
+use std::net::UdpSocket;
+
+fn run(tx: crossbeam_channel::Sender<SocketMessage>) {
+    let socket = UdpSocket::bind("127.0.0.1:5001").unwrap();
+    loop {
+        let mut buf = [0; 240];
+        let _size = socket.recv(&mut buf);
+        let message = match bincode::DefaultOptions::new()
+            .allow_trailing_bytes()
+            .deserialize(&buf)
+        {
+            Ok(message) => message,
+            Err(err) => {
+                error!("Error decoding MumbleLink message: {:?}", err);
+                continue;
+            }
+        };
+        if let Err(e) = tx.send(message) {
+            println!("Error when sending to Mumblelink: {:?}", e);
+        }
+    }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct GW2Context {
-    pub server_address: Ipv4Addr,
-    pub map_id: u32,
-    pub map_type: u32,
-    pub shard_id: u32,
-    pub instance: u32,
-    pub build_id: u32,
-    pub ui_state: u32,
-    pub compass_width: u16,
-    pub compass_height: u16,
-    pub compress_rotation: f32,
-    pub player_x: f32,
-    pub player_y: f32,
-    pub map_center_x: f32,
-    pub map_center_y: f32,
-    pub map_scale: f32,
-    pub process_id: u32,
-    pub mount_index: u8,
+#[derive(Resource, Deref)]
+struct MumbleLinkMessageReceiver(pub Receiver<SocketMessage>);
+
+fn start_socket_system(mut commands: Commands) {
+    let (tx, rx) = crossbeam_channel::unbounded::<SocketMessage>();
+    commands.insert_resource(MumbleLinkMessageReceiver(rx));
+    std::thread::spawn(|| run(tx));
+    debug!("Waiting for link...");
 }
 
-impl GW2Context {
-    fn from_bytes(value: [u8; 256]) -> Result<Self, std::io::Error> {
-        let mut cursor = std::io::Cursor::new(value);
-        Ok(Self {
-            server_address: {
-                let addr = Ipv4Addr::new(
-                    cursor.read_u8()?,
-                    cursor.read_u8()?,
-                    cursor.read_u8()?,
-                    cursor.read_u8()?,
+#[derive(Resource, Deref, DerefMut)]
+struct PrevMumblelinkState(MumbleLinkDataDef);
+
+fn monitor_system(
+    mut commands: Commands,
+    rx: Res<MumbleLinkMessageReceiver>,
+    mut state: ResMut<NextState<AppState>>,
+) {
+    if let Ok(SocketMessage::MumbleLinkData(mut data)) = rx.try_recv() {
+        if data.ui_tick > 0 {
+            commands.insert_resource(MapId(data.identity.map_id));
+            data.context.compass_width = 0;
+            data.context.compass_height = 0;
+            commands.insert_resource(PrevMumblelinkState(*data));
+            state.set(AppState::Running);
+            info!("Link connected.");
+        }
+    }
+}
+
+fn socket_system(
+    mut commands: Commands,
+    rx: Res<MumbleLinkMessageReceiver>,
+    mut world_events: EventWriter<WorldEvent>,
+    mut ui_events: EventWriter<UiEvent>,
+    mut previous: ResMut<PrevMumblelinkState>,
+) {
+    while let Ok(message) = rx.try_recv() {
+        match message {
+            SocketMessage::MumbleLinkData(current) => {
+                let facing = Vec3::new(
+                    current.camera.front[0],
+                    current.camera.front[1],
+                    current.camera.front[2],
                 );
-                // 28 bits are reserved to include ipv6 support.
-                cursor.seek_relative(24)?;
-                addr
+
+                world_events.send(WorldEvent::CameraUpdate {
+                    position: Vec3::new(
+                        current.camera.position[0],
+                        current.camera.position[1],
+                        -current.camera.position[2],
+                    ),
+                    facing,
+                    fov: current.identity.fov,
+                });
+
+                world_events.send(WorldEvent::PlayerPositon(Vec3 {
+                    x: current.avatar.position[0],
+                    y: current.avatar.position[1],
+                    z: -current.avatar.position[2],
+                }));
+
+                if previous.context.compass_width != current.context.compass_width {
+                    ui_events.send(UiEvent::CompassSize(UVec2 {
+                        x: current.context.compass_width as u32,
+                        y: current.context.compass_height as u32,
+                    }));
+                } else if previous.context.compass_height != current.context.compass_height {
+                    ui_events.send(UiEvent::CompassSize(UVec2 {
+                        x: current.context.compass_width as u32,
+                        y: current.context.compass_height as u32,
+                    }));
+                }
+
+                ui_events.send(UiEvent::MapPosition(Vec2 {
+                    x: current.context.map_center_x,
+                    y: current.context.map_center_y,
+                }));
+
+                ui_events.send(UiEvent::PlayerPosition(Vec2 {
+                    x: current.context.player_x,
+                    y: current.context.player_y,
+                }));
+
+                ui_events.send(UiEvent::MapScale(current.context.map_scale));
+
+                if previous.context.map_open() != current.context.map_open() {
+                    ui_events.send(UiEvent::MapOpen(current.context.map_open()));
+                }
+
+                if previous.context.map_id != current.identity.map_id {
+                    commands.insert_resource(MapId(current.identity.map_id));
+                }
+
+                previous.0 = *current;
+            }
+            SocketMessage::Action(action) => match action {
+                ActionEvent {
+                    action,
+                    state: ButtonState::Pressed,
+                } => match action {
+                    Action::Menu => {
+                        ui_events.send(UiEvent::ToggleUI);
+                    }
+                    Action::Close => {
+                        ui_events.send(UiEvent::CloseUi);
+                    }
+                    _ => {}
+                },
+                _ => {}
             },
-            map_id: cursor.read_u32::<LittleEndian>()?,
-            map_type: cursor.read_u32::<LittleEndian>()?,
-            shard_id: cursor.read_u32::<LittleEndian>()?,
-            instance: cursor.read_u32::<LittleEndian>()?,
-            build_id: cursor.read_u32::<LittleEndian>()?,
-            ui_state: cursor.read_u32::<LittleEndian>()?,
-            compass_width: cursor.read_u16::<LittleEndian>()?,
-            compass_height: cursor.read_u16::<LittleEndian>()?,
-            compress_rotation: cursor.read_f32::<LittleEndian>()?,
-            player_x: cursor.read_f32::<LittleEndian>()?,
-            player_y: cursor.read_f32::<LittleEndian>()?,
-            map_center_x: cursor.read_f32::<LittleEndian>()?,
-            map_center_y: cursor.read_f32::<LittleEndian>()?,
-            map_scale: cursor.read_f32::<LittleEndian>()?,
-            process_id: cursor.read_u32::<LittleEndian>()?,
-            mount_index: cursor.read_u8()?,
-        })
-    }
-
-    pub fn map_open(&self) -> bool {
-        self.ui_state & 0b00000001 != 0
-    }
-
-    pub fn compass_top_right(&self) -> bool {
-        self.ui_state & 0b00000010 != 0
-    }
-
-    pub fn compass_rotation_enabled(&self) -> bool {
-        self.ui_state & 0b00000100 != 0
-    }
-
-    pub fn game_focused(&self) -> bool {
-        self.ui_state & 0b00001000 != 0
-    }
-
-    pub fn in_competitive_gamemode(&self) -> bool {
-        self.ui_state & 0b00010000 != 0
-    }
-
-    pub fn textbox_focused(&self) -> bool {
-        self.ui_state & 0b00100000 != 0
-    }
-
-    pub fn in_combat(&self) -> bool {
-        self.ui_state & 0b01000000 != 0
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct PositionDef {
-    pub position: Vector3D,
-    pub front: Vector3D,
-    pub top: Vector3D,
-}
-
-impl From<Position> for PositionDef {
-    fn from(value: Position) -> Self {
-        Self {
-            position: value.position,
-            front: value.front,
-            top: value.top,
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-struct Identity {
-    pub name: String,
-    pub profession: u8,
-    pub spec: u8,
-    pub race: u8,
-    pub map_id: u32,
-    // obsolete
-    #[serde(skip)]
-    pub _world_id: usize,
-    pub team_color_id: usize,
-    pub commander: bool,
-    pub fov: f32,
-    pub uisz: u8,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub enum Profession {
-    Unknown = 0,
-    Guardian = 1,
-    Warrior = 2,
-    Engineer = 3,
-    Ranger = 4,
-    Thief = 5,
-    Elementalist = 6,
-    Mesmer = 7,
-    Necromancer = 8,
-    Revenant = 9,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct IdentityDef {
-    pub name: String,
-    pub profession: Profession,
-    pub spec: u8,
-    pub race: u8,
-    pub map_id: u32,
-    pub team_color_id: usize,
-    pub commander: bool,
-    pub fov: f32,
-    pub uisz: u8,
-}
-
-impl Profession {
-    fn from_u8(value: u8) -> Self {
-        match value {
-            1 => Profession::Guardian,
-            2 => Profession::Warrior,
-            3 => Profession::Engineer,
-            4 => Profession::Ranger,
-            5 => Profession::Thief,
-            6 => Profession::Elementalist,
-            7 => Profession::Mesmer,
-            8 => Profession::Necromancer,
-            9 => Profession::Revenant,
-            _ => Profession::Unknown,
-        }
-    }
-}
-
-impl IdentityDef {
-    fn from_string(value: String) -> Result<Self, serde_json::Error> {
-        let identity: Identity = serde_json::from_str(value.as_str())?;
-        Ok(Self {
-            name: identity.name,
-            profession: Profession::from_u8(identity.profession),
-            spec: identity.spec,
-            race: identity.race,
-            map_id: identity.map_id,
-            team_color_id: identity.team_color_id,
-            commander: identity.commander,
-            fov: identity.fov,
-            uisz: identity.uisz,
-        })
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct MumbleLinkDataDef {
-    pub ui_version: i64,
-    pub ui_tick: i64,
-    pub avatar: PositionDef,
-    pub name: String,
-    pub camera: PositionDef,
-    pub identity: IdentityDef,
-    pub context_len: i64,
-    pub context: GW2Context,
-    pub description: String,
-}
-
-impl MumbleLinkDataDef {
-    pub fn from_data(value: MumbleLinkData) -> Result<MumbleLinkDataDef, serde_json::Error> {
-        let context = GW2Context::from_bytes(value.context).unwrap();
-        Ok(Self {
-            ui_version: value.ui_version,
-            ui_tick: value.ui_tick,
-            avatar: value.avatar.into(),
-            name: value.name,
-            camera: value.camera.into(),
-            identity: IdentityDef::from_string(value.identity)?,
-            context_len: value.context_len,
-            context,
-            description: value.description,
-        })
+pub struct Plugin;
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(OnEnter(AppState::WaitingForMumbleLink), start_socket_system);
+        app.add_systems(
+            Update,
+            monitor_system.run_if(in_state(AppState::WaitingForMumbleLink)),
+        );
+        app.add_systems(Update, socket_system.run_if(in_state(AppState::Running)));
     }
 }

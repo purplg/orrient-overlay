@@ -2327,9 +2327,9 @@ dependencies = [
 
 [[package]]
 name = "env_filter"
-version = "0.1.0"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a009aa4810eb158359dda09d0c87378e4bbb89b5a801f016885a4707ba24f7ea"
+checksum = "4f2c92ceda6ceec50f43169f9ee8424fe2db276791afde7b2cd8bc084cb376ab"
 dependencies = [
  "log",
  "regex",
@@ -2337,9 +2337,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.11.3"
+version = "0.11.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38b35839ba51819680ba087cd351788c9a3c476841207e0b8cee0b04722343b9"
+checksum = "e13fa619b91fb2381732789fc5de83b45675e882f66623b7d8cb4f643017018d"
 dependencies = [
  "anstream",
  "anstyle",
@@ -2946,8 +2946,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bevy",
- "bincode",
- "crossbeam-channel",
  "orrient_api",
  "orrient_core",
  "orrient_input",
@@ -4256,7 +4254,6 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "serde",
- "smol_str",
 ]
 
 [[package]]
@@ -4267,14 +4264,12 @@ dependencies = [
  "bincode",
  "byteorder",
  "crossbeam-channel",
- "env_logger",
- "log",
  "mumblelink_reader",
+ "orrient_core",
  "orrient_input",
- "rdev",
+ "orrient_ui",
  "serde",
  "serde_json",
- "smol_str",
 ]
 
 [[package]]
@@ -4296,6 +4291,20 @@ dependencies = [
  "tempfile",
  "typed-path",
  "zip",
+]
+
+[[package]]
+name = "orrient_shim"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bincode",
+ "crossbeam-channel",
+ "env_logger",
+ "mumblelink_reader",
+ "orrient_input",
+ "orrient_link",
+ "rdev",
 ]
 
 [[package]]

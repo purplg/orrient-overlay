@@ -1,5 +1,4 @@
 use crate::{ChannelRx, ChannelTx};
-use log::{error, info};
 use orrient_link::{MumbleLinkDataDef, SocketMessage};
 
 use bevy::prelude::*;
