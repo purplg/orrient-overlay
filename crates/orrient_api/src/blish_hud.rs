@@ -11,7 +11,7 @@ use bevy_mod_reqwest::ReqwestResponseEvent;
 use orrient_pathing::prelude::ReloadMarkersEvent;
 use serde::Deserialize;
 
-const BH_URL: &'static str = "https://mp-repo.blishhud.com/repo.json";
+const BH_URL: &'static str = "https://mp-repo.blishhud.com/repo-latest.json";
 
 const TEST_DATA: &'static str = r#"[
   {
