@@ -1,12 +1,11 @@
 mod theme;
-use std::time::SystemTime;
-
-use cyborgtime::{format_duration, FormattedDuration};
 use theme::*;
 
 use orrient_api::prelude::*;
 
 use bevy::prelude::*;
+
+use cyborgtime::format_duration;
 use itertools::Itertools;
 use sickle_ui::prelude::*;
 

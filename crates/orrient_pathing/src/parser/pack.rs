@@ -12,11 +12,10 @@ use std::collections::BTreeSet;
 use std::{collections::VecDeque, convert::identity, ops::Deref, str::FromStr as _};
 use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
 
-use super::{
-    model::{self, Poi, TrailXml},
-    trail::TrailData,
-    PackId,
-};
+use super::model::Poi;
+use super::model::TrailXml;
+use super::trail::TrailData;
+use super::PackId;
 
 #[derive(Hash, Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MarkerId(pub Cow<'static, str>);
@@ -91,30 +90,6 @@ pub enum Behavior {
     ReappearMapReset,          // 5
     ReappearInstanceChange,    // 6
     ReappearDailyPerCharacter, // 7
-}
-
-impl Behavior {
-    fn from_category(category: model::MarkerCategory) -> Option<Behavior> {
-        if let Some(behavior) = category.behavior {
-            match behavior {
-                0 => Some(Self::AlwaysVisible),
-                1 => Some(Self::ReappearOnMapChange),
-                2 => Some(Self::ReappearDaily),
-                3 => Some(Self::DisappearOnUse),
-                4 => Some(Self::ReappearAfterTime(
-                    category
-                        .reset_length
-                        .expect("resetLength must be defined to use Behavior 4"),
-                )),
-                5 => Some(Self::ReappearMapReset),
-                6 => Some(Self::ReappearInstanceChange),
-                7 => Some(Self::ReappearDailyPerCharacter),
-                _ => None,
-            }
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

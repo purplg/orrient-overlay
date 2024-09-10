@@ -111,7 +111,7 @@ pub(super) trait UiCompassWindowExt {
 
 impl UiCompassWindowExt for UiBuilder<'_, Entity> {
     fn compass(&mut self) {
-        self.container(CompassWindow::frame(), |parent| {})
+        self.container(CompassWindow::frame(), |_| {})
             .insert(CompassWindow {
                 docked_offset: Vec2 { x: 0.0, y: 36.0 },
                 ..default()

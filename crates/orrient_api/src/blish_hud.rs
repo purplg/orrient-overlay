@@ -13,41 +13,6 @@ use serde::Deserialize;
 
 const BH_URL: &'static str = "https://mp-repo.blishhud.com/repo-latest.json";
 
-const TEST_DATA: &'static str = r#"[
-  {
-    "Name": "[fast] TacO Markers",
-    "Description": "A set of markers and trails for some of the most profitable solo-farming gathering routes across a wide range of maps.\r\nClick the Info button for current benchmarks and more details!",
-    "Download": "https://mp-repo.blishhud.com/packs/fast_TacO_pack.taco",
-    "Info": "https://fast.farming-community.eu/farming/guides/fast-taco-marker",
-    "FileName": "fast_TacO_pack.taco",
-    "Categories": "Solo Farming",
-    "Version": "https://fast.farming-community.eu/fast/markers/fast_TacO_pack.taco",
-    "Size": 0.63182163,
-    "TotalDownloads": 468,
-    "AuthorName": "[fast]",
-    "AuthorUsername": "",
-    "LastUpdate": "2024-08-27T13:15:17.1130223Z",
-    "DistinctDownloads": {}
-  },
-  {
-    "Name": "[FvD] Dungeon Markers",
-    "Description": "Trails for all dungeon explorable and story paths (excluding Arah Story mode). Includes: Path info, mechanics, and some skips.",
-    "Download": "https://mp-repo.blishhud.com/packs/FvD_Dungeon_Guide.taco",
-    "Info": "https://github.com/SZG5/gw2-dungeon-markers",
-    "FileName": "FvD_Dungeon_Guide.taco",
-    "Categories": "Dungeons",
-    "Version": "178128182",
-    "Size": 1.26542,
-    "TotalDownloads": 34,
-    "AuthorName": "Z. Long",
-    "AuthorUsername": "S Z G.4359",
-    "LastUpdate": "2024-07-07T03:01:23",
-    "DistinctDownloads": {
-      "178128182%0.6.0": 2698
-    }
-  }
-]"#;
-
 #[derive(Resource, Default, Deref, DerefMut)]
 pub struct DownloadablePacks(HashMap<RepoPackId, RepoPack>);
 

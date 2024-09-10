@@ -5,6 +5,7 @@ use std::{fs::File, io::Read, path::Path};
 /// The raw trail data read directly from a file.
 #[derive(Clone, Debug)]
 pub struct TrailData {
+    #[allow(unused)]
     pub version: u32,
     pub map_id: u32,
     pub path: Vec<Vec3>,

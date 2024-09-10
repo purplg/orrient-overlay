@@ -138,9 +138,7 @@ enum Tag {
     POIs,
     Poi(model::Poi),
     Trail(model::TrailXml),
-    Route,
     UnknownField(String),
-    CorruptField(String),
 }
 
 impl Tag {
@@ -174,12 +172,8 @@ impl Tag {
             Tag::Trail(trail) => {
                 builder.add_trail_tag(MarkerId(trail.id.clone()), trail);
             }
-            Tag::Route => {}
             Tag::UnknownField(element) => {
                 warn!("Unknown Field: {element}");
-            }
-            Tag::CorruptField(element) => {
-                warn!("Corrupt Field: {element}");
             }
         }
     }

@@ -167,7 +167,7 @@ impl Header {
         Theme::new(vec![base_theme])
     }
 
-    fn primary_style(style_builder: &mut StyleBuilder, theme_data: &ThemeData) {}
+    fn primary_style(_style: &mut StyleBuilder, _theme: &ThemeData) {}
 }
 impl DefaultTheme for Header {
     fn default_theme() -> Option<Theme<Self>> {
@@ -188,7 +188,7 @@ impl Body {
         Theme::new(vec![base_theme])
     }
 
-    fn primary_style(style_builder: &mut StyleBuilder, theme_data: &ThemeData) {}
+    fn primary_style(_style: &mut StyleBuilder, _theme: &ThemeData) {}
 }
 impl DefaultTheme for Body {
     fn default_theme() -> Option<Theme<Self>> {
