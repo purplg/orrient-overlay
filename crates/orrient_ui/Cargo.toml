@@ -7,6 +7,7 @@ edition.workspace = true
 orrient_api.workspace = true
 orrient_core.workspace = true
 orrient_pathing.workspace = true
+orrient_input.workspace = true
 
 bevy.workspace = true
 

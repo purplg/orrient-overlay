@@ -1,3 +1,5 @@
+/// Input systems shared between both the overlay and link applications.
+
 use bevy::{input::ButtonState, prelude::*};
 
 use serde::{Deserialize, Serialize};

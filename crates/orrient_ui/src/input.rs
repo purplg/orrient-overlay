@@ -1,10 +1,12 @@
-use crate::prelude::*;
-use bevy::input::ButtonState;
+use crate::UiEvent;
+use orrient_core::prelude::AppState;
 use orrient_input::Action;
 use orrient_input::ActionEvent;
-use orrient_ui::UiEvent;
 
-fn update(mut events: EventReader<ActionEvent>, mut mumble_link_event: EventWriter<UiEvent>) {
+use bevy::input::ButtonState;
+use bevy::prelude::*;
+
+fn update(mut events: EventReader<ActionEvent>, mut ew_ui: EventWriter<UiEvent>) {
     for event in events.read() {
         match event {
             ActionEvent {
@@ -13,10 +15,10 @@ fn update(mut events: EventReader<ActionEvent>, mut mumble_link_event: EventWrit
             } => match action {
                 Action::Modifier => {}
                 Action::Menu => {
-                    mumble_link_event.send(UiEvent::ToggleUI);
+                    ew_ui.send(UiEvent::ToggleUI);
                 }
                 Action::Close => {
-                    mumble_link_event.send(UiEvent::CloseUi);
+                    ew_ui.send(UiEvent::CloseUi);
                 }
                 Action::Overlay => {}
             },

@@ -1,6 +1,7 @@
 pub mod compass;
 mod console;
 mod debug_panel;
+mod input;
 mod marker_list;
 
 use bevy::prelude::*;
@@ -62,6 +63,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_plugins(compass::Plugin);
         app.add_plugins(marker_list::Plugin);
         app.add_plugins(debug_panel::Plugin);
+        app.add_plugins(input::Plugin);
 
         app.add_systems(PreStartup, setup_camera);
         app.add_systems(

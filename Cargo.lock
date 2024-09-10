@@ -4310,6 +4310,7 @@ dependencies = [
  "itertools 0.13.0",
  "orrient_api",
  "orrient_core",
+ "orrient_input",
  "orrient_pathing",
  "sickle_ui",
 ]

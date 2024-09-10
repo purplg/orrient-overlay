@@ -1,4 +1,3 @@
-mod input;
 mod link;
 
 use bevy::window::WindowLevel;
@@ -32,7 +31,6 @@ fn main() {
     app.add_plugins(orrient_pathing::Plugin);
     app.add_plugins(orrient_ui::Plugin);
 
-    app.add_plugins(input::Plugin);
     app.add_plugins(link::Plugin);
 
     app.run();
