@@ -79,7 +79,7 @@ fn despawn_marker(
     }
 }
 
-const METERS_TO_INCHES: f32 = 39.3700787;
+const METERS_TO_INCHES: f32 = 39.370_08;
 
 fn position_system(
     mut commands: Commands,

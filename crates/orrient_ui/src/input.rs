@@ -8,11 +8,12 @@ use bevy::prelude::*;
 
 fn update(mut events: EventReader<ActionEvent>, mut ew_ui: EventWriter<UiEvent>) {
     for event in events.read() {
-        match event {
-            ActionEvent {
-                action,
-                state: ButtonState::Pressed,
-            } => match action {
+        if let ActionEvent {
+            action,
+            state: ButtonState::Pressed,
+        } = event
+        {
+            match action {
                 Action::Modifier => {}
                 Action::Menu => {
                     ew_ui.send(UiEvent::ToggleUI);
@@ -21,8 +22,7 @@ fn update(mut events: EventReader<ActionEvent>, mut ew_ui: EventWriter<UiEvent>)
                     ew_ui.send(UiEvent::CloseUi);
                 }
                 Action::Overlay => {}
-            },
-            _ => {}
+            }
         }
     }
 }

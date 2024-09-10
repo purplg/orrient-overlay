@@ -9,7 +9,7 @@ use quick_xml::events::attributes::Attributes;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::BTreeSet;
-use std::{collections::VecDeque, convert::identity, ops::Deref, str::FromStr as _};
+use std::{collections::VecDeque, ops::Deref, str::FromStr as _};
 use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
 
 use super::model::Poi;
@@ -119,7 +119,7 @@ impl Marker {
     pub fn from_attrs(attrs: Attributes) -> Result<Self> {
         let mut this = Self::default();
 
-        for attr in attrs.map(Result::ok).filter_map(identity) {
+        for attr in attrs.filter_map(Result::ok) {
             let Ok(key) = String::from_utf8(attr.key.0.to_vec()) else {
                 warn!("Key is not UTF-8 encoded: {:?}", attr);
                 continue;
@@ -239,12 +239,11 @@ impl MarkerPack {
         map_id: &'a u32,
     ) -> impl Iterator<Item = FullMarkerId> + 'a {
         self.roots()
-            .map(|root| {
+            .flat_map(|root| {
                 self.iter_recursive(&root.id)
                     .filter(|marker| self.contains_map_id(&marker.id, *map_id))
                     .map(|marker| &marker.id)
             })
-            .flatten()
             .map(|marker_id| FullMarkerId {
                 pack_id: self.id.clone(),
                 marker_id: marker_id.clone(),
@@ -281,8 +280,7 @@ impl MarkerPack {
         let start_marker = self.get(start).unwrap();
         [start_marker].into_iter().chain(
             self.iter(start)
-                .map(|marker| [marker].into_iter().chain(self.iter(&marker.id)))
-                .flatten(),
+                .flat_map(|marker| [marker].into_iter().chain(self.iter(&marker.id))),
         )
     }
 }
@@ -432,7 +430,7 @@ impl MarkerPackBuilder {
                 let Some(texture) = tag
                     .texture_file
                     .as_ref()
-                    .or_else(|| self.get(&id).and_then(|marker| marker.texture.as_ref()))
+                    .or_else(|| self.get(id).and_then(|marker| marker.texture.as_ref()))
                 else {
                     warn!("Trail has no texture: {id}");
                     continue;

@@ -11,7 +11,7 @@ use bevy_mod_reqwest::ReqwestResponseEvent;
 use orrient_pathing::prelude::ReloadMarkersEvent;
 use serde::Deserialize;
 
-const BH_URL: &'static str = "https://mp-repo.blishhud.com/repo-latest.json";
+const BH_URL: &str = "https://mp-repo.blishhud.com/repo-latest.json";
 
 #[derive(Resource, Default, Deref, DerefMut)]
 pub struct DownloadablePacks(HashMap<RepoPackId, RepoPack>);
@@ -84,7 +84,7 @@ fn update_request(mut client: BevyReqwest, mut next_state: ResMut<NextState<Refr
                     return;
                 };
 
-                let Ok(packs) = serde_json::from_str::<Vec<RepoPack>>(&body) else {
+                let Ok(packs) = serde_json::from_str::<Vec<RepoPack>>(body) else {
                     warn!("HTTPError/deser: {response:?}");
                     return;
                 };

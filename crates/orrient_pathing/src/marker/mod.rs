@@ -122,7 +122,7 @@ fn save_system(enabled_markers: Res<EnabledMarkers>) {
 
     match File::create(filepath) {
         Ok(mut file) => {
-            file.write(data.as_bytes()).unwrap();
+            file.write_all(data.as_bytes()).unwrap();
         }
         Err(err) => {
             error!("Could not write to state file when trying to save: {err:?}");

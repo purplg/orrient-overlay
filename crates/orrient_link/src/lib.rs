@@ -96,12 +96,9 @@ fn socket_system(
                     z: -current.avatar.position[2],
                 }));
 
-                if previous.context.compass_width != current.context.compass_width {
-                    ui_events.send(UiEvent::CompassSize(UVec2 {
-                        x: current.context.compass_width as u32,
-                        y: current.context.compass_height as u32,
-                    }));
-                } else if previous.context.compass_height != current.context.compass_height {
+                if previous.context.compass_width != current.context.compass_width
+                    || previous.context.compass_height != current.context.compass_height
+                {
                     ui_events.send(UiEvent::CompassSize(UVec2 {
                         x: current.context.compass_width as u32,
                         y: current.context.compass_height as u32,
@@ -130,21 +127,23 @@ fn socket_system(
 
                 previous.0 = *current;
             }
-            SocketMessage::Action(action) => match action {
-                ActionEvent {
+            SocketMessage::Action(action) => {
+                if let ActionEvent {
                     action,
                     state: ButtonState::Pressed,
-                } => match action {
-                    Action::Menu => {
-                        ui_events.send(UiEvent::ToggleUI);
+                } = action
+                {
+                    match action {
+                        Action::Menu => {
+                            ui_events.send(UiEvent::ToggleUI);
+                        }
+                        Action::Close => {
+                            ui_events.send(UiEvent::CloseUi);
+                        }
+                        _ => {}
                     }
-                    Action::Close => {
-                        ui_events.send(UiEvent::CloseUi);
-                    }
-                    _ => {}
-                },
-                _ => {}
-            },
+                }
+            }
         }
     }
 }

@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::convert::identity;
 
 use anyhow::{anyhow, Result};
 use bevy::{log::warn, math::Vec3};
@@ -29,7 +28,7 @@ impl Poi {
         let mut id: Option<String> = None;
         let mut icon_file: Option<Utf8PathBuf<Utf8UnixEncoding>> = None;
 
-        for attr in attrs.map(Result::ok).flatten() {
+        for attr in attrs.filter_map(Result::ok) {
             let Ok(key) = String::from_utf8(attr.key.0.to_vec()) else {
                 warn!("Key is not UTF-8 encoded: {:?}", attr);
                 continue;
@@ -68,7 +67,7 @@ impl Poi {
         // Catch if only a position is only partially defined.
         // `num_coords` should only be 3 or 0. If it's anything else,
         // then a xpos, ypos, zpos is either duplicate or missing.
-        let num_coords = [x, y, z].into_iter().filter_map(identity).count();
+        let num_coords = [x, y, z].into_iter().flatten().count();
         let position = if num_coords == 3 {
             Some(Vec3::new(x.unwrap(), y.unwrap(), z.unwrap()))
         } else {
@@ -107,7 +106,7 @@ impl TrailXml {
         let mut trail_file: Option<String> = None;
         let mut texture_file: Option<String> = None;
 
-        for attr in attrs.map(Result::ok).filter_map(identity) {
+        for attr in attrs.filter_map(Result::ok) {
             let Ok(key) = String::from_utf8(attr.key.0.to_vec()) else {
                 warn!("Key is not UTF-8 encoded: {:?}", attr);
                 continue;

@@ -125,9 +125,7 @@ impl MarkerPacks {
         &'a self,
         map_id: &'a u32,
     ) -> impl Iterator<Item = FullMarkerId> + 'a {
-        self.values()
-            .map(|pack| pack.get_map_markers(map_id))
-            .flatten()
+        self.values().flat_map(|pack| pack.get_map_markers(map_id))
     }
 }
 
@@ -179,7 +177,7 @@ impl Tag {
     }
 }
 
-fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<MarkerPack> {
+fn read_marker_pack(path: &Path, images: &mut Assets<Image>) -> Result<MarkerPack> {
     let pack_filename = path
         .file_name()
         .context("Could not determine filename in {path:?}")?
@@ -217,7 +215,7 @@ fn read_marker_pack(path: &Path, mut images: &mut Assets<Image>) -> Result<Marke
                     RenderAssetUsages::all(), // TODO Maybe only needs to be RENDER_WORLD?
                 )
                 .unwrap();
-                builder.add_image(file_path, image, &mut images);
+                builder.add_image(file_path, image, images);
             }
             "trl" => match trail::read(file) {
                 Ok(trail_data) => builder.add_trail_data(file_path, trail_data),

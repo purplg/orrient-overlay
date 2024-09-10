@@ -39,7 +39,7 @@ impl UiEntryExt for UiBuilder<'_, Entity> {
                         .parse::<cyborgtime::Timestamp>()
                         .ok()
                         .and_then(|timestamp| timestamp.elapsed().ok())
-                        .map(|elapsed| format_duration(elapsed))
+                        .map(format_duration)
                         .map(|formatted_time| formatted_time.to_string())
                         .map(|text| text.split(" ").take(2).join(" "))
                         .map(|text| format!("{text} ago"))
