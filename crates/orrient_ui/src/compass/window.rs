@@ -1,4 +1,6 @@
-use bevy::{color::palettes, prelude::*, window::PrimaryWindow};
+use bevy::color::palettes;
+use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 use sickle_ui::prelude::*;
 
 use crate::UiEvent;
