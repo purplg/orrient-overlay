@@ -1,4 +1,3 @@
-mod camera;
 mod input;
 mod link;
 
@@ -33,7 +32,6 @@ fn main() {
     app.add_plugins(orrient_pathing::Plugin);
     app.add_plugins(orrient_ui::Plugin);
 
-    app.add_plugins(camera::Plugin);
     app.add_plugins(input::Plugin);
     app.add_plugins(link::Plugin);
 

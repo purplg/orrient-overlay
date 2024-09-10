@@ -1,3 +1,4 @@
+mod camera;
 mod events;
 mod player;
 mod state;
@@ -19,5 +20,6 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_plugins(events::Plugin);
         app.add_plugins(player::Plugin);
         app.add_plugins(state::Plugin);
+        app.add_plugins(camera::Plugin);
     }
 }
