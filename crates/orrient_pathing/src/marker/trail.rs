@@ -116,7 +116,6 @@ fn show_trails(
         };
 
         let Some(pack) = &packs.get(&full_id.pack_id) else {
-            warn!("Pack ID not found: {}", full_id.pack_id);
             continue;
         };
 

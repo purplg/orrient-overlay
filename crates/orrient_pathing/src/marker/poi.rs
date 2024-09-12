@@ -90,7 +90,6 @@ fn spawn_pois_system(
         let SpawnPoiEvent(full_id) = event;
 
         let Some(pack) = &packs.get(&full_id.pack_id) else {
-            warn!("Pack ID not found: {}", &full_id.pack_id);
             continue;
         };
 
