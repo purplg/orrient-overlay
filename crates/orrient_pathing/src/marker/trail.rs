@@ -175,7 +175,8 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_plugins(MaterialPlugin::<TrailMaterial>::default());
         app.add_systems(
             Update,
-            (hide_trails, show_trails).run_if(on_event::<MarkerEvent>()),
+            (hide_trails, show_trails.run_if(resource_exists::<MapId>))
+                .run_if(on_event::<MarkerEvent>()),
         );
     }
 }
