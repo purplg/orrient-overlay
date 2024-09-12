@@ -12,7 +12,7 @@ orrient_input.workspace = true
 bevy.workspace = true
 
 # https://github.com/UmbraLuminosa/sickle_ui
-sickle_ui = { git = "https://github.com/UmbraLuminosa/sickle_ui", rev = "b39bffa35b8c6ef2f081ef0b7f577825f5fcd87a" }
+sickle_ui = { git = "https://github.com/UmbraLuminosa/sickle_ui", rev = "83ed461d54a149840afc6a46d369a219c9429ca1" }
 # https://github.com/kulkalkul/bevy_mod_billboard
 bevy_mod_billboard = "0.7.0"
 
