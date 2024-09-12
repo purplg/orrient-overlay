@@ -11,9 +11,6 @@ use orrient_pathing::prelude::*;
 
 use sickle_ui::SickleUiPlugin;
 
-#[derive(Component)]
-struct OrrientMenuItem(pub MarkerEvent);
-
 #[derive(Event, Clone, Debug)]
 pub enum UiEvent {
     ToggleUI,

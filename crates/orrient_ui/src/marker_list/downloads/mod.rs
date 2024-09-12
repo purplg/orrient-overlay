@@ -21,7 +21,7 @@ trait UiEntryExt {
 }
 impl UiEntryExt for UiBuilder<'_, Entity> {
     fn entry(&mut self, pack_id: RepoPackId, repo_pack: &RepoPack) -> UiBuilder<Entity> {
-        self.container(DownloadPackMain::frame(), |parent| {
+        self.container(DownloadPack::frame(), |parent| {
             parent.container(Content::frame(), |parent| {
                 parent.container(Header::frame(), |parent| {
                     parent.spawn((
@@ -143,35 +143,36 @@ fn repo_button(
     }
 }
 
-fn setup(trigger: Trigger<OnAdd, DownloadsView>, mut commands: Commands) {
-    let mut builder = commands.ui_builder(trigger.entity());
-    builder.container(RepoBar::frame(), |parent| {
+fn setup(trigger: Trigger<OnAdd, DownloadView>, mut commands: Commands) {
+    let mut parent = commands.ui_builder(trigger.entity());
+    parent.spawn(RepoBar::frame()).row(|parent| {
         parent.repo_button("Refresh").insert(ButtonKind::Refresh);
+    });
+    parent.scroll_view(Some(ScrollAxis::Vertical), |parent| {
+        parent.spawn(DownloadList::frame());
     });
 }
 
 fn update_repos(
     mut commands: Commands,
-    q_downloads_view: Query<Entity, With<DownloadsView>>,
+    q_downloads_list: Query<Entity, With<DownloadList>>,
     downloadable_packs: Res<DownloadablePacks>,
 ) {
-    let Ok(entity) = q_downloads_view.get_single() else {
+    let Ok(entity) = q_downloads_list.get_single() else {
         return;
     };
-    let mut builder = commands.ui_builder(entity);
-    builder.scroll_view(Some(ScrollAxis::Vertical), |parent| {
-        let sorted_packs = downloadable_packs
-            .iter()
-            .sorted_by(|(_, pack_a), (_, pack_b)| pack_a.name.cmp(&pack_b.name));
-        for (pack_id, pack) in sorted_packs {
-            parent.row(|parent| {
-                parent.entry(*pack_id, pack);
-            });
-        }
-    });
+
+    let sorted_packs = downloadable_packs
+        .iter()
+        .sorted_by(|(_, pack_a), (_, pack_b)| pack_a.name.cmp(&pack_b.name));
+
+    let mut parent = commands.ui_builder(entity);
+    for (pack_id, pack) in sorted_packs {
+        parent.entry(*pack_id, pack);
+    }
 }
 
-pub(super) use theme::DownloadsView;
+pub(super) use theme::DownloadView;
 pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {

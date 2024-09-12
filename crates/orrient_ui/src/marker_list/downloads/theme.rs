@@ -3,14 +3,64 @@ use bevy::prelude::*;
 use sickle_ui::prelude::*;
 
 /// The main view for the entire downloads tab area.
-#[derive(Component)]
-pub struct DownloadsView;
+#[derive(Component, Clone, Default, Debug, UiContext)]
+pub struct DownloadView;
+impl DownloadView {
+    pub fn frame() -> impl Bundle {
+        (Name::new("Downloads View"), NodeBundle::default(), Self)
+    }
+
+    fn theme() -> Theme<Self> {
+        let base_theme = PseudoTheme::deferred(None, Self::primary_style);
+        Theme::new(vec![base_theme])
+    }
+
+    fn primary_style(style_builder: &mut StyleBuilder, theme_data: &ThemeData) {
+        let theme_spacing = theme_data.spacing;
+        let colors = theme_data.colors();
+        style_builder
+            .flex_direction(FlexDirection::Column)
+            .width(Val::Percent(100.))
+            .height(Val::Percent(100.));
+    }
+}
+impl DefaultTheme for DownloadView {
+    fn default_theme() -> Option<Theme<Self>> {
+        Self::theme().into()
+    }
+}
+
+/// Scrollable list of downloadable marker packs
+#[derive(Component, Clone, Default, Debug, UiContext)]
+pub(super) struct DownloadList;
+impl DownloadList {
+    pub(super) fn frame() -> impl Bundle {
+        (Name::new("Download List"), NodeBundle::default(), Self)
+    }
+
+    fn theme() -> Theme<Self> {
+        let base_theme = PseudoTheme::deferred(None, Self::primary_style);
+        Theme::new(vec![base_theme])
+    }
+
+    fn primary_style(style: &mut StyleBuilder, _theme: &ThemeData) {
+        style
+            .flex_direction(FlexDirection::Column)
+            .width(Val::Percent(100.))
+            .height(Val::Percent(100.));
+    }
+}
+impl DefaultTheme for DownloadList {
+    fn default_theme() -> Option<Theme<Self>> {
+        Self::theme().into()
+    }
+}
 
 /// The highest container for a single entry for a downloadable repo
 /// pack.
 #[derive(Component, Clone, Default, Debug, UiContext)]
-pub(super) struct DownloadPackMain;
-impl DownloadPackMain {
+pub(super) struct DownloadPack;
+impl DownloadPack {
     pub(super) fn frame() -> impl Bundle {
         (Name::new("Marker Entry"), NodeBundle::default(), Self)
     }
@@ -37,7 +87,7 @@ impl DownloadPackMain {
             .padding(UiRect::all(Val::Px(theme_spacing.gaps.large)));
     }
 }
-impl DefaultTheme for DownloadPackMain {
+impl DefaultTheme for DownloadPack {
     fn default_theme() -> Option<Theme<Self>> {
         Self::theme().into()
     }
@@ -59,8 +109,8 @@ impl RepoBar {
     fn primary_style(style_builder: &mut StyleBuilder, theme: &ThemeData) {
         style_builder
             .padding(UiRect::all(Val::Px(theme.spacing.gaps.small)))
-            .flex_direction(FlexDirection::Row)
-            .justify_content(JustifyContent::FlexEnd);
+            .width(Val::Percent(100.))
+            .flex_direction(FlexDirection::Row);
     }
 }
 impl DefaultTheme for RepoBar {
@@ -118,6 +168,7 @@ impl RepoButton {
             .border_color(Color::BLACK)
             .padding(UiRect::all(Val::Px(theme.spacing.gaps.small)))
             .margin(UiRect::horizontal(Val::Px(theme.spacing.gaps.small)))
+            .align_self(AlignSelf::FlexEnd)
             .animated()
             .background_color(AnimatedVals {
                 idle: theme.colors().container(Container::SurfaceMid),
@@ -325,7 +376,9 @@ impl DefaultTheme for Timestamp {
 pub(super) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(ComponentThemePlugin::<DownloadPackMain>::default());
+        app.add_plugins(ComponentThemePlugin::<DownloadView>::default());
+        app.add_plugins(ComponentThemePlugin::<DownloadPack>::default());
+        app.add_plugins(ComponentThemePlugin::<DownloadList>::default());
         app.add_plugins(ComponentThemePlugin::<Content>::default());
         app.add_plugins(ComponentThemePlugin::<RepoBar>::default());
         app.add_plugins(ComponentThemePlugin::<RepoButton>::default());
