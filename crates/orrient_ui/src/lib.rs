@@ -7,7 +7,6 @@ mod marker_list;
 use bevy::prelude::*;
 
 use orrient_core::prelude::*;
-use orrient_pathing::prelude::*;
 
 use sickle_ui::SickleUiPlugin;
 

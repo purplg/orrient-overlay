@@ -15,10 +15,8 @@ impl DownloadView {
         Theme::new(vec![base_theme])
     }
 
-    fn primary_style(style_builder: &mut StyleBuilder, theme_data: &ThemeData) {
-        let theme_spacing = theme_data.spacing;
-        let colors = theme_data.colors();
-        style_builder
+    fn primary_style(style: &mut StyleBuilder, _theme: &ThemeData) {
+        style
             .flex_direction(FlexDirection::Column)
             .width(Val::Percent(100.))
             .height(Val::Percent(100.));
@@ -70,10 +68,10 @@ impl DownloadPack {
         Theme::new(vec![base_theme])
     }
 
-    fn primary_style(style_builder: &mut StyleBuilder, theme_data: &ThemeData) {
-        let theme_spacing = theme_data.spacing;
-        let colors = theme_data.colors();
-        style_builder
+    fn primary_style(style: &mut StyleBuilder, theme: &ThemeData) {
+        let theme_spacing = theme.spacing;
+        let colors = theme.colors();
+        style
             .width(Val::Percent(100.))
             .border(UiRect::all(Val::Px(1.)))
             .border_color(palettes::basic::BLACK)
@@ -106,8 +104,8 @@ impl RepoBar {
         Theme::new(vec![base_theme])
     }
 
-    fn primary_style(style_builder: &mut StyleBuilder, theme: &ThemeData) {
-        style_builder
+    fn primary_style(style: &mut StyleBuilder, theme: &ThemeData) {
+        style
             .padding(UiRect::all(Val::Px(theme.spacing.gaps.small)))
             .width(Val::Percent(100.))
             .flex_direction(FlexDirection::Row);
@@ -132,8 +130,8 @@ impl Content {
         Theme::new(vec![base_theme])
     }
 
-    fn primary_style(style_builder: &mut StyleBuilder, _theme_data: &ThemeData) {
-        style_builder
+    fn primary_style(style: &mut StyleBuilder, _theme: &ThemeData) {
+        style
             .flex_direction(FlexDirection::Column)
             .width(Val::Percent(100.));
     }
@@ -162,8 +160,8 @@ impl RepoButton {
         Theme::new(vec![base_theme, open_theme, inactive_theme, disabled_theme])
     }
 
-    fn primary_style(style_builder: &mut StyleBuilder, theme: &ThemeData) {
-        style_builder
+    fn primary_style(style: &mut StyleBuilder, theme: &ThemeData) {
+        style
             .border(UiRect::all(Val::Px(1.)))
             .border_color(Color::BLACK)
             .padding(UiRect::all(Val::Px(theme.spacing.gaps.small)))
@@ -177,26 +175,26 @@ impl RepoButton {
             });
     }
 
-    fn open_style(style_builder: &mut StyleBuilder, _: Entity, _: &Self, world: &World) {
-        let theme_data = world.resource::<ThemeData>().clone();
-        let colors = theme_data.colors();
-        style_builder.background_color(colors.container(Container::SurfaceHighest));
+    fn open_style(style: &mut StyleBuilder, _: Entity, _: &Self, world: &World) {
+        let theme = world.resource::<ThemeData>().clone();
+        let colors = theme.colors();
+        style.background_color(colors.container(Container::SurfaceHighest));
     }
 
-    fn inactive_style(style_builder: &mut StyleBuilder, _: Entity, _: &Self, world: &World) {
-        let theme_data = world.resource::<ThemeData>().clone();
-        let colors = theme_data.colors();
-        style_builder.animated().background_color(AnimatedVals {
+    fn inactive_style(style: &mut StyleBuilder, _: Entity, _: &Self, world: &World) {
+        let theme = world.resource::<ThemeData>().clone();
+        let colors = theme.colors();
+        style.animated().background_color(AnimatedVals {
             idle: colors.container(Container::SurfaceLowest),
             hover: colors.container(Container::SurfaceMid).into(),
             ..default()
         });
     }
 
-    fn disabled_style(style_builder: &mut StyleBuilder, _: Entity, _: &Self, world: &World) {
-        let theme_data = world.resource::<ThemeData>().clone();
-        let colors = theme_data.colors();
-        style_builder.background_color(colors.surface(Surface::SurfaceDim));
+    fn disabled_style(style: &mut StyleBuilder, _: Entity, _: &Self, world: &World) {
+        let theme = world.resource::<ThemeData>().clone();
+        let colors = theme.colors();
+        style.background_color(colors.surface(Surface::SurfaceDim));
     }
 }
 impl DefaultTheme for RepoButton {
@@ -260,9 +258,9 @@ impl Footer {
         Theme::new(vec![base_theme])
     }
 
-    fn primary_style(style_builder: &mut StyleBuilder, theme_data: &ThemeData) {
-        let theme_spacing = theme_data.spacing;
-        style_builder
+    fn primary_style(style: &mut StyleBuilder, theme: &ThemeData) {
+        let theme_spacing = theme.spacing;
+        style
             .padding(UiRect::all(Val::Px(theme_spacing.gaps.small)))
             .margin(UiRect::top(Val::Px(theme_spacing.gaps.small)))
             .width(Val::Percent(100.))
@@ -288,8 +286,8 @@ impl Categories {
         Theme::new(vec![base_theme])
     }
 
-    fn primary_style(style_builder: &mut StyleBuilder, _theme_data: &ThemeData) {
-        style_builder
+    fn primary_style(style: &mut StyleBuilder, _theme: &ThemeData) {
+        style
             .flex_direction(FlexDirection::Column)
             .justify_content(JustifyContent::Center)
             .width(Val::Percent(50.));
@@ -314,8 +312,8 @@ impl Buttons {
         Theme::new(vec![base_theme])
     }
 
-    fn primary_style(style_builder: &mut StyleBuilder, _theme_data: &ThemeData) {
-        style_builder
+    fn primary_style(style: &mut StyleBuilder, _theme: &ThemeData) {
+        style
             .flex_direction(FlexDirection::Row)
             .align_content(AlignContent::Center)
             .justify_content(JustifyContent::FlexEnd)
@@ -337,8 +335,8 @@ impl Title {
         Theme::new(vec![base_theme])
     }
 
-    fn primary_style(style_builder: &mut StyleBuilder, theme: &ThemeData) {
-        style_builder
+    fn primary_style(style: &mut StyleBuilder, theme: &ThemeData) {
+        style
             .font_color(theme.colors().primary)
             .align_self(AlignSelf::FlexStart)
             .width(Val::Percent(50.));
@@ -359,8 +357,8 @@ impl Timestamp {
         Theme::new(vec![base_theme])
     }
 
-    fn primary_style(style_builder: &mut StyleBuilder, theme: &ThemeData) {
-        style_builder
+    fn primary_style(style: &mut StyleBuilder, theme: &ThemeData) {
+        style
             .font_color(theme.colors().primary)
             .align_self(AlignSelf::FlexEnd)
             .align_content(AlignContent::FlexEnd)
