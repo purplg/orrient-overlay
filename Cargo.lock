@@ -4298,7 +4298,6 @@ dependencies = [
  "mumblelink_reader",
  "orrient_core",
  "orrient_input",
- "orrient_ui",
  "serde",
  "serde_json",
 ]
@@ -4351,6 +4350,7 @@ dependencies = [
  "orrient_api",
  "orrient_core",
  "orrient_input",
+ "orrient_link",
  "orrient_pathing",
  "sickle_ui",
 ]

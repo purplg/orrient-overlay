@@ -1,10 +1,11 @@
+use bevy::prelude::Event;
 use byteorder::{LittleEndian, ReadBytesExt};
 use mumblelink_reader::mumble_link::{MumbleLinkData, Position, Vector3D};
 use orrient_input::ActionEvent;
 use serde::{Deserialize, Serialize};
 use std::{io::Seek, net::Ipv4Addr};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Event, Clone, Serialize, Deserialize, Debug)]
 pub enum SocketMessage {
     MumbleLinkData(Box<MumbleLinkDataDef>),
     Action(ActionEvent),

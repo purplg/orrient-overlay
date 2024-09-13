@@ -9,7 +9,6 @@ name = "orrient_link"
 [dependencies]
 orrient_core.workspace = true
 orrient_input.workspace = true
-orrient_ui.workspace = true
 
 bevy.workspace = true
 
