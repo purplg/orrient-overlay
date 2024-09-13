@@ -1,13 +1,7 @@
+pub use bevy::prelude::*;
+use bevy::window::CompositeAlphaMode;
 use bevy::window::WindowLevel;
-use bevy::window::{CompositeAlphaMode, WindowResolution};
-
-pub mod prelude {
-    pub use bevy::prelude::*;
-    pub use orrient_core::prelude::*;
-    pub use orrient_pathing::prelude::*;
-}
-
-use crate::prelude::*;
+use bevy::window::WindowResolution;
 
 fn main() {
     let mut app = App::new();
