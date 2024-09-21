@@ -4,6 +4,7 @@ pub mod trail;
 use crate::events::MarkerEvent;
 use crate::parser::pack::FullMarkerId;
 use crate::parser::MarkerPacks;
+use anyhow::{anyhow, Result};
 use orrient_core::prelude::*;
 
 use bevy::prelude::*;
@@ -14,6 +15,7 @@ use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write as _;
+use std::path::PathBuf;
 
 #[derive(Resource, Clone, Deref, DerefMut, Debug, Default)]
 pub struct MapMarkers(pub HashSet<FullMarkerId>);
@@ -55,78 +57,57 @@ fn track_markers_system(
     }
 }
 
-fn load_system(mut commands: Commands) {
-    let Some(base_dirs) = BaseDirs::new() else {
-        error!("Could not find base directories when trying to load.");
-        commands.init_resource::<EnabledMarkers>();
-        return;
-    };
+fn find_enabled_file() -> Result<PathBuf> {
+    let base_dirs = BaseDirs::new().ok_or(anyhow!("Could not find base directories"))?;
 
-    let Some(state_dir) = base_dirs.state_dir() else {
-        error!("Could not find state directory when trying to load.");
-        commands.init_resource::<EnabledMarkers>();
-        return;
-    };
+    let state_dir = base_dirs
+        .state_dir()
+        .ok_or(anyhow!("Could not find state directory"))?;
 
     let dir = state_dir.join("orrient");
-    let filepath = dir.join("enabled.ron");
+    std::fs::create_dir_all(&dir)
+        .map_err(|err| anyhow!("Could not create directory {dir:?}: {err:?}"))?;
 
-    let data = match File::open(filepath) {
-        Ok(data) => data,
-        Err(err) => {
-            error!("Could not read enabled file when trying to load: {err:?}");
-            commands.init_resource::<EnabledMarkers>();
-            return;
-        }
-    };
-
-    let enabled_markers: EnabledMarkers = match ron::de::from_reader(data) {
-        Ok(inner) => inner,
-        Err(err) => {
-            error!("Could not deserialize enabled file when trying to load: {err:?}");
-            commands.init_resource::<EnabledMarkers>();
-            return;
-        }
-    };
-
-    commands.insert_resource(enabled_markers);
+    Ok(dir.join("enabled.ron"))
 }
 
-fn save_system(enabled_markers: Res<EnabledMarkers>) {
-    let Some(base_dirs) = BaseDirs::new() else {
-        error!("Could not find base directories when trying to save.");
-        return;
-    };
+fn load_system(filepath: In<Result<PathBuf>>, mut commands: Commands) -> Result<()> {
+    let filepath = filepath.0?;
 
-    let Some(state_dir) = base_dirs.state_dir() else {
-        error!("Could not find state directory when trying to save.");
-        return;
-    };
+    if !std::fs::exists(&filepath).unwrap_or_default() {
+        commands.init_resource::<EnabledMarkers>();
+        return Ok(());
+    }
 
-    let dir = state_dir.join("orrient");
-    let filepath = dir.join("enabled.ron");
+    let data =
+        File::open(&filepath).map_err(|err| anyhow!("Could not read {filepath:?}: {err:?}"))?;
 
-    info!("Saving enabled markers to {dir:?}");
-    if let Err(err) = std::fs::create_dir_all(dir) {
-        error!("Could not create state directory when trying to save: {err:?}");
-        return;
-    };
+    let enabled_markers: EnabledMarkers = ron::de::from_reader(data)
+        .map_err(|err| anyhow!("Could not deserialize {filepath:?}: {err:?}"))?;
 
-    let data = match ron::ser::to_string_pretty(&*enabled_markers, PrettyConfig::default()) {
-        Ok(data) => data,
-        Err(err) => {
-            error!("Could not serialize enabled markers: {err:?}");
-            return;
-        }
-    };
+    commands.insert_resource(enabled_markers);
+    Ok(())
+}
 
-    match File::create(filepath) {
-        Ok(mut file) => {
-            file.write_all(data.as_bytes()).unwrap();
-        }
-        Err(err) => {
-            error!("Could not write to state file when trying to save: {err:?}");
-        }
+fn save_system(filepath: In<Result<PathBuf>>, enabled_markers: Res<EnabledMarkers>) -> Result<()> {
+    let filepath = filepath.0?;
+    info!("Saving enabled markers to {filepath:?}");
+
+    let data = ron::ser::to_string_pretty(&*enabled_markers, PrettyConfig::default())
+        .map_err(|err| anyhow!("Could not serialize enabled markers: {err:?}"))?;
+
+    let mut file = File::create(&filepath)
+        .map_err(|err| anyhow!("Could not write to state file when trying to save: {err:?}"))?;
+
+    file.write_all(data.as_bytes())
+        .map_err(|err| anyhow!("Could not write to {filepath:?}: {err:?}"))?;
+
+    Ok(())
+}
+
+fn output_error(result: In<Result<()>>) {
+    if let Err(err) = result.0 {
+        error!("{err:?}");
     }
 }
 
@@ -135,27 +116,28 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<MarkerEvent>();
         app.init_resource::<MapMarkers>();
+        app.init_resource::<EnabledMarkers>();
 
         app.add_plugins(poi::Plugin);
         app.add_plugins(trail::Plugin);
 
         app.add_systems(OnEnter(GameState::ChangingMaps), map_exit_system);
         app.add_systems(OnEnter(GameState::InGame), map_enter_system);
-
-        app.add_systems(Startup, load_system);
-
+        app.add_systems(
+            Startup,
+            find_enabled_file.pipe(load_system).pipe(output_error),
+        );
         app.add_systems(
             Update,
-            save_system
-                .run_if(in_state(GameState::InGame))
+            find_enabled_file
+                .pipe(save_system)
+                .pipe(output_error)
+                .run_if(not(in_state(AppState::ParsingMarkerPacks)))
                 .run_if(resource_exists_and_changed::<EnabledMarkers>),
         );
-
         app.add_systems(
             PostUpdate,
-            track_markers_system
-                .run_if(in_state(GameState::InGame))
-                .run_if(on_event::<MarkerEvent>()),
+            track_markers_system.run_if(on_event::<MarkerEvent>()),
         );
     }
 }

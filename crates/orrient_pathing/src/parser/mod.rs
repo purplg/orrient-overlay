@@ -65,7 +65,11 @@ fn finish_system(mut next_state: ResMut<NextState<AppState>>) {
 fn load(path: &Path, images: &mut Assets<Image>) -> Result<HashMap<PackId, MarkerPack>> {
     let mut packs: HashMap<PackId, MarkerPack> = Default::default();
 
-    let iter = std::fs::read_dir(path).unwrap();
+    let iter = std::fs::read_dir(path).or_else(|_| {
+        std::fs::create_dir_all(path)?;
+        std::fs::read_dir(path)
+    })?;
+
     for path in iter
         .filter_map(|file| file.ok().map(|file| file.path()))
         .filter(|file| file.is_file())
