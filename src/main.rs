@@ -1,4 +1,4 @@
-pub use bevy::prelude::*;
+use bevy::prelude::*;
 use bevy::window::CompositeAlphaMode;
 use bevy::window::WindowLevel;
 use bevy::window::WindowResolution;
