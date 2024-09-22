@@ -173,7 +173,7 @@ pub struct MarkerPack {
     markers: HashMap<NodeIndex, Marker>,
 
     /// Map the relationship between markers
-    graph: DiGraph<NodeIndex, ()>,
+    graph: DiGraph<MarkerId, ()>,
 
     /// POIs associated with markers
     pois: HashMap<MarkerId, Vec<Poi>>,
@@ -288,14 +288,8 @@ impl MarkerPack {
 pub struct MarkerPackBuilder {
     tree: MarkerPack,
 
-    edges: HashMap<NodeIndex, BTreeSet<NodeIndex>>,
-
     trail_tags: HashMap<MarkerId, Vec<TrailXml>>,
     trail_data: HashMap<String, TrailData>,
-
-    /// The number of indices in the graph so to generate unique
-    /// indices.
-    count: usize,
 
     /// The path in the tree we currently are located.
     parent_id: VecDeque<NodeIndex>,
@@ -313,8 +307,6 @@ impl MarkerPackBuilder {
     pub fn new(pack_id: impl Into<PackId>) -> Self {
         Self {
             tree: MarkerPack::new(pack_id.into()),
-            edges: Default::default(),
-            count: Default::default(),
             parent_id: Default::default(),
             trail_tags: Default::default(),
             trail_data: Default::default(),
@@ -328,18 +320,20 @@ impl MarkerPackBuilder {
     pub fn add_marker(&mut self, mut marker: Marker) -> &mut Self {
         let node_id = if let Some(parent_id) = self.parent_id.front().copied() {
             let parent_marker = self.tree.markers.get(&parent_id).unwrap();
+
+            // TODO Remove this line
+            // Instead, I wanted to create a *private* NaiveMarker
+            // that only contains the data directly associated with
+            // that marker. Public "getter" methods should return a
+            // fulfilled Marker that contains inherited data from its'
+            // parents.
             marker.copy_from_parent(parent_marker);
-            let node_id = self.get_or_create_index(marker.id.clone());
-            if let Some(children) = self.edges.get_mut(&parent_id) {
-                children.insert(node_id);
-            } else {
-                let mut set = BTreeSet::default();
-                set.insert(node_id);
-                self.edges.insert(parent_id, set);
-            }
+
+            let node_id = self.get_or_init(marker.id.clone());
+            self.tree.graph.add_edge(parent_id, node_id, ());
             node_id
         } else {
-            let node_id = self.get_or_create_index(marker.id.clone());
+            let node_id = self.get_or_init(marker.id.clone());
             self.tree.roots.insert(node_id);
             node_id
         };
@@ -387,13 +381,9 @@ impl MarkerPackBuilder {
         }
     }
 
-    fn get_or_create_index(&mut self, marker_id: MarkerId) -> NodeIndex {
+    fn get_or_init(&mut self, marker_id: MarkerId) -> NodeIndex {
         self.tree.index_of(&marker_id).unwrap_or_else(|| {
-            let node_id = NodeIndex::new({
-                let i = self.count;
-                self.count += 1;
-                i
-            });
+            let node_id = self.tree.graph.add_node(marker_id.clone());
             self.tree.indices.insert(marker_id, node_id);
             node_id
         })
@@ -408,18 +398,6 @@ impl MarkerPackBuilder {
     }
 
     pub fn build(mut self) -> MarkerPack {
-        for node_id in self.tree.markers.keys() {
-            self.tree.graph.add_node(*node_id);
-        }
-
-        for (parent, children) in self.edges.drain() {
-            // Reverse the list of child nodes to ensure they're order
-            // is maintained from the marker pack.
-            for child in children.into_iter().rev() {
-                self.tree.graph.add_edge(parent, child, ());
-            }
-        }
-
         for (id, tags) in self.trail_tags.iter() {
             for tag in tags {
                 let Some(data) = self.trail_data.get(&tag.trail_file) else {
