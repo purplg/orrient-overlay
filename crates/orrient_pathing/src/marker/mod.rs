@@ -36,6 +36,9 @@ fn map_enter_system(
     mut map_markers: ResMut<MapMarkers>,
 ) {
     map_markers.0.extend(packs.get_map_markers(&map_id.0));
+    for marker in map_markers.iter() {
+        println!("marker: {:?}", marker);
+    }
 }
 
 fn track_markers_system(
@@ -44,7 +47,7 @@ fn track_markers_system(
 ) {
     for event in events.read() {
         match event {
-            MarkerEvent::Enabled(full_id) => {
+            MarkerEvent::Enable(full_id) => {
                 enabled_markers.insert(full_id.clone());
             }
             MarkerEvent::Disable(full_id) => {

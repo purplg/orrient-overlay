@@ -111,7 +111,7 @@ fn show_trails(
     map_id: Res<MapId>,
 ) {
     for event in events.read() {
-        let MarkerEvent::Enabled(full_id) = event else {
+        let MarkerEvent::Enable(full_id) = event else {
             continue;
         };
 
@@ -119,11 +119,15 @@ fn show_trails(
             continue;
         };
 
-        let Some(trails) = pack.get_trails(&full_id.marker_id) else {
+        let Some(marker) = pack.get_marker(full_id.marker_id) else {
             continue;
         };
 
-        for trail in trails.iter().filter(|trail| trail.map_id == map_id.0) {
+        for trail in marker
+            .trails
+            .iter()
+            .filter(|trail| trail.map_id == map_id.0)
+        {
             let iter = trail.path.iter().rev().map(|path| Vec3 {
                 x: path.x,
                 y: path.y,
@@ -153,7 +157,7 @@ fn show_trails(
                 },
             ));
         }
-        info!("Loaded trail: {}", full_id);
+        info!("Loaded trail: {:?}", full_id);
     }
 }
 

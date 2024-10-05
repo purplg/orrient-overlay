@@ -1,5 +1,4 @@
 use super::theme::*;
-use crate::marker_list::window::MarkerItem;
 use crate::marker_list::window::MarkerWindowEvent;
 
 use orrient_core::prelude::*;
@@ -15,6 +14,7 @@ pub trait UiMarkerButtonExt {
     fn marker_button(
         &mut self,
         pack: &MarkerPack,
+        marker_id: MarkerId,
         marker: &Marker,
         column_id: usize,
         checked: bool,
@@ -24,25 +24,25 @@ pub trait UiMarkerButtonExt {
 #[derive(Component)]
 struct ColumnRef(usize);
 
-#[derive(Component, Deref, Debug)]
+#[derive(Component, Debug)]
 struct MarkerCheckbox(FullMarkerId);
 
 impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
     fn marker_button(
         &mut self,
         pack: &MarkerPack,
+        marker_id: MarkerId,
         marker: &Marker,
         column_id: usize,
         checked: bool,
     ) {
-        let full_id = pack.full_id(marker.id.clone());
         self.container(
             (
                 MarkerButton::frame(),
                 ColumnRef(column_id),
                 MarkerButton {
-                    full_id: full_id.clone(),
-                    has_children: pack.iter(&marker.id).count() > 0,
+                    full_id: pack.full_id(marker_id),
+                    has_children: pack.iter(marker_id).count() > 0,
                     open: false,
                 },
             ),
@@ -50,7 +50,7 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
                 parent.row(|parent| {
                     parent
                         .checkbox(None, checked)
-                        .insert(MarkerCheckbox(full_id.clone()));
+                        .insert(MarkerCheckbox(pack.full_id(marker_id)));
                     parent.column(|parent| {
                         parent.spawn(TextBundle::from_section(
                             &marker.label,
@@ -60,7 +60,7 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
                             },
                         ));
                         parent.spawn(TextBundle::from_section(
-                            full_id.marker_id.to_string(),
+                            pack.name_of(marker_id).to_string(),
                             TextStyle {
                                 color: palettes::tailwind::GRAY_500.into(),
                                 font_size: 10.,
@@ -71,6 +71,25 @@ impl UiMarkerButtonExt for UiBuilder<'_, Entity> {
                 });
             },
         );
+    }
+}
+
+fn button_init(
+    mut commands: Commands,
+    buttons: Query<(Entity, &MarkerButton), Added<MarkerButton>>,
+    packs: Res<MarkerPacks>,
+    map_id: Res<MapId>,
+) {
+    for (entity, button) in &buttons {
+        let mut entity_cmds = commands.entity(entity);
+        let Some(pack) = packs.get(&button.full_id.pack_id) else {
+            warn!("Pack for button not found.");
+            return;
+        };
+
+        if !pack.contains_map_id(button.full_id.marker_id, **map_id) {
+            entity_cmds.add_pseudo_state(PseudoState::Disabled);
+        }
     }
 }
 
@@ -87,7 +106,7 @@ fn button_mapid_disable(
             continue;
         };
 
-        if pack.contains_map_id(&button.full_id.marker_id, **map_id) {
+        if pack.contains_map_id(button.full_id.marker_id, **map_id) {
             entity_cmds.remove_pseudo_state(PseudoState::Disabled);
         } else {
             entity_cmds.add_pseudo_state(PseudoState::Disabled);
@@ -128,7 +147,7 @@ fn button_interaction(
                     continue;
                 };
 
-                if pack.iter(&button.full_id.marker_id).count() == 0 {
+                if pack.iter(button.full_id.marker_id).count() == 0 {
                     continue;
                 }
 
@@ -167,148 +186,68 @@ fn button_state(
     }
 }
 
+/// What happens when a checkbox is toggled
 fn checkbox_action(
     query: Query<(&Checkbox, &MarkerCheckbox, &FluxInteraction), Changed<FluxInteraction>>,
     mut events: EventWriter<MarkerEvent>,
     packs: Res<MarkerPacks>,
 ) {
-    for (checkbox, full_id, interaction) in &query {
-        if interaction.is_pressed() {
-            if let Some(pack) = packs.get(&full_id.pack_id) {
-                let markers = pack
-                    .iter_recursive(&full_id.marker_id)
-                    .map(|marker| full_id.with_marker_id(marker.id.clone()));
-
-                if checkbox.checked {
-                    events.send_batch(markers.map(MarkerEvent::Disable));
-                } else {
-                    events.send_batch(markers.map(MarkerEvent::Enabled));
-                }
-            }
+    for (checkbox, marker_checkbox, interaction) in &query {
+        if !interaction.is_released() {
+            continue;
         }
-    }
-}
 
-fn checkbox_follow(
-    mut query: Query<(&mut Checkbox, &MarkerCheckbox)>,
-    mut events: EventReader<MarkerEvent>,
-) {
-    for event in events.read() {
-        match event {
-            MarkerEvent::Enabled(id_to_load) => {
-                for (mut checkbox, this_id) in &mut query {
-                    if checkbox.checked {
-                        continue;
-                    };
-                    if this_id.within(id_to_load) {
-                        checkbox.checked = true;
-                    }
-                }
-            }
-            MarkerEvent::Disable(id_to_unload) => {
-                for (mut checkbox, this_id) in &mut query {
-                    if !checkbox.checked {
-                        continue;
-                    };
-                    if this_id.within(id_to_unload) {
-                        checkbox.checked = false;
-                    }
-                }
-            }
-            MarkerEvent::DisableAll => {
-                for (mut checkbox, _) in &mut query {
-                    if !checkbox.checked {
-                        continue;
-                    };
-                    checkbox.checked = false;
-                }
-            }
-        }
-    }
-}
-
-fn button_init(
-    mut commands: Commands,
-    buttons: Query<(Entity, &MarkerButton), Added<MarkerButton>>,
-    packs: Res<MarkerPacks>,
-    map_id: Res<MapId>,
-) {
-    for (entity, button) in &buttons {
-        let mut entity_cmds = commands.entity(entity);
-        let Some(pack) = packs.get(&button.full_id.pack_id) else {
-            warn!("Pack for button not found.");
-            return;
-        };
-
-        if !pack.contains_map_id(&button.full_id.marker_id, **map_id) {
-            entity_cmds.add_pseudo_state(PseudoState::Disabled);
-        }
-    }
-}
-
-#[derive(Event, Debug)]
-enum CheckboxEvent {
-    Enable(FullMarkerId),
-    Disable(FullMarkerId),
-}
-
-impl CheckboxEvent {
-    fn id(&self) -> &FullMarkerId {
-        match self {
-            CheckboxEvent::Enable(id) => id,
-            CheckboxEvent::Disable(id) => id,
-        }
-    }
-
-    fn enabled(&self) -> bool {
-        match self {
-            CheckboxEvent::Enable(_) => true,
-            CheckboxEvent::Disable(_) => false,
-        }
-    }
-}
-
-fn checkbox(
-    query: Query<(&Checkbox, &MarkerItem), Changed<Checkbox>>,
-    mut checkbox_events: EventWriter<CheckboxEvent>,
-    mut events: EventWriter<MarkerEvent>,
-    packs: Res<MarkerPacks>,
-) {
-    for (checkbox, item) in query.iter() {
-        let Some(pack) = packs.get(&item.id.pack_id) else {
+        let Some(pack) = packs.get(&marker_checkbox.0.pack_id) else {
             continue;
         };
 
+        let markers = pack
+            .recurse(marker_checkbox.0.marker_id)
+            .map(|(id, _marker)| pack.full_id(id));
+        for marker in markers {
+            println!("marker: {:?}", marker.marker_name);
+        }
+
+        let markers = pack
+            .recurse(marker_checkbox.0.marker_id)
+            .map(|(id, _marker)| pack.full_id(id));
+
         if checkbox.checked {
-            events.send(MarkerEvent::Enabled(item.id.clone()));
-            checkbox_events
-                .send_batch(pack.iter(&item.id.marker_id).map(|marker| {
-                    CheckboxEvent::Enable(item.id.with_marker_id(marker.id.clone()))
-                }));
+            events.send_batch(markers.map(MarkerEvent::Disable));
         } else {
-            events.send(MarkerEvent::Disable(item.id.clone()));
-            checkbox_events.send_batch(
-                pack.iter(&item.id.marker_id).map(|marker| {
-                    CheckboxEvent::Disable(item.id.with_marker_id(marker.id.clone()))
-                }),
-            );
+            events.send_batch(markers.map(MarkerEvent::Enable));
         }
     }
 }
 
-fn checkbox_events(
-    mut query: Query<(&mut Checkbox, &MarkerItem)>,
-    mut checkbox_events: EventReader<CheckboxEvent>,
+/// Update the state of checkboxes as markers get enabled/disabled
+fn checkbox_update(
+    mut query: Query<(&mut Checkbox, &MarkerCheckbox)>,
+    mut r_marker_events: EventReader<MarkerEvent>,
 ) {
-    for event in checkbox_events.read() {
-        if let Some(mut checkbox) = query.iter_mut().find_map(|(checkbox, item)| {
-            if &item.id == event.id() {
-                Some(checkbox)
-            } else {
-                None
+    for event in r_marker_events.read() {
+        match event {
+            MarkerEvent::Enable(full_marker_id) => {
+                if let Some((mut checkbox, _marker_id)) = query
+                    .iter_mut()
+                    .find(|(_checkbox, marker_id)| &marker_id.0 == full_marker_id)
+                {
+                    checkbox.checked = true;
+                }
             }
-        }) {
-            checkbox.checked = event.enabled();
+            MarkerEvent::Disable(full_marker_id) => {
+                if let Some((mut checkbox, _marker_id)) = query
+                    .iter_mut()
+                    .find(|(_checkbox, marker_id)| &marker_id.0 == full_marker_id)
+                {
+                    checkbox.checked = false;
+                }
+            }
+            MarkerEvent::DisableAll => {
+                for (mut checkbox, _marker_id) in &mut query {
+                    checkbox.checked = false;
+                }
+            }
         }
     }
 }
@@ -318,19 +257,16 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ComponentThemePlugin::<MarkerButton>::default());
         app.add_systems(Update, button_interaction);
-        app.add_systems(Update, checkbox_action);
         app.add_systems(Update, button_state);
         app.add_systems(Update, button_track_state);
 
-        app.add_event::<CheckboxEvent>();
-        app.add_systems(Update, checkbox);
-        app.add_systems(Update, checkbox_events);
+        app.add_systems(Update, checkbox_update.run_if(on_event::<MarkerEvent>()));
+        app.add_systems(Update, checkbox_action.after(checkbox_update));
 
         app.add_systems(
             Update,
             button_mapid_disable.run_if(resource_exists_and_changed::<MapId>),
         );
-        app.add_systems(Update, checkbox_follow.run_if(on_event::<MarkerEvent>()));
         app.add_systems(Update, button_init.run_if(resource_exists::<MapId>));
     }
 }

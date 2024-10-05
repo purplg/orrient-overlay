@@ -28,6 +28,21 @@ fn unload_all_command(
     }
 }
 
+/// Reload the map_id
+#[derive(Parser, ConsoleCommand)]
+#[command(name = "reload_map")]
+struct ReloadMapCommand;
+fn reload_map_command(
+    mut log: ConsoleCommand<ReloadMapCommand>,
+    mut commands: Commands,
+    map_id: Res<MapId>,
+) {
+    if let Some(Ok(ReloadMapCommand)) = log.take() {
+        commands.insert_resource(map_id.clone());
+        log.reply_ok("Reloaded map");
+    }
+}
+
 /// Reload marker packs
 #[derive(Parser, ConsoleCommand)]
 #[command(name = "reload")]
@@ -172,17 +187,45 @@ struct MarkerCommand {
 }
 #[derive(Subcommand, Clone)]
 enum MarkerSubcommand {
-    Load { pack_id: String, marker_id: String },
+    List { pack_id: String },
+    Load { pack_id: String, marker_idx: usize },
 }
-fn marker_command(mut log: ConsoleCommand<MarkerCommand>, mut events: EventWriter<MarkerEvent>) {
+fn marker_command(
+    mut log: ConsoleCommand<MarkerCommand>,
+    mut events: EventWriter<MarkerEvent>,
+    packs: Res<MarkerPacks>,
+) {
     if let Some(Ok(MarkerCommand { subcommand: kind })) = log.take() {
         match kind {
-            MarkerSubcommand::Load { pack_id, marker_id } => {
-                let full_id = FullMarkerId {
-                    pack_id: PackId(pack_id),
-                    marker_id: MarkerId(marker_id.into()),
+            MarkerSubcommand::List { pack_id } => {
+                let Some(pack) = packs.get(&PackId(pack_id)) else {
+                    log.reply_failed("Pack ID not found.");
+                    return;
                 };
-                events.send(MarkerEvent::Enabled(full_id));
+                for root in pack.roots() {
+                    for (idx, _marker) in pack.recurse(root) {
+                        log.reply(format!("{}: {}", idx, pack.name_of(idx).0.join(".")));
+                    }
+                }
+                log.ok();
+            }
+            MarkerSubcommand::Load {
+                pack_id,
+                marker_idx,
+            } => {
+                let pack_id = PackId(pack_id);
+                let Some(pack) = packs.get(&pack_id) else {
+                    return log.reply_failed("Pack not found.");
+                };
+
+                let marker_id: MarkerId = marker_idx.into();
+                let marker_name = pack.name_of(marker_id);
+                let full_id = FullMarkerId {
+                    pack_id,
+                    marker_id,
+                    marker_name,
+                };
+                events.send(MarkerEvent::Enable(full_id));
                 log.ok();
             }
         }
@@ -197,7 +240,8 @@ struct TrailCommand {
 }
 #[derive(Subcommand, Clone)]
 enum Trail {
-    Load { pack_id: String, marker_id: String },
+    List { pack_id: String },
+    Load { pack_id: String, marker_idx: usize },
 }
 fn trail_command(
     mut log: ConsoleCommand<TrailCommand>,
@@ -213,24 +257,47 @@ fn trail_command(
             return;
         };
         match kind {
-            Trail::Load { pack_id, marker_id } => {
-                let full_id = FullMarkerId {
-                    pack_id: PackId(pack_id),
-                    marker_id: MarkerId(marker_id.into()),
-                };
-                let Some(pack) = packs.get(&full_id.pack_id) else {
-                    log.reply_failed("Pack not found");
+            Trail::List { pack_id } => {
+                let Some(pack) = packs.get(&PackId(pack_id)) else {
+                    log.reply_failed("Pack ID not found.");
                     return;
                 };
+                for root in pack.roots() {
+                    for (idx, _marker) in pack.recurse(root) {
+                        log.reply(format!("{}: {}", idx, pack.name_of(idx).0.join(".")));
+                    }
+                }
+                log.ok();
+            }
+            Trail::Load {
+                pack_id,
+                marker_idx,
+            } => {
+                let pack_id = PackId(pack_id);
+                let Some(pack) = packs.get(&pack_id) else {
+                    return log.reply_failed("Pack not found.");
+                };
 
-                let Some(trails) = pack.get_trails(&full_id.marker_id) else {
+                let marker_id: MarkerId = marker_idx.into();
+                let marker_name = pack.name_of(marker_id);
+                let full_id = FullMarkerId {
+                    pack_id,
+                    marker_id,
+                    marker_name,
+                };
+
+                let Some(marker) = pack.get_marker(full_id.marker_id) else {
                     log.reply_failed("Trail not found for marker_id: {full_id}");
                     return;
                 };
 
-                debug!("Loading trails for {}...", full_id);
+                debug!("Loading trails for {:?}...", full_id);
 
-                for trail in trails.iter().filter(|trail| trail.map_id == map_id.0) {
+                for trail in marker
+                    .trails
+                    .iter()
+                    .filter(|trail| trail.map_id == map_id.0)
+                {
                     let iter = trail.path.iter().rev().map(|path| Vec3 {
                         x: path.x,
                         y: path.y,
@@ -262,10 +329,10 @@ fn trail_command(
                         },
                     ));
                 }
-                info!("Trail {} loaded.", full_id);
+                info!("Trail {:?} loaded.", full_id);
+                log.ok()
             }
         }
-        log.ok();
     }
 }
 
@@ -274,6 +341,7 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ConsolePlugin);
         app.add_console_command::<UnloadAllCommand, _>(unload_all_command);
+        app.add_console_command::<ReloadMapCommand, _>(reload_map_command);
         app.add_console_command::<ReloadCommand, _>(reload_command);
         app.add_console_command::<MapIdCommand, _>(mapid_command);
         app.add_console_command::<PacksCommand, _>(packs_command);

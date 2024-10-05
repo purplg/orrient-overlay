@@ -12,13 +12,16 @@ pub mod prelude {
     pub use crate::marker::trail::TrailMaterial;
     pub use crate::marker::trail::TrailMesh;
     pub use crate::marker::EnabledMarkers;
-    pub use crate::parser::model::Poi;
-    pub use crate::parser::pack::Behavior;
+    pub use crate::marker::MapMarkers;
+    pub use crate::parser::model::Behavior;
+    pub use crate::parser::model::MarkerKind;
     pub use crate::parser::pack::FullMarkerId;
     pub use crate::parser::pack::Marker;
     pub use crate::parser::pack::MarkerId;
-    pub use crate::parser::pack::MarkerKind;
+    pub use crate::parser::pack::MarkerName;
     pub use crate::parser::pack::MarkerPack;
+    pub use crate::parser::pack::MarkerPath;
+    pub use crate::parser::pack::Poi;
     pub use crate::parser::MarkerPacks;
     pub use crate::parser::PackId;
 }

@@ -4,12 +4,9 @@ pub(super) mod marker_button;
 pub(super) mod separator;
 pub(super) mod tooltip;
 
+use orrient_pathing::prelude::*;
+
 use marker_button::UiMarkerButtonExt as _;
-use orrient_pathing::prelude::EnabledMarkers;
-use orrient_pathing::prelude::MarkerEvent;
-use orrient_pathing::prelude::MarkerKind;
-use orrient_pathing::prelude::MarkerPacks;
-use orrient_pathing::prelude::ReloadMarkersEvent;
 use separator::UiMarkerSeparatorExt as _;
 
 use super::window::MarkerWindowEvent;
@@ -67,9 +64,10 @@ fn set_column(
                         scroll_view.column(|parent| {
                             parent.label(LabelConfig::from("Top"));
                             for (_pack_id, pack) in packs.iter() {
-                                for marker in pack.roots().filter_map(|marker| pack.get(&marker.id))
-                                {
-                                    parent.marker_button(pack, marker, 0, false);
+                                for (idx, marker) in pack.roots().flat_map(|idx| {
+                                    pack.get_marker(idx).map(|marker| (idx, marker))
+                                }) {
+                                    parent.marker_button(pack, idx, &marker, 0, false);
                                 }
                             }
                         });
@@ -79,17 +77,16 @@ fn set_column(
                     .width(Val::Px(200.));
             }
             MarkerWindowEvent::SetColumn { column_id, full_id } => {
+                println!("set_column: {:?}", full_id);
                 let Some(pack) = packs.get(&full_id.pack_id) else {
                     warn!("Pack {} not found", full_id.pack_id);
                     continue;
                 };
 
-                let Some(parent_marker) = pack.get(&full_id.marker_id) else {
-                    warn!("Marker {} not found", full_id.marker_id);
+                let Some(parent_marker) = pack.get_marker(full_id.marker_id) else {
+                    warn!("Marker {:?} not found", full_id.marker_id);
                     continue;
                 };
-
-                let markers = pack.iter(&full_id.marker_id).collect::<Vec<_>>();
 
                 let next_column_id = column_id + 1;
 
@@ -106,13 +103,13 @@ fn set_column(
                     .scroll_view(Some(ScrollAxis::Vertical), |parent| {
                         parent.column(|parent| {
                             parent.label(LabelConfig::from(parent_marker.label.clone()));
-                            for marker in &markers {
+                            for (id, marker) in pack.iter(full_id.marker_id) {
                                 if let MarkerKind::Separator = marker.kind {
                                     parent.marker_separator(&marker.label);
                                 } else {
-                                    let full_id = full_id.with_marker_id(marker.id.clone());
+                                    let full_id = pack.full_id(id);
                                     let checked = visible_markers.contains(&full_id);
-                                    parent.marker_button(pack, marker, next_column_id, checked);
+                                    parent.marker_button(pack, id, marker, next_column_id, checked);
                                 }
                             }
                         });

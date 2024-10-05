@@ -1,6 +1,7 @@
 pub mod compass;
 mod console;
 mod debug_panel;
+mod guide_arrow;
 mod input;
 mod marker_list;
 
@@ -147,6 +148,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_plugins(console::Plugin);
         app.add_plugins(SickleUiPlugin);
         app.add_plugins(compass::Plugin);
+        app.add_plugins(guide_arrow::Plugin);
         app.add_plugins(marker_list::Plugin);
         app.add_plugins(debug_panel::Plugin);
         app.add_plugins(input::Plugin);

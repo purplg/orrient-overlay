@@ -1,16 +1,22 @@
-use std::borrow::Cow;
+use std::str::FromStr as _;
 
-use anyhow::{anyhow, Result};
-use bevy::{log::warn, math::Vec3};
+use anyhow::anyhow;
+use anyhow::Result;
+use bevy::log::warn;
+use bevy::math::Vec3;
+use bevy::utils::HashSet;
 use quick_xml::events::attributes::Attributes;
-use typed_path::{Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsPathBuf};
+use typed_path::Utf8PathBuf;
+use typed_path::Utf8UnixEncoding;
+use typed_path::Utf8WindowsPathBuf;
 
-use super::pack::MarkerId;
+use super::pack::MarkerPackBuilder;
+use super::pack::MarkerPath;
 
 #[derive(Clone, Debug)]
-pub struct Poi {
+pub struct PoiXml {
     // type
-    pub id: MarkerId,
+    pub id: String,
     // MapID
     pub map_id: Option<u32>,
     // xpos, ypos, zpos
@@ -19,8 +25,8 @@ pub struct Poi {
     pub icon_file: Option<Utf8PathBuf<Utf8UnixEncoding>>,
 }
 
-impl Poi {
-    pub(super) fn from_attrs(attrs: Attributes) -> Result<Self> {
+impl PoiXml {
+    pub(super) fn from_attrs(builder: &MarkerPackBuilder, attrs: Attributes) -> Result<Self> {
         let mut map_id: Option<u32> = None;
         let mut x: Option<f32> = None;
         let mut y: Option<f32> = None;
@@ -81,8 +87,8 @@ impl Poi {
             None
         };
 
-        Ok(Poi {
-            id: MarkerId(id.ok_or(anyhow!("POI missing field `poi.type`."))?.into()),
+        Ok(PoiXml {
+            id: id.ok_or(anyhow!("POI missing field `poi.type`."))?,
             map_id,
             position,
             icon_file,
@@ -93,7 +99,7 @@ impl Poi {
 #[derive(Clone, Debug)]
 pub(crate) struct TrailXml {
     // type
-    pub id: Cow<'static, str>,
+    pub id: String,
     // trailData
     pub trail_file: String,
     // texture
@@ -101,7 +107,7 @@ pub(crate) struct TrailXml {
 }
 
 impl TrailXml {
-    pub(super) fn from_attrs(attrs: Attributes) -> Result<Self> {
+    pub(super) fn from_attrs(builder: &MarkerPackBuilder, attrs: Attributes) -> Result<Self> {
         let mut id: Option<String> = None;
         let mut trail_file: Option<String> = None;
         let mut texture_file: Option<String> = None;
@@ -132,11 +138,80 @@ impl TrailXml {
         }
 
         Ok(Self {
-            id: id.ok_or(anyhow!("Trail missing field `type`."))?.into(),
+            id: id.ok_or(anyhow!("Trail missing field `trail.type`."))?,
             trail_file: trail_file
                 .map(|file| file.to_lowercase())
                 .ok_or(anyhow!("Trail missing field `trailData`."))?,
             texture_file: texture_file.map(|file| file.to_lowercase()),
         })
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub enum MarkerKind {
+    #[default]
+    Category,
+    Separator,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum Behavior {
+    AlwaysVisible,             // 0
+    ReappearOnMapChange,       // 1
+    ReappearDaily,             // 2
+    DisappearOnUse,            // 3
+    ReappearAfterTime(f32),    // 4
+    ReappearMapReset,          // 5
+    ReappearInstanceChange,    // 6
+    ReappearDailyPerCharacter, // 7
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct MarkerXml {
+    pub name: String,
+    pub label: String,
+    pub kind: MarkerKind,
+    pub depth: usize,
+    pub behavior: Option<Behavior>,
+    pub poi_tip: Option<String>,
+    pub poi_description: Option<String>,
+    pub map_ids: HashSet<u32>,
+    pub icon_file: Option<Utf8PathBuf<Utf8UnixEncoding>>,
+    pub texture: Option<String>,
+}
+
+impl MarkerXml {
+    pub fn from_attrs(attrs: Attributes) -> Result<Self> {
+        let mut this = Self::default();
+
+        for attr in attrs.filter_map(Result::ok) {
+            let Ok(key) = String::from_utf8(attr.key.0.to_vec()) else {
+                warn!("Key is not UTF-8 encoded: {:?}", attr);
+                continue;
+            };
+
+            let Ok(value) = String::from_utf8(attr.value.to_vec()) else {
+                warn!("Value is not UTF-8 encoded: {:?}", attr);
+                continue;
+            };
+
+            match key.to_lowercase().as_str() {
+                "name" => this.name = value.into(),
+                "displayname" => this.label = value,
+                "isseparator" => match value.to_lowercase().as_str() {
+                    "true" | "1" => this.kind = MarkerKind::Separator,
+                    _ => {}
+                },
+                "iconfile" => {
+                    let Ok(path) = Utf8WindowsPathBuf::from_str(&value.to_lowercase());
+                    this.icon_file = Some(path.with_unix_encoding().to_path_buf());
+                }
+                "texture" => {
+                    this.texture = Some(value.to_lowercase());
+                }
+                _ => {}
+            }
+        }
+        Ok(this)
     }
 }

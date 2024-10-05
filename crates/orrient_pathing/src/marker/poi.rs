@@ -3,10 +3,9 @@ use orrient_core::prelude::*;
 
 use super::EnabledMarkers;
 use crate::events::MarkerEvent;
-use crate::parser::pack::Behavior;
+use crate::parser::model::Behavior;
 use crate::parser::MarkerPacks;
 use crate::prelude::FullMarkerId;
-use crate::prelude::MarkerId;
 
 use bevy_mod_billboard::plugin::BillboardPlugin;
 use bevy_mod_billboard::BillboardMeshHandle;
@@ -59,7 +58,8 @@ fn marker_event_system(
 ) {
     for event in marker_events.read() {
         match event {
-            MarkerEvent::Enabled(full_id) => {
+            MarkerEvent::Enable(full_id) => {
+                println!("spawn: {:?}", full_id);
                 spawn_events.send(SpawnPoiEvent(full_id.clone()));
             }
             MarkerEvent::Disable(full_id) => {
@@ -93,18 +93,15 @@ fn spawn_pois_system(
             continue;
         };
 
-        let Some(pois) = pack.get_pois(&full_id.marker_id) else {
+        let Some(marker) = pack.get_marker(full_id.marker_id) else {
             continue;
         };
 
-        let Some(marker) = &pack.get(&full_id.marker_id) else {
-            warn!("Marker {full_id} not found in {}", full_id.pack_id);
-            continue;
-        };
-
-        info!("Loading POIs from {full_id}");
-
-        for poi in pois.iter().filter(|poi| poi.map_id == Some(map_id.0)) {
+        for poi in marker
+            .pois
+            .iter()
+            .filter(|poi| poi.map_id == Some(map_id.0))
+        {
             let Some(pos) = poi.position.map(|position| Vec3 {
                 x: position.x,
                 y: position.y,
@@ -117,9 +114,7 @@ fn spawn_pois_system(
             let icon = poi
                 .icon_file
                 .clone()
-                .or(pack
-                    .get(&full_id.marker_id)
-                    .and_then(|marker| marker.icon_file.clone()))
+                .or_else(|| marker.icon_file.clone())
                 .map(|icon_path| icon_path.into_string())
                 .and_then(|path| pack.get_image(&path));
 
@@ -136,7 +131,7 @@ fn spawn_pois_system(
                     });
                 });
             } else {
-                warn!("No icon for {}", full_id);
+                warn!("No icon for {:?}", full_id);
                 builder.with_children(|parent| {
                     parent.spawn(BillboardTextureBundle {
                         mesh: BillboardMeshHandle(assets.0.clone()),
@@ -144,11 +139,7 @@ fn spawn_pois_system(
                         transform: Transform::from_scale(Vec3::splat(0.25)),
                         ..default()
                     });
-
-                    let display_name = pack
-                        .get(&MarkerId(poi.id.0.clone()))
-                        .map(|marker| marker.label.to_string())
-                        .unwrap_or_else(|| poi.id.0.to_string());
+                    let display_name = marker.label.to_string();
                     parent.spawn(BillboardTextBundle {
                         text: Text::from_section(
                             display_name,
