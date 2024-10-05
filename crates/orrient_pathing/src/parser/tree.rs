@@ -1,4 +1,5 @@
-use petgraph::{prelude::*, visit::Walker};
+use petgraph::prelude::*;
+use petgraph::visit::Walker;
 
 use super::pack::MarkerPath;
 
@@ -96,7 +97,7 @@ impl<N> Trees<N> {
 
     /// Recurse through all nodes starting at `start`.
     pub fn recurse(&self, start: NodeIndex) -> impl Iterator<Item = (NodeIndex, &N)> {
-        petgraph::visit::Bfs::new(&self.graph, start)
+        petgraph::visit::Dfs::new(&self.graph, start)
             .iter(&self.graph)
             .filter_map(|idx| self.graph.node_weight(idx).map(|weight| (idx, weight)))
     }
@@ -192,7 +193,8 @@ mod tests {
         let n_3 = &builder.insert(Node(3));
         let n_4 = &builder.insert(Node(4));
 
-        let n_10 = &builder.insert_root(Node(10));
+        builder.new_root();
+        let n_10 = &builder.insert(Node(10));
         let n_11 = &builder.insert(Node(11));
         let _n_12 = &builder.insert(Node(12));
         builder.up();
@@ -227,7 +229,8 @@ mod tests {
         let n_2 = &builder.insert(Node(2));
         assert_eq!(builder.trees.roots, vec![*n_0, *n_2]);
 
-        let n_3 = &builder.insert_root(Node(3));
+        builder.new_root();
+        let n_3 = &builder.insert(Node(3));
         let tree = builder.build();
         assert_eq!(tree.roots, vec![*n_0, *n_2, *n_3]);
     }
@@ -246,8 +249,8 @@ mod tests {
 
         let mut iter = tree.recurse(n_1);
         assert_eq!(iter.next(), Some((n_1, &Node(1))));
-        assert_eq!(iter.next(), Some((n_3, &Node(3))));
         assert_eq!(iter.next(), Some((n_2, &Node(2))));
+        assert_eq!(iter.next(), Some((n_3, &Node(3))));
         assert_eq!(iter.next(), Some((n_4, &Node(4))));
     }
 }

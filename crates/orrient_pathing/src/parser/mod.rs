@@ -313,236 +313,264 @@ impl bevy::prelude::Plugin for Plugin {
     }
 }
 
-// TODO
-// #[cfg(ignore)]
-// #[cfg(test)]
-// mod tests {
-//     use std::io::Write;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     use lazy_static::lazy_static;
-//     use pack::MarkerName;
-//     use tempfile::tempdir;
-//     use zip::{write::SimpleFileOptions, ZipWriter};
+    use std::io::Write;
 
-//     use super::*;
+    use lazy_static::lazy_static;
+    use pack::MarkerPath;
+    use petgraph::prelude::NodeIndex;
+    use tempfile::tempdir;
+    use zip::{write::SimpleFileOptions, ZipWriter};
 
-//     lazy_static! {
-//         static ref TEST_PACKS: HashMap<PackId, MarkerPack> = {
-//             let dir = tempdir().unwrap().into_path();
-//             let mut writer = ZipWriter::new(File::create_new(dir.join("test.taco")).unwrap());
-//             let options =
-//                 SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    lazy_static! {
+        static ref TEST_PACKS: HashMap<PackId, MarkerPack> = {
+            let dir = tempdir().unwrap().into_path();
+            let mut writer = ZipWriter::new(File::create_new(dir.join("test.taco")).unwrap());
+            let options =
+                SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
-//             writer.start_file("test_1.xml", options).unwrap();
-//             writer
-//                 .write(
-//                     r#"
-// <OverlayData>
-//   <MarkerCategory name="A" DisplayName="Item A">
-//     <MarkerCategory name="B" DisplayName="Item A.B">
-//       <MarkerCategory name="C" DisplayName="Item A.B" />
-//       <MarkerCategory name="D" DisplayName="Item A.B" />
-//     </MarkerCategory>
-//   </MarkerCategory>
-//   <POIs>
-//     <POI MapID="15" xpos="100.0" ypos="100.0" zpos="-100.0" type="A" GUID="none"/>
-//     <POI MapID="15" xpos="200.0" ypos="200.0" zpos="-200.0" type="A.B" GUID="none"/>
-//   </POIs>
-// </OverlayData>
-// "#
-//                     .as_bytes(),
-//                 )
-//                 .unwrap();
+            writer.start_file("test_1.xml", options).unwrap();
+            writer
+                .write(
+                    r#"
+<OverlayData>
+  <MarkerCategory name="A" DisplayName="Item A">
+    <MarkerCategory name="B" DisplayName="Item A.B">
+      <MarkerCategory name="C" DisplayName="Item A.B" />
+      <MarkerCategory name="D" DisplayName="Item A.B" />
+    </MarkerCategory>
+  </MarkerCategory>
+  <POIs>
+    <POI MapID="15" xpos="100.0" ypos="100.0" zpos="-100.0" type="A" GUID="none"/>
+    <POI MapID="15" xpos="200.0" ypos="200.0" zpos="-200.0" type="A.B" GUID="none"/>
+  </POIs>
+</OverlayData>
+"#
+                    .as_bytes(),
+                )
+                .unwrap();
 
-//             writer.start_file("test_2.xml", options).unwrap();
-//             writer
-//                 .write(
-//                     r#"
-// <OverlayData>
-//   <MarkerCategory name="A" DisplayName="Item A">
-//     <MarkerCategory name="E" DisplayName="Item A.E">
-//       <MarkerCategory name="F" DisplayName="Item A.E.F" />
-//     </MarkerCategory>
-//   </MarkerCategory>
-//   <POIs>
-//     <POI MapID="15" xpos="300.0" ypos="300.0" zpos="-300.0" type="A.E" GUID="none"/>
-//     <POI MapID="15" xpos="400.0" ypos="400.0" zpos="-400.0" type="A.E" GUID="none"/>
-//   </POIs>
-// </OverlayData>
-// "#
-//                     .as_bytes(),
-//                 )
-//                 .unwrap();
+            writer.start_file("test_2.xml", options).unwrap();
+            writer
+                .write(
+                    r#"
+<OverlayData>
+  <MarkerCategory name="A" DisplayName="Item A">
+    <MarkerCategory name="E" DisplayName="Item A.E">
+      <MarkerCategory name="F" DisplayName="Item A.E.F" />
+    </MarkerCategory>
+  </MarkerCategory>
+  <POIs>
+    <POI MapID="15" xpos="300.0" ypos="300.0" zpos="-300.0" type="A.E" GUID="none"/>
+    <POI MapID="15" xpos="400.0" ypos="400.0" zpos="-400.0" type="A.E" GUID="none"/>
+  </POIs>
+</OverlayData>
+"#
+                    .as_bytes(),
+                )
+                .unwrap();
 
-//             writer.start_file("test_3.xml", options).unwrap();
-//             writer
-//                 .write(
-//                     r#"
-// <OverlayData>
-//   <MarkerCategory name="G" DisplayName="Item G">
-//     <MarkerCategory name="H" DisplayName="Item G.B" />
-//     <MarkerCategory name="I" DisplayName="Item G.I">
-//       <MarkerCategory name="J" DisplayName="Item G.I.J" />
-//       <MarkerCategory name="K" DisplayName="Item G.I.K" />
-//       <MarkerCategory name="L" DisplayName="Item G.I.L" />
-//     </MarkerCategory>
-//   </MarkerCategory>
-//   <POIs>
-//     <POI MapID="15" xpos="500.0" ypos="500.0" zpos="-500.0" type="G.K" GUID="none"/>
-//     <POI MapID="15" xpos="600.0" ypos="600.0" zpos="-600.0" type="G.L" GUID="none"/>
-//   </POIs>
-// </OverlayData>
-// "#
-//                     .as_bytes(),
-//                 )
-//                 .unwrap();
+            writer.start_file("test_3.xml", options).unwrap();
+            writer
+                .write(
+                    r#"
+<OverlayData>
+  <MarkerCategory name="G" DisplayName="Item G">
+    <MarkerCategory name="H" DisplayName="Item G.B" />
+    <MarkerCategory name="I" DisplayName="Item G.I">
+      <MarkerCategory name="J" DisplayName="Item G.I.J" />
+      <MarkerCategory name="K" DisplayName="Item G.I.K" />
+      <MarkerCategory name="L" DisplayName="Item G.I.L" />
+    </MarkerCategory>
+  </MarkerCategory>
+  <POIs>
+    <POI MapID="15" xpos="500.0" ypos="500.0" zpos="-500.0" type="G.K" GUID="none"/>
+    <POI MapID="15" xpos="600.0" ypos="600.0" zpos="-600.0" type="G.L" GUID="none"/>
+  </POIs>
+</OverlayData>
+"#
+                    .as_bytes(),
+                )
+                .unwrap();
 
-//             writer.finish().unwrap();
-//             let mut images: Assets<Image> = Assets::default();
-//             load(&dir, &mut images).unwrap()
-//         };
-//     }
+            writer.finish().unwrap();
+            let mut images: Assets<Image> = Assets::default();
+            load(&dir, &mut images).unwrap()
+        };
+    }
 
-//     #[test]
-//     fn test_iter() {
-//         let markers = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
-//         let mut iter = markers.recurse(&MarkerPath::new_root("A".into()));
+    #[test]
+    fn test_iter() {
+        let markers = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
+        for idx in markers.trees.graph().node_indices() {
+            let name = &markers.trees.graph().node_weight(idx).unwrap().name;
+            println!("{idx:?}: {name:?}");
+        }
 
-//         //     A
-//         //    / \
-//         //   B   E
-//         //  / \   \
-//         // C   D   F
-//         assert_eq!(iter.next().unwrap().id.path.0, "A");
-//         assert_eq!(iter.next().unwrap().id.path.0, "A.B");
-//         assert_eq!(iter.next().unwrap().id.path.0, "A.B.C");
-//         assert_eq!(iter.next().unwrap().id.path.0, "A.B.D");
-//         assert_eq!(iter.next().unwrap().id.path.0, "A.E");
-//         assert_eq!(iter.next().unwrap().id.path.0, "A.E.F");
-//         assert!(iter.next().is_none());
+        let root: NodeIndex = *MarkerPath::from_string(&markers.trees, "A")
+            .unwrap()
+            .last()
+            .unwrap();
+        let mut iter = markers
+            .recurse(root.into())
+            .map(|(id, _)| markers.name_of(id).0.join("."));
 
-//         //   G
-//         //  / \
-//         // H   I
-//         //   / | \
-//         //  J  K  L
-//         let mut iter = markers.recurse(&MarkerName("G".into()));
-//         assert_eq!(iter.next().unwrap().id.0, "G");
-//         assert_eq!(iter.next().unwrap().id.0, "G.H");
-//         assert_eq!(iter.next().unwrap().id.0, "G.I");
-//         assert_eq!(iter.next().unwrap().id.0, "G.I.J");
-//         assert_eq!(iter.next().unwrap().id.0, "G.I.K");
-//         assert_eq!(iter.next().unwrap().id.0, "G.I.L");
-//         assert!(iter.next().is_none());
+        //     A
+        //    / \
+        //   B   E
+        //  / \   \
+        // C   D   F
+        assert_eq!(iter.next().unwrap(), "A");
+        assert_eq!(iter.next().unwrap(), "A.B");
+        assert_eq!(iter.next().unwrap(), "A.B.C");
+        assert_eq!(iter.next().unwrap(), "A.B.D");
+        assert_eq!(iter.next().unwrap(), "A.E");
+        assert_eq!(iter.next().unwrap(), "A.E.F");
+        assert!(iter.next().is_none());
 
-//         //     A
-//         //    / \
-//         //   B   E
-//         //  / \   \
-//         // C   D   F
-//         let mut iter = markers.recurse(&MarkerName("A.B".into()));
-//         assert_eq!(iter.next().unwrap().id.0, "A.B");
-//         assert_eq!(iter.next().unwrap().id.0, "A.B.C");
-//         assert_eq!(iter.next().unwrap().id.0, "A.B.D");
-//         assert!(iter.next().is_none());
+        //   G
+        //  / \
+        // H   I
+        //   / | \
+        //  J  K  L
+        let root: NodeIndex = *MarkerPath::from_string(&markers.trees, "G")
+            .unwrap()
+            .last()
+            .unwrap();
+        let mut iter = markers
+            .recurse(root.into())
+            .map(|(id, _)| markers.name_of(id).0.join("."));
+        assert_eq!(iter.next().unwrap(), "G");
+        assert_eq!(iter.next().unwrap(), "G.H");
+        assert_eq!(iter.next().unwrap(), "G.I");
+        assert_eq!(iter.next().unwrap(), "G.I.J");
+        assert_eq!(iter.next().unwrap(), "G.I.K");
+        assert_eq!(iter.next().unwrap(), "G.I.L");
+        assert!(iter.next().is_none());
 
-//         //     A
-//         //    / \
-//         //   B   E
-//         //  / \   \
-//         // C   D   F
-//         let mut iter = markers.recurse(&MarkerName("A.B.C".into()));
-//         assert_eq!(iter.next().unwrap().id.0, "A.B.C");
-//         assert!(iter.next().is_none());
-//     }
+        //     A
+        //    / \
+        //   B   E
+        //  / \   \
+        // C   D   F
+        let root: NodeIndex = *MarkerPath::from_string(&markers.trees, "A.B")
+            .unwrap()
+            .last()
+            .unwrap();
+        let mut iter = markers
+            .recurse(root.into())
+            .map(|(id, _)| markers.name_of(id).0.join("."));
+        assert_eq!(iter.next().unwrap(), "A.B");
+        assert_eq!(iter.next().unwrap(), "A.B.C");
+        assert_eq!(iter.next().unwrap(), "A.B.D");
+        assert!(iter.next().is_none());
 
-//     #[test]
-//     fn test_xml() {
-//         let pack = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
-//         let mut roots = pack.roots();
-//         let root = roots.next().unwrap();
-//         assert_eq!(root.name, MarkerName("A".into()));
-//         {
-//             let mut iter = pack.iter(&root.name);
-//             assert_eq!(iter.next().unwrap().id, MarkerName("A.B".into()));
-//             assert_eq!(iter.next().unwrap().id, MarkerName("A.E".into()));
-//         }
+        //     A
+        //    / \
+        //   B   E
+        //  / \   \
+        // C   D   F
+        let root: NodeIndex = *MarkerPath::from_string(&markers.trees, "A.B.C")
+            .unwrap()
+            .last()
+            .unwrap();
+        let mut iter = markers
+            .recurse(root.into())
+            .map(|(id, _)| markers.name_of(id).0.join("."));
+        assert_eq!(iter.next().unwrap(), "A.B.C");
+        assert!(iter.next().is_none());
+    }
 
-//         let root = roots.next().unwrap();
-//         assert_eq!(root.name, MarkerName("G".into()));
-//         {
-//             let mut iter = pack.iter(&root.name);
-//             assert_eq!(iter.next().unwrap().id, MarkerName("G.H".into()));
-//             assert_eq!(iter.next().unwrap().id, MarkerName("G.I".into()));
-//         }
-//     }
+    #[test]
+    fn test_xml() {
+        let pack = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
+        let mut roots = pack.roots();
+        let root = roots.next().unwrap();
+        assert_eq!(pack.get_marker(root).unwrap().name, "A");
+        {
+            let mut iter = pack.iter(root).map(|(_idx, marker)| &marker.name);
+            assert_eq!(iter.next().unwrap(), "B");
+            assert_eq!(iter.next().unwrap(), "E");
+        }
 
-//     #[test]
-//     fn test_poi() {
-//         let pack = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
+        let root = roots.next().unwrap();
+        assert_eq!(pack.get_marker(root).unwrap().name, "G");
+        {
+            let mut iter = pack.iter(root).map(|(_idx, marker)| &marker.name);
+            assert_eq!(iter.next().unwrap(), "H");
+            assert_eq!(iter.next().unwrap(), "I");
+        }
+    }
 
-//         {
-//             let mut pois = pack
-//                 .get_pois(&MarkerPath::new_from_str("A"))
-//                 .unwrap()
-//                 .iter();
-//             let poi: &model::Poi = pois.next().unwrap();
-//             assert_eq!(poi.map_id, Some(15));
-//             assert_eq!(poi.position.unwrap().x, 100.0);
-//             assert_eq!(poi.position.unwrap().y, 100.0);
-//             assert_eq!(poi.position.unwrap().z, -100.0);
-//         }
-//         {
-//             let mut pois = pack
-//                 .get_pois(&MarkerPath::new_from_str("A.B"))
-//                 .unwrap()
-//                 .iter();
-//             let poi: &model::Poi = pois.next().unwrap();
-//             assert_eq!(poi.map_id, Some(15));
-//             assert_eq!(poi.position.unwrap().x, 200.0);
-//             assert_eq!(poi.position.unwrap().y, 200.0);
-//             assert_eq!(poi.position.unwrap().z, -200.0);
-//         }
-//         {
-//             let mut pois = pack
-//                 .get_pois(&MarkerPath::new_from_str("A.E"))
-//                 .unwrap()
-//                 .iter();
-//             let poi: &model::Poi = pois.next().unwrap();
-//             assert_eq!(poi.map_id, Some(15));
-//             assert_eq!(poi.position.unwrap().x, 300.0);
-//             assert_eq!(poi.position.unwrap().y, 300.0);
-//             assert_eq!(poi.position.unwrap().z, -300.0);
+    // #[test]
+    // fn test_poi() {
+    //     let pack = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
 
-//             let poi: &model::Poi = pois.next().unwrap();
-//             assert_eq!(poi.map_id, Some(15));
-//             assert_eq!(poi.position.unwrap().x, 400.0);
-//             assert_eq!(poi.position.unwrap().y, 400.0);
-//             assert_eq!(poi.position.unwrap().z, -400.0);
-//         }
+    //     {
+    //         let mut pois = pack
+    //             .get_pois(&MarkerPath::new_from_str("A"))
+    //             .unwrap()
+    //             .iter();
+    //         let poi: &model::Poi = pois.next().unwrap();
+    //         assert_eq!(poi.map_id, Some(15));
+    //         assert_eq!(poi.position.unwrap().x, 100.0);
+    //         assert_eq!(poi.position.unwrap().y, 100.0);
+    //         assert_eq!(poi.position.unwrap().z, -100.0);
+    //     }
+    //     {
+    //         let mut pois = pack
+    //             .get_pois(&MarkerPath::new_from_str("A.B"))
+    //             .unwrap()
+    //             .iter();
+    //         let poi: &model::Poi = pois.next().unwrap();
+    //         assert_eq!(poi.map_id, Some(15));
+    //         assert_eq!(poi.position.unwrap().x, 200.0);
+    //         assert_eq!(poi.position.unwrap().y, 200.0);
+    //         assert_eq!(poi.position.unwrap().z, -200.0);
+    //     }
+    //     {
+    //         let mut pois = pack
+    //             .get_pois(&MarkerPath::new_from_str("A.E"))
+    //             .unwrap()
+    //             .iter();
+    //         let poi: &model::Poi = pois.next().unwrap();
+    //         assert_eq!(poi.map_id, Some(15));
+    //         assert_eq!(poi.position.unwrap().x, 300.0);
+    //         assert_eq!(poi.position.unwrap().y, 300.0);
+    //         assert_eq!(poi.position.unwrap().z, -300.0);
 
-//         {
-//             let mut pois = pack
-//                 .get_pois(&MarkerPath::new_from_str("G.K"))
-//                 .unwrap()
-//                 .iter();
-//             let poi: &model::Poi = pois.next().unwrap();
-//             assert_eq!(poi.map_id, Some(15));
-//             assert_eq!(poi.position.unwrap().x, 500.0);
-//             assert_eq!(poi.position.unwrap().y, 500.0);
-//             assert_eq!(poi.position.unwrap().z, -500.0);
-//         }
+    //         let poi: &model::Poi = pois.next().unwrap();
+    //         assert_eq!(poi.map_id, Some(15));
+    //         assert_eq!(poi.position.unwrap().x, 400.0);
+    //         assert_eq!(poi.position.unwrap().y, 400.0);
+    //         assert_eq!(poi.position.unwrap().z, -400.0);
+    //     }
 
-//         {
-//             let mut pois = pack
-//                 .get_pois(&MarkerPath::new_from_str("G.L"))
-//                 .unwrap()
-//                 .iter();
-//             let poi: &model::Poi = pois.next().unwrap();
-//             assert_eq!(poi.map_id, Some(15));
-//             assert_eq!(poi.position.unwrap().x, 600.0);
-//             assert_eq!(poi.position.unwrap().y, 600.0);
-//             assert_eq!(poi.position.unwrap().z, -600.0);
-//         }
-//     }
-// }
+    //     {
+    //         let mut pois = pack
+    //             .get_pois(&MarkerPath::new_from_str("G.K"))
+    //             .unwrap()
+    //             .iter();
+    //         let poi: &model::Poi = pois.next().unwrap();
+    //         assert_eq!(poi.map_id, Some(15));
+    //         assert_eq!(poi.position.unwrap().x, 500.0);
+    //         assert_eq!(poi.position.unwrap().y, 500.0);
+    //         assert_eq!(poi.position.unwrap().z, -500.0);
+    //     }
+
+    //     {
+    //         let mut pois = pack
+    //             .get_pois(&MarkerPath::new_from_str("G.L"))
+    //             .unwrap()
+    //             .iter();
+    //         let poi: &model::Poi = pois.next().unwrap();
+    //         assert_eq!(poi.map_id, Some(15));
+    //         assert_eq!(poi.position.unwrap().x, 600.0);
+    //         assert_eq!(poi.position.unwrap().y, 600.0);
+    //         assert_eq!(poi.position.unwrap().z, -600.0);
+    //     }
+    // }
+}
