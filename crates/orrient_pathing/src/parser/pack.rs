@@ -342,7 +342,7 @@ impl MarkerPackBuilder {
 
     pub fn add_marker(&mut self, xml: MarkerXml) -> NodeIndex {
         self.tree.insert(Marker {
-            path: self.tree.path(),
+            path: MarkerPath(self.tree.path().cloned().collect()),
             name: xml.name,
             label: xml.label,
             kind: xml.kind,

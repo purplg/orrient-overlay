@@ -158,8 +158,8 @@ impl<N> TreeBuilder<N> {
     }
 
     /// Get the current path in the tree.
-    pub fn path(&self) -> MarkerPath {
-        MarkerPath(self.parents.clone())
+    pub fn path(&self) -> impl Iterator<Item = &NodeIndex> {
+        self.parents.iter()
     }
 
     pub fn build(self) -> Trees<N> {
