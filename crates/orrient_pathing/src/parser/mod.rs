@@ -145,14 +145,14 @@ enum Tag {
 }
 
 impl Tag {
-    fn from_element(builder: &MarkerPackBuilder, element: &BytesStart) -> Result<Tag> {
+    fn from_element(element: &BytesStart) -> Result<Tag> {
         let tag = core::str::from_utf8(element.name().0)?;
         Ok(match tag.to_lowercase().as_ref() {
             "overlaydata" => Tag::OverlayData,
             "markercategory" => Tag::Marker(MarkerXml::from_attrs(element.attributes())?),
             "pois" => Tag::POIs,
-            "poi" => Tag::Poi(model::PoiXml::from_attrs(builder, element.attributes())?),
-            "trail" => Tag::Trail(model::TrailXml::from_attrs(builder, element.attributes())?),
+            "poi" => Tag::Poi(model::PoiXml::from_attrs(element.attributes())?),
+            "trail" => Tag::Trail(model::TrailXml::from_attrs(element.attributes())?),
             field => Tag::UnknownField(field.to_string()),
         })
     }
@@ -249,7 +249,7 @@ fn parse_xml<R: Read + BufRead>(
         match reader.read_event_into(&mut buf) {
             Ok(event) => match event {
                 Event::Start(element) => {
-                    match Tag::from_element(&builder, &element) {
+                    match Tag::from_element(&element) {
                         Ok(tag) => tag.apply(builder),
                         Err(err) => {
                             warn!(
@@ -261,7 +261,7 @@ fn parse_xml<R: Read + BufRead>(
                     };
                 }
                 Event::Empty(element) => {
-                    match Tag::from_element(&builder, &element) {
+                    match Tag::from_element(&element) {
                         Ok(tag) => tag.apply(builder),
                         Err(err) => {
                             warn!(

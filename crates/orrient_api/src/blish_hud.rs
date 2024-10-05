@@ -191,7 +191,7 @@ fn download_request(
                     }
 
                     let pack_info = PackInfo {
-                        name: repo_pack.name.clone().into(),
+                        name: repo_pack.name.clone(),
                         last_update: repo_pack.last_update().unwrap(),
                         downloaded: Utc::now(),
                     };

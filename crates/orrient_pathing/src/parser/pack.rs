@@ -25,31 +25,24 @@ pub struct Poi {
     pub icon_file: Option<Utf8PathBuf<Utf8UnixEncoding>>,
 }
 
-#[derive(Clone, Debug)]
-pub(crate) struct Trail {
-    pub idx: NodeIndex,
-    pub trail_file: String,
-    pub texture_file: Option<String>,
-}
-
 #[derive(Hash, Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MarkerName(pub Vec<String>);
 
-impl ToString for MarkerName {
-    fn to_string(&self) -> String {
-        self.0.join(".")
+impl std::fmt::Display for MarkerName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.join(".").fmt(f)
     }
 }
 
 impl MarkerName {
     /// Returns true when `other` is a child of this `MarkerId`.
     pub fn child_of(&self, other: &MarkerName) -> bool {
-        self.0.len() != other.0.len() && self.0.starts_with(&*other.0)
+        self.0.len() != other.0.len() && self.0.starts_with(&other.0)
     }
 
     /// Returns true when `other` is a parent of this `MarkerId`.
     pub fn parent_of(&self, other: &MarkerName) -> bool {
-        self.0.len() != other.0.len() && other.0.starts_with(&*self.0)
+        self.0.len() != other.0.len() && other.0.starts_with(&self.0)
     }
 }
 
@@ -149,15 +142,15 @@ impl std::fmt::Display for MarkerPath {
 #[derive(Hash, Copy, Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MarkerId(pub NodeIndex);
 
-impl Into<MarkerId> for NodeIndex {
-    fn into(self) -> MarkerId {
-        MarkerId(self)
+impl From<NodeIndex> for MarkerId {
+    fn from(value: NodeIndex) -> MarkerId {
+        MarkerId(value)
     }
 }
 
-impl Into<MarkerId> for usize {
-    fn into(self) -> MarkerId {
-        MarkerId(NodeIndex::new(self))
+impl From<usize> for MarkerId {
+    fn from(value: usize) -> MarkerId {
+        MarkerId(NodeIndex::new(value))
     }
 }
 
@@ -231,17 +224,17 @@ impl MarkerPack {
         }
     }
 
-    pub fn roots<'a>(&'a self) -> impl Iterator<Item = MarkerId> + use<'a> {
+    pub fn roots(&self) -> impl Iterator<Item = MarkerId> + use<'_> {
         self.trees.roots.iter().map(|idx| (*idx).into())
     }
 
-    pub fn iter<'a>(&'a self, id: MarkerId) -> impl Iterator<Item = (MarkerId, &'a Marker)> {
+    pub fn iter(&self, id: MarkerId) -> impl Iterator<Item = (MarkerId, &Marker)> {
         self.trees
             .children(id.0)
             .map(|(idx, marker)| (MarkerId(idx), marker))
     }
 
-    pub fn recurse<'a>(&'a self, id: MarkerId) -> impl Iterator<Item = (MarkerId, &'a Marker)> {
+    pub fn recurse(&self, id: MarkerId) -> impl Iterator<Item = (MarkerId, &Marker)> {
         self.trees
             .recurse(id.0)
             .map(|(idx, marker)| (MarkerId(idx), marker))
@@ -318,12 +311,6 @@ impl MarkerPackBuilder {
 
     pub fn id(&self) -> &PackId {
         &self.pack_id
-    }
-
-    pub fn find<'a>(&'a self, path: &'a MarkerPath) -> Option<(MarkerId, &'a Marker)> {
-        self.tree
-            .find(&path.0)
-            .map(|(idx, marker)| (MarkerId(idx), marker))
     }
 
     pub fn find_mut<'a>(&'a mut self, path: &'a MarkerPath) -> Option<(MarkerId, &'a mut Marker)> {

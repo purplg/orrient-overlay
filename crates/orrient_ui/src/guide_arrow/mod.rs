@@ -7,8 +7,6 @@ use orrient_pathing::prelude::*;
 #[derive(Resource, Default)]
 struct Closest(Option<Vec3>);
 
-fn setup(mut commands: Commands) {}
-
 fn draw(mut gizmos: Gizmos, player: Query<&Transform, With<Player>>, closest: Res<Closest>) {
     let Some(closest) = closest.0 else {
         return;
@@ -36,7 +34,6 @@ fn update(
     let pos = player.translation;
     closest.0 = enabled_markers
         .intersection(&map_markers)
-        .into_iter()
         .filter_map(|full_id| {
             packs.get(&full_id.pack_id).and_then(|pack| {
                 pack.get_marker(full_id.marker_id)
@@ -59,7 +56,6 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         // app.init_resource::<Closest>();
         app.insert_resource(Closest(Some(Vec3::ZERO)));
-        app.add_systems(Startup, setup);
         app.add_systems(Update, draw);
         app.add_systems(Update, update.run_if(on_timer(Duration::from_secs(1))));
     }

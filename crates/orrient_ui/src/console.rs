@@ -38,7 +38,7 @@ fn reload_map_command(
     map_id: Res<MapId>,
 ) {
     if let Some(Ok(ReloadMapCommand)) = log.take() {
-        commands.insert_resource(map_id.clone());
+        commands.insert_resource(*map_id);
         log.reply_ok("Reloaded map");
     }
 }

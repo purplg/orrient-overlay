@@ -31,7 +31,6 @@ pub(super) struct MarkerWindow;
 
 #[derive(Component)]
 pub(super) struct MarkerItem {
-    pub id: FullMarkerId,
     pub tip: Option<String>,
     pub description: Option<String>,
 }

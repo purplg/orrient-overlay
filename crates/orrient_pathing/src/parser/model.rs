@@ -10,9 +10,6 @@ use typed_path::Utf8PathBuf;
 use typed_path::Utf8UnixEncoding;
 use typed_path::Utf8WindowsPathBuf;
 
-use super::pack::MarkerPackBuilder;
-use super::pack::MarkerPath;
-
 #[derive(Clone, Debug)]
 pub struct PoiXml {
     // type
@@ -26,7 +23,7 @@ pub struct PoiXml {
 }
 
 impl PoiXml {
-    pub(super) fn from_attrs(builder: &MarkerPackBuilder, attrs: Attributes) -> Result<Self> {
+    pub(super) fn from_attrs(attrs: Attributes) -> Result<Self> {
         let mut map_id: Option<u32> = None;
         let mut x: Option<f32> = None;
         let mut y: Option<f32> = None;
@@ -107,7 +104,7 @@ pub(crate) struct TrailXml {
 }
 
 impl TrailXml {
-    pub(super) fn from_attrs(builder: &MarkerPackBuilder, attrs: Attributes) -> Result<Self> {
+    pub(super) fn from_attrs(attrs: Attributes) -> Result<Self> {
         let mut id: Option<String> = None;
         let mut trail_file: Option<String> = None;
         let mut texture_file: Option<String> = None;
@@ -196,7 +193,7 @@ impl MarkerXml {
             };
 
             match key.to_lowercase().as_str() {
-                "name" => this.name = value.into(),
+                "name" => this.name = value,
                 "displayname" => this.label = value,
                 "isseparator" => match value.to_lowercase().as_str() {
                     "true" | "1" => this.kind = MarkerKind::Separator,

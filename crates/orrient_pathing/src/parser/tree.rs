@@ -1,9 +1,6 @@
 use petgraph::{prelude::*, visit::Walker};
 
-use super::{
-    pack::{Marker, MarkerPath},
-    MarkerPacks,
-};
+use super::pack::MarkerPath;
 
 #[derive(Debug, Default)]
 pub struct Trees<N> {
@@ -81,7 +78,8 @@ impl<N> Trees<N> {
         for neighbor in self
             .graph
             .neighbors_directed(b, Direction::Outgoing)
-            .collect::<Vec<_>>() {
+            .collect::<Vec<_>>()
+        {
             self.graph.add_edge(a, neighbor, ());
         }
 
@@ -90,14 +88,14 @@ impl<N> Trees<N> {
     }
 
     /// Iterate through all direct neighbors of `start`.
-    pub fn children<'a>(&'a self, start: NodeIndex) -> impl Iterator<Item = (NodeIndex, &'a N)> {
+    pub fn children(&self, start: NodeIndex) -> impl Iterator<Item = (NodeIndex, &N)> {
         self.graph
             .neighbors_directed(start, Direction::Outgoing)
             .filter_map(|idx| self.graph.node_weight(idx).map(|weight| (idx, weight)))
     }
 
     /// Recurse through all nodes starting at `start`.
-    pub fn recurse<'a>(&'a self, start: NodeIndex) -> impl Iterator<Item = (NodeIndex, &'a N)> {
+    pub fn recurse(&self, start: NodeIndex) -> impl Iterator<Item = (NodeIndex, &N)> {
         petgraph::visit::Bfs::new(&self.graph, start)
             .iter(&self.graph)
             .filter_map(|idx| self.graph.node_weight(idx).map(|weight| (idx, weight)))
@@ -147,33 +145,16 @@ impl<N> TreeBuilder<N> {
         node_id
     }
 
-    pub fn insert_root(&mut self, item: N) -> NodeIndex {
-        self.new_root();
-        self.insert(item)
-    }
-
     /// Move up the tree removing the most recent parent from the
     /// list.
     pub fn new_root(&mut self) {
         self.parents.clear();
     }
 
-    pub fn roots(&self) -> impl Iterator<Item = &NodeIndex> {
-        self.trees.roots.iter()
-    }
-
     /// Move up the tree removing the most recent parent from the
     /// list.
     pub fn up(&mut self) {
         self.parents.pop();
-    }
-
-    pub fn parent(&self) -> Option<NodeIndex> {
-        self.parents.last().copied()
-    }
-
-    pub fn push_parent(&mut self, idx: NodeIndex) {
-        self.parents.push(idx);
     }
 
     /// Get the current path in the tree.

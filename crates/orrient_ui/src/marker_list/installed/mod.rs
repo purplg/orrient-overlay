@@ -67,7 +67,7 @@ fn set_column(
                                 for (idx, marker) in pack.roots().flat_map(|idx| {
                                     pack.get_marker(idx).map(|marker| (idx, marker))
                                 }) {
-                                    parent.marker_button(pack, idx, &marker, 0, false);
+                                    parent.marker_button(pack, idx, marker, 0, false);
                                 }
                             }
                         });
