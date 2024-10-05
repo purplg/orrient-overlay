@@ -1,7 +1,7 @@
 set dotenv-load := true
 
-watch command:
-    cargo watch -d 1 --ignore assets/ --ignore orrient_shim/ --clear -- cargo {{ command }}
+watch *command:
+    cargo watch --ignore assets/ --ignore orrient_shim/ --clear -- cargo {{ command }}
 
 run:
     @just watch lrun
@@ -11,6 +11,10 @@ build:
 
 release:
     cargo lrun --release
+
+test:
+    cargo test --no-run
+    cargo pretty-test --workspace
 
 link:
     just -f crates/orrient_shim/justfile build
