@@ -1,0 +1,12 @@
+#+TITLE: Orrient Overlay
+
+An overlay application for Guild Wars 2 similar to gw2taco or the BlishHUD pathing module.
+
+This project is still under heavy development, is barely functional, and prone to breakage.
+
+* Goals
+
+- [x] Marker / Trails rendering :: The core is mostly implement, but is still being reworked a lot.
+- [ ] Achievement API :: This will help with hiding (or showing) markers based on your account data and what you've completed.
+- [ ] LUA plugin support :: Some marker packs come with LUA scripts to run things like timers for raid encounters and such.
+- [ ] WASM plugin support :: Stretch goal. WASM is seemingly much more secure for a plugin infrastructure than LUA.
