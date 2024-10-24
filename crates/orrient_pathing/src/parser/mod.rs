@@ -126,9 +126,20 @@ impl std::fmt::Display for PackId {
 pub struct MarkerPacks(HashMap<PackId, MarkerPack>);
 
 impl MarkerPacks {
-    pub fn get_map_markers<'a>(&'a self, map_id: &'a u32) -> impl Iterator<Item = FullMarkerId> {
-        // self.values().flat_map(|pack| pack.get_map_markers(map_id))
-        [].into_iter()
+    pub fn get_map_markers<'a>(
+        &'a self,
+        map_id: &'a u32,
+    ) -> impl Iterator<Item = FullMarkerId> + use<'a> {
+        self.values().flat_map(|pack| {
+            pack.recurse(pack.root().unwrap().node_id())
+                .filter_map(|node| {
+                    if node.data().map_ids.contains(map_id) {
+                        Some(pack.full_id(node.node_id()))
+                    } else {
+                        None
+                    }
+                })
+        })
     }
 }
 

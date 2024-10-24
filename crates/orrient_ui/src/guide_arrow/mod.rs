@@ -36,7 +36,9 @@ fn update(
         .intersection(&map_markers)
         .filter_map(|full_id| {
             packs.get(&full_id.pack_id).and_then(|pack| {
-                pack.get_marker(full_id.marker_id)
+                pack.find_by_name(full_id.marker_name.clone())
+                    .and_then(|node_id| pack.get(node_id))
+                    .map(|node| node.data())
                     .map(|marker| marker.pois.clone())
             })
         })
@@ -54,7 +56,7 @@ fn update(
 pub(crate) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        // app.init_resource::<Closest>();
+        app.init_resource::<Closest>();
         app.insert_resource(Closest(Some(Vec3::ZERO)));
         app.add_systems(Update, draw);
         app.add_systems(Update, update.run_if(on_timer(Duration::from_secs(1))));
