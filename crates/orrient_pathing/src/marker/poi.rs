@@ -93,7 +93,11 @@ fn spawn_pois_system(
             continue;
         };
 
-        let Some(marker) = pack.get_marker(full_id.marker_id) else {
+        let Some(marker) = pack
+            .find_by_name(full_id.marker_name.clone())
+            .and_then(|node_id| pack.get(node_id))
+            .map(|node| node.data())
+        else {
             continue;
         };
 

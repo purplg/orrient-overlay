@@ -1,7 +1,6 @@
 pub(crate) mod model;
 pub mod pack;
 mod trail;
-mod tree;
 
 use model::MarkerXml;
 use orrient_core::prelude::AppState;
@@ -109,10 +108,9 @@ fn load(path: &Path, images: &mut Assets<Image>) -> Result<HashMap<PackId, Marke
 pub struct PackId(pub String);
 
 impl PackId {
-    pub fn with_marker(&self, marker_id: MarkerId, marker_name: MarkerName) -> FullMarkerId {
+    pub fn with_marker(&self, marker_name: MarkerName) -> FullMarkerId {
         FullMarkerId {
             pack_id: self.clone(),
-            marker_id,
             marker_name,
         }
     }
@@ -186,8 +184,8 @@ fn read_marker_pack(path: &Path, images: &mut Assets<Image>) -> Result<MarkerPac
         .to_string_lossy()
         .to_string();
 
-    let mut builder = MarkerPackBuilder::new(PackId(pack_filename));
-    info!("Parsing: {}", builder.id());
+    let mut builder = MarkerPackBuilder::new(pack_filename);
+    info!("Parsing: {}", builder.pack.id());
 
     let pack = File::open(path)?;
     println!("pack: {:?}", pack);
@@ -229,9 +227,9 @@ fn read_marker_pack(path: &Path, images: &mut Assets<Image>) -> Result<MarkerPac
             ext => debug!("Skipping unknown extension {ext}"),
         }
     }
-    info!("Building: {}", builder.id());
+    info!("Building: {}", builder.pack.id());
     let marker_pack = builder.build();
-    info!("Finished: {}", marker_pack.id);
+    info!("Finished: {}", marker_pack.id());
     Ok(marker_pack)
 }
 
@@ -405,12 +403,12 @@ mod tests {
     #[test]
     fn test_iter() {
         let markers = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
-        for idx in markers.trees.graph().node_indices() {
-            let name = &markers.trees.graph().node_weight(idx).unwrap().name;
+        for idx in markers.tree.graph().node_indices() {
+            let name = &markers.tree.graph().node_weight(idx).unwrap().name;
             println!("{idx:?}: {name:?}");
         }
 
-        let root: NodeIndex = *MarkerPath::from_string(&markers.trees, "A")
+        let root: NodeIndex = *MarkerPath::from_string(&markers.tree, "A")
             .unwrap()
             .last()
             .unwrap();
@@ -436,7 +434,7 @@ mod tests {
         // H   I
         //   / | \
         //  J  K  L
-        let root: NodeIndex = *MarkerPath::from_string(&markers.trees, "G")
+        let root: NodeIndex = *MarkerPath::from_string(&markers.tree, "G")
             .unwrap()
             .last()
             .unwrap();
@@ -456,7 +454,7 @@ mod tests {
         //   B   E
         //  / \   \
         // C   D   F
-        let root: NodeIndex = *MarkerPath::from_string(&markers.trees, "A.B")
+        let root: NodeIndex = *MarkerPath::from_string(&markers.tree, "A.B")
             .unwrap()
             .last()
             .unwrap();
@@ -473,7 +471,7 @@ mod tests {
         //   B   E
         //  / \   \
         // C   D   F
-        let root: NodeIndex = *MarkerPath::from_string(&markers.trees, "A.B.C")
+        let root: NodeIndex = *MarkerPath::from_string(&markers.tree, "A.B.C")
             .unwrap()
             .last()
             .unwrap();

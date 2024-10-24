@@ -65,9 +65,9 @@ fn set_column(
                             parent.label(LabelConfig::from("Top"));
                             for (_pack_id, pack) in packs.iter() {
                                 for (idx, marker) in pack.roots().flat_map(|idx| {
-                                    pack.get_marker(idx).map(|marker| (idx, marker))
+                                    pack.get(idx).map(|marker| (idx, marker.data()))
                                 }) {
-                                    parent.marker_button(pack, idx, marker, 0, false);
+                                    parent.marker_button(pack, idx.into(), marker, 0, false);
                                 }
                             }
                         });
@@ -83,8 +83,10 @@ fn set_column(
                     continue;
                 };
 
-                let Some(parent_marker) = pack.get_marker(full_id.marker_id) else {
-                    warn!("Marker {:?} not found", full_id.marker_id);
+                let node_id = pack.find_by_name(full_id.marker_name.clone()).unwrap();
+
+                let Some(parent_marker) = pack.get(node_id).map(|node| node.data()) else {
+                    warn!("Marker {:?} not found", full_id);
                     continue;
                 };
 
@@ -103,13 +105,22 @@ fn set_column(
                     .scroll_view(Some(ScrollAxis::Vertical), |parent| {
                         parent.column(|parent| {
                             parent.label(LabelConfig::from(parent_marker.label.clone()));
-                            for (id, marker) in pack.iter(full_id.marker_id) {
+                            let node_id = pack.find_by_name(full_id.marker_name.clone()).unwrap();
+                            for (id, marker) in
+                                pack.iter(node_id).map(|node| (node.node_id(), node.data()))
+                            {
                                 if let MarkerKind::Separator = marker.kind {
                                     parent.marker_separator(&marker.label);
                                 } else {
                                     let full_id = pack.full_id(id);
                                     let checked = visible_markers.contains(&full_id);
-                                    parent.marker_button(pack, id, marker, next_column_id, checked);
+                                    parent.marker_button(
+                                        pack,
+                                        id.into(),
+                                        marker,
+                                        next_column_id,
+                                        checked,
+                                    );
                                 }
                             }
                         });

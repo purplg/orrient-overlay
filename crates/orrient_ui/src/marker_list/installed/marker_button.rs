@@ -87,7 +87,11 @@ fn button_init(
             return;
         };
 
-        if !pack.contains_map_id(button.full_id.marker_id, **map_id) {
+        let node_id = pack
+            .find_by_name(button.full_id.marker_name.clone())
+            .unwrap();
+
+        if !pack.contains_map_id(node_id, **map_id) {
             entity_cmds.add_pseudo_state(PseudoState::Disabled);
         }
     }
@@ -106,7 +110,11 @@ fn button_mapid_disable(
             continue;
         };
 
-        if pack.contains_map_id(button.full_id.marker_id, **map_id) {
+        let node_id = pack
+            .find_by_name(button.full_id.marker_name.clone())
+            .unwrap();
+
+        if pack.contains_map_id(node_id, **map_id) {
             entity_cmds.remove_pseudo_state(PseudoState::Disabled);
         } else {
             entity_cmds.add_pseudo_state(PseudoState::Disabled);
@@ -147,7 +155,11 @@ fn button_interaction(
                     continue;
                 };
 
-                if pack.iter(button.full_id.marker_id).count() == 0 {
+                let node_id = pack
+                    .find_by_name(button.full_id.marker_name.clone())
+                    .unwrap();
+
+                if pack.iter(node_id).count() == 0 {
                     continue;
                 }
 
@@ -201,16 +213,13 @@ fn checkbox_action(
             continue;
         };
 
-        let markers = pack
-            .recurse(marker_checkbox.0.marker_id)
-            .map(|(id, _marker)| pack.full_id(id));
-        for marker in markers {
-            println!("marker: {:?}", marker.marker_name);
-        }
+        let node_id = pack
+            .find_by_name(marker_checkbox.0.marker_name.clone())
+            .unwrap();
 
         let markers = pack
-            .recurse(marker_checkbox.0.marker_id)
-            .map(|(id, _marker)| pack.full_id(id));
+            .recurse(node_id)
+            .map(|node| pack.full_id(node.node_id()));
 
         if checkbox.checked {
             events.send_batch(markers.map(MarkerEvent::Disable));
