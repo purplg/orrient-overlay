@@ -151,7 +151,12 @@ fn download_request(
             continue;
         };
 
-        let request = client.get(repo_pack.download.clone()).build().unwrap();
+        let request = client
+            .get(repo_pack.download.clone())
+            .header("User-Agent", "Blish-HUD")
+            .build()
+            .unwrap();
+        info!("Downloading url: {}", repo_pack.download);
         client
             .send(request)
             .on_response(
@@ -160,7 +165,8 @@ fn download_request(
                     let response = trigger.event();
                     let status = response.status();
                     if status != 200 {
-                        warn!("Invalid HTTP response: {response:?}");
+                        warn!("Invalid HTTP response: {status}");
+                        debug!("Invalid HTTP response: {response:?}");
                         return;
                     }
 
