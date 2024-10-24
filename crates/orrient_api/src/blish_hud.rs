@@ -161,6 +161,7 @@ fn download_request(
                     let status = response.status();
                     if status != 200 {
                         warn!("Invalid HTTP response: {response:?}");
+                        return;
                     }
 
                     let Some(base_dirs) = directories::BaseDirs::new() else {
