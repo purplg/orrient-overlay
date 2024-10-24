@@ -358,10 +358,12 @@ impl MarkerPackBuilder {
     }
 
     pub fn add_image(&mut self, file_path: String, image: Image, image_assets: &mut Assets<Image>) {
-        // debug!("Found image: {pack_id}/{file_path}", pack_id = self.tree.id);
+        debug!(
+            "Found image: {pack_id}/{file_path}",
+            pack_id = self.pack.id()
+        );
         let handle = image_assets.add(image);
-        // TODO
-        // self.tree.icons.insert(file_path, handle);
+        self.pack.icons.insert(file_path, handle);
     }
 
     pub fn add_marker(&mut self, xml: MarkerXml) -> NodeId {
