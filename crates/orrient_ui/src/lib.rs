@@ -77,6 +77,7 @@ fn monitor_system(
         commands.insert_resource(PrevMumblelinkState(*data.clone()));
         state.set(AppState::Running);
         info!("Link connected.");
+        return;
     }
 }
 
