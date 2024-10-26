@@ -199,7 +199,6 @@ fn read_marker_pack(path: &Path, images: &mut Assets<Image>) -> Result<MarkerPac
     info!("Parsing: {}", builder.pack.id());
 
     let pack = File::open(path)?;
-    println!("pack: {:?}", pack);
     let mut zip = zip::ZipArchive::new(pack)?;
     for i in 0..zip.len() {
         let mut file = zip.by_index(i)?;
@@ -414,10 +413,6 @@ mod tests {
     #[test]
     fn test_iter() {
         let markers = TEST_PACKS.get(&PackId("test.taco".into())).unwrap();
-        for idx in markers.tree.graph().node_indices() {
-            let name = &markers.tree.graph().node_weight(idx).unwrap().name;
-            println!("{idx:?}: {name:?}");
-        }
 
         let root: NodeIndex = *MarkerPath::from_string(&markers.tree, "A")
             .unwrap()

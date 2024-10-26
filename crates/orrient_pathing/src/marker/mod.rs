@@ -36,9 +36,6 @@ fn map_enter_system(
     mut map_markers: ResMut<MapMarkers>,
 ) {
     map_markers.0.extend(packs.get_map_markers(&map_id.0));
-    for marker in map_markers.iter() {
-        println!("marker: {:?}", marker);
-    }
 }
 
 fn track_markers_system(
