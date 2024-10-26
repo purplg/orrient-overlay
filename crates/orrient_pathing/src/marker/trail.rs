@@ -160,8 +160,8 @@ fn show_trails(
                     ..default()
                 },
             ));
+            info!("Loaded trail: {:?}", full_id);
         }
-        info!("Loaded trail: {:?}", full_id);
     }
 }
 
