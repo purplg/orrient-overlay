@@ -355,7 +355,7 @@ impl MarkerPackBuilder {
     }
 
     pub fn add_trail_data(&mut self, file_path: String, data: TrailData) {
-        if self.trail_data.insert(file_path.clone(), data).is_some() {
+        if self.trail_data.insert(file_path.to_lowercase(), data).is_some() {
             warn!("{file_path} already exists!");
         }
     }
@@ -366,7 +366,7 @@ impl MarkerPackBuilder {
             pack_id = self.pack.id()
         );
         let handle = image_assets.add(image);
-        self.pack.icons.insert(file_path, handle);
+        self.pack.icons.insert(file_path.to_lowercase(), handle);
     }
 
     pub fn add_marker(&mut self, xml: MarkerXml) -> NodeId {
