@@ -300,13 +300,16 @@ impl MarkerPack {
     }
 
     pub fn find_by_name<'a>(&self, name: impl Into<MarkerName>) -> Option<NodeId> {
-        let name = name.into();
-        for node in self.root().unwrap().traverse_pre_order() {
-            if name == self.name_of(node.node_id()) {
-                return Some(node.node_id());
+        let mut current = self.root()?;
+        for part in name.into().0.iter() {
+            if let Some(found) = current.children().find(|node| part == &node.data().name) {
+                current = found;
+                continue;
+            } else {
+                return None;
             }
         }
-        None
+        Some(current.node_id())
     }
 }
 
