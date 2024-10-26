@@ -443,6 +443,7 @@ impl MarkerPackBuilder {
 
         // Attach trail tags
         let trails = self.trail_tags.drain(..).collect::<Vec<_>>();
+        info!("Loading Trails...");
         for trail in trails {
             let Some(data) = self.trail_data.get(&trail.trail_file) else {
                 warn!(
