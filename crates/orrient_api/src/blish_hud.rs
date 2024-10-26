@@ -1,4 +1,7 @@
 use anyhow::anyhow;
+// TODO Remove this event.
+//      Replace with with an Event in this crate so that
+//      `orrient_pathing` can depend on API instead.
 use orrient_pathing::prelude::ReloadMarkersEvent;
 
 use bevy::prelude::*;
